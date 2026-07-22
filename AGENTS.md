@@ -1,15 +1,13 @@
-# Agent Guidelines: Clinical DDF Integration Bridge
+# Agent Guidelines: Cadence Clinical Platform
 
-## Role & Purpose
-This repository serves as the orchestration and transformation middleware connecting:
-- Upstream: OpenStudyBuilder (Clinical Metadata Repository / USDM DDF API)
-- Downstream: OpenClinica (Electronic Data Capture engine / eCRFs and Study Build API)
+## Product Vision
+Cadence Clinical is a standalone, next-generation eClinical platform that unifies Clinical Metadata Management (MDR) and Electronic Data Capture (EDC) into a single, cohesive product suite.
 
-## Workspace Architecture
-- Do NOT modify upstream core logic in OpenStudyBuilder or OpenClinica directly.
-- All ETL pipelines, data transformers (USDM -> XForms/ODM), and SSO/Keycloak orchestration code belong in this repository.
+## Workspace Architecture & Reference Codebases
+- `openstudybuilder-ref`: Read-only reference for CDISC USDM graph schemas, protocol versioning, and Schedule of Activities.
+- `openclinica-ref`: Read-only reference for eCRF form evaluation, Enketo/XForm rendering, subject lifecycle state machines, and audit trail enforcement.
 
-## Target Stack & Conventions
-- **Language:** Python 3.11+ (FastAPI, Pydantic v2, HTTPX)
-- **Code Style:** Black / Ruff linting, typed python with strict type hints.
-- **Testing:** Pytest for schema transformation unit tests.
+## System Guardrails
+- Upstream reference repositories (`openstudybuilder-ref`, `openclinica-ref`) MUST remain untouched.
+- All newly extracted modules, Pydantic v2 schemas, FastAPI routes, and database migrations MUST be generated exclusively inside `cadence-clinical`.
+- Stack: Python 3.11+ (FastAPI, Pydantic v2, HTTPX), Keycloak OIDC, Docker Compose setup.
