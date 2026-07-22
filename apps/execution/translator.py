@@ -14,6 +14,17 @@ env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
 def extract_appearance(item: dict) -> str | None:
+    """Extract grid layout metadata properties into standard Enketo appearance classes.
+
+    Parses USDM item layout properties (`cols`, `column_span`, `span`) directly or from
+    a nested layout/grid object, converting width factors into OpenRosa/Enketo classes (`w1`-`w4`).
+
+    Args:
+        item (dict): The USDM study item definition dictionary.
+
+    Returns:
+        str | None: The computed appearance class, or None if no layout is specified.
+    """
     # Check item.cols, item.column_span, item.span
     keys = ["cols", "column_span", "span"]
     for k in keys:
