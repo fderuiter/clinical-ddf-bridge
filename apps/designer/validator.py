@@ -3,11 +3,33 @@ from pydantic import BaseModel
 from neo4j import AsyncSession
 
 class ItemMappingStatus(BaseModel):
+    """
+    Represents the mapping status of an individual activity item.
+    
+    Attributes:
+        item_id: The public string identifier of the activity item.
+        internal_id: The internal graph database ID of the activity item.
+        is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it.
+    """
     item_id: Optional[str]
     internal_id: Optional[int]
     is_mapped: bool
 
 class ActivityReport(BaseModel):
+    """
+    Detailed report of an activity definition mapped within an epoch schedule.
+    
+    Attributes:
+        epoch_id: The public identifier for the study epoch.
+        epoch_internal_id: The internal database ID for the epoch.
+        scheduled_event_id: The public identifier for the scheduled event instance.
+        scheduled_event_internal_id: The internal database ID for the scheduled event instance.
+        activity_def_id: The public identifier for the activity definition.
+        activity_def_internal_id: The internal database ID for the activity definition.
+        status: Mapping status of this activity ('complete', 'incomplete', or 'unmapped').
+        unmapped_items: List of `ItemMappingStatus` for items lacking an operational mapping.
+        mapped_items: List of `ItemMappingStatus` for items successfully mapped to operational nodes.
+    """
     epoch_id: Optional[str]
     epoch_internal_id: int
     scheduled_event_id: Optional[str]
@@ -19,6 +41,17 @@ class ActivityReport(BaseModel):
     mapped_items: List[ItemMappingStatus]
 
 class StudyAlignmentReport(BaseModel):
+    """
+    Comprehensive alignment report analyzing the mapping between study epochs and CRFs.
+    
+    Attributes:
+        study_id: The unique identifier of the study being evaluated.
+        complete_activities: Activities where all required items are mapped successfully.
+        incomplete_activities: Activities with partially mapped items.
+        unmapped_activities: Activities completely lacking any mapped items.
+        unmapped_odm_items: ODM nodes present but not associated with any active activity item.
+        unmapped_crf_item_values: CRF items/values present but not associated with any activity definition.
+    """
     study_id: str
     complete_activities: List[ActivityReport]
     incomplete_activities: List[ActivityReport]
@@ -27,6 +60,19 @@ class StudyAlignmentReport(BaseModel):
     unmapped_crf_item_values: List[Dict[str, Any]]
 
 async def get_unmapped_odm_items(session: AsyncSession) -> List[Dict[str, Any]]:
+    """
+    Retrieves all ODM items that have not been mapped to an active ActivityItem.
+    
+    This helps in identifying extraneous operational data elements that are present
+    in the database but not integrated into the study's scheduled activity tree.
+    
+    Args:
+        session (AsyncSession): The active Neo4j asynchronous session.
+        
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries representing unmapped ODM nodes,
+            containing 'internal_id', 'node_id', and 'node_labels'.
+    """
     query = """
     MATCH (odm)
     WHERE ('ODMItem' IN labels(odm) OR 'CDISCODMItem' IN labels(odm))
@@ -44,6 +90,18 @@ async def get_unmapped_odm_items(session: AsyncSession) -> List[Dict[str, Any]]:
     ]
 
 async def get_unmapped_crf_item_values(session: AsyncSession) -> List[Dict[str, Any]]:
+    """
+    Retrieves all CRF items/values that lack a relationship mapping to any ActivityDefinition.
+    
+    Identifies operational case report fields disconnected from the broader protocol schema.
+    
+    Args:
+        session (AsyncSession): The active Neo4j asynchronous session.
+        
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries representing unmapped CRF nodes,
+            containing 'internal_id', 'node_id', and 'node_labels'.
+    """
     query = """
     MATCH (crf)
     WHERE ('CRFItemValue' IN labels(crf) OR 'CRFNode' IN labels(crf) OR 'CRFItem' IN labels(crf))
@@ -61,6 +119,23 @@ async def get_unmapped_crf_item_values(session: AsyncSession) -> List[Dict[str, 
     ]
 
 async def evaluate_epoch_activities(session: AsyncSession, study_id: str):
+    """
+    Evaluates mapping statuses for all activities linked under a given study's epochs.
+    
+    Executes a Cypher traversal starting from the Study down through Epochs, ScheduledEvents,
+    and ActivityDefinitions. It aggregates the active ActivityItems beneath them and checks
+    if these items are linked to operational elements (like ODMItem or CRFItem).
+    
+    Args:
+        session (AsyncSession): The active Neo4j asynchronous session.
+        study_id (str): The unique string identifier of the target Study node.
+        
+    Returns:
+        tuple: A three-element tuple of lists:
+            - complete: List of ActivityReport for fully mapped activities.
+            - incomplete: List of ActivityReport for partially mapped activities.
+            - unmapped: List of ActivityReport for activities with zero mappings.
+    """
     query = """
     MATCH (s:Study)-[]->(e)-[]->(sei)-[]->(ad)
     WHERE s.id = $study_id 
@@ -126,6 +201,19 @@ async def evaluate_epoch_activities(session: AsyncSession, study_id: str):
     return complete, incomplete, unmapped
 
 async def generate_alignment_report(driver, study_id: str) -> StudyAlignmentReport:
+    """
+    Orchestrates the entire alignment validation for a given study and builds a final report.
+    
+    Uses an isolated neo4j AsyncSession to capture both unmapped global operational items
+    and the activity-specific evaluation metrics across all epochs in the study.
+    
+    Args:
+        driver (neo4j.AsyncDriver): A Neo4j Async Driver instance.
+        study_id (str): The string identifier of the study to evaluate.
+        
+    Returns:
+        StudyAlignmentReport: A comprehensive report model containing structural discrepancies.
+    """
     async with driver.session() as session:
         unmapped_odm = await get_unmapped_odm_items(session)
         unmapped_crf = await get_unmapped_crf_item_values(session)
