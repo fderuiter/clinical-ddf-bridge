@@ -5,194 +5,2017 @@ This guide provides centralized functional specifications and manual verificatio
 
 ---
 
-## 2. Study Design & MDR Parity (OpenStudyBuilder)
+# PART 1: OpenStudyBuilder Features
+OpenStudyBuilder is an open-source solution for clinical study specification. It relies on CDISC standards and aims to provide a centralized metadata repository (MDR).
 
-### 2.1 Specification: Study Design & Metadata Repository (MDR)
-The system must support the definition and governance of study designs according to CDISC Standards and centralized metadata repositories.
-- **Biomedical Concepts (BCs):** Core clinical concepts must be mapable and reusable across protocols.
-- **Data Standards Governance:** Ensure CDISC Controlled Terminology (CT) and custom dictionaries can be versioned and applied to study items.
-- **Study Elements & Arms:** Support the definition of study arms, cohorts, and elements for complex trial designs (e.g., crossover, adaptive).
-- **Value-Level Metadata (VLM):** Ensure granular constraints and attributes at the value level are accurately captured.
+## Study Design & Metadata Repository (MDR)
+### Specification: Study Design & Metadata Repository (MDR) Workflows
+The system must support the robust definition and governance of the following features:
+- **Biomedical Concepts (BCs):** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Biomedical Concepts (BCs).
+  - APIs must provide CRUD endpoints for Biomedical Concepts (BCs).
+  - UI must allow authorized users to manage Biomedical Concepts (BCs).
+  - Audit logs must track all modifications to Biomedical Concepts (BCs).
+- **Data Standards Governance:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Data Standards Governance.
+  - APIs must provide CRUD endpoints for Data Standards Governance.
+  - UI must allow authorized users to manage Data Standards Governance.
+  - Audit logs must track all modifications to Data Standards Governance.
+- **Study Elements & Arms:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Study Elements & Arms.
+  - APIs must provide CRUD endpoints for Study Elements & Arms.
+  - UI must allow authorized users to manage Study Elements & Arms.
+  - Audit logs must track all modifications to Study Elements & Arms.
+- **Value-Level Metadata (VLM):** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Value-Level Metadata (VLM).
+  - APIs must provide CRUD endpoints for Value-Level Metadata (VLM).
+  - UI must allow authorized users to manage Value-Level Metadata (VLM).
+  - Audit logs must track all modifications to Value-Level Metadata (VLM).
+- **Syntax and Dictionary Validations:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Syntax and Dictionary Validations.
+  - APIs must provide CRUD endpoints for Syntax and Dictionary Validations.
+  - UI must allow authorized users to manage Syntax and Dictionary Validations.
+  - Audit logs must track all modifications to Syntax and Dictionary Validations.
+- **Study Objective Mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Study Objective Mapping.
+  - APIs must provide CRUD endpoints for Study Objective Mapping.
+  - UI must allow authorized users to manage Study Objective Mapping.
+  - Audit logs must track all modifications to Study Objective Mapping.
+- **Endpoints Definition:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Endpoints Definition.
+  - APIs must provide CRUD endpoints for Endpoints Definition.
+  - UI must allow authorized users to manage Endpoints Definition.
+  - Audit logs must track all modifications to Endpoints Definition.
+- **Trial Activity Timelines:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Trial Activity Timelines.
+  - APIs must provide CRUD endpoints for Trial Activity Timelines.
+  - UI must allow authorized users to manage Trial Activity Timelines.
+  - Audit logs must track all modifications to Trial Activity Timelines.
+- **Complex Trial Designs:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Complex Trial Designs.
+  - APIs must provide CRUD endpoints for Complex Trial Designs.
+  - UI must allow authorized users to manage Complex Trial Designs.
+  - Audit logs must track all modifications to Complex Trial Designs.
+- **Adaptive Trial Support:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Adaptive Trial Support.
+  - APIs must provide CRUD endpoints for Adaptive Trial Support.
+  - UI must allow authorized users to manage Adaptive Trial Support.
+  - Audit logs must track all modifications to Adaptive Trial Support.
+- **Basket Trial Design:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Basket Trial Design.
+  - APIs must provide CRUD endpoints for Basket Trial Design.
+  - UI must allow authorized users to manage Basket Trial Design.
+  - Audit logs must track all modifications to Basket Trial Design.
+- **Umbrella Trial Design:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Umbrella Trial Design.
+  - APIs must provide CRUD endpoints for Umbrella Trial Design.
+  - UI must allow authorized users to manage Umbrella Trial Design.
+  - Audit logs must track all modifications to Umbrella Trial Design.
+- **Platform Trial Configurations:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Platform Trial Configurations.
+  - APIs must provide CRUD endpoints for Platform Trial Configurations.
+  - UI must allow authorized users to manage Platform Trial Configurations.
+  - Audit logs must track all modifications to Platform Trial Configurations.
+- **Crossover Study Parameters:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Crossover Study Parameters.
+  - APIs must provide CRUD endpoints for Crossover Study Parameters.
+  - UI must allow authorized users to manage Crossover Study Parameters.
+  - Audit logs must track all modifications to Crossover Study Parameters.
+- **Dose Escalation Protocols:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Dose Escalation Protocols.
+  - APIs must provide CRUD endpoints for Dose Escalation Protocols.
+  - UI must allow authorized users to manage Dose Escalation Protocols.
+  - Audit logs must track all modifications to Dose Escalation Protocols.
+- **Blinding Mechanisms:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Blinding Mechanisms.
+  - APIs must provide CRUD endpoints for Blinding Mechanisms.
+  - UI must allow authorized users to manage Blinding Mechanisms.
+  - Audit logs must track all modifications to Blinding Mechanisms.
+- **Stratification Criteria:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Stratification Criteria.
+  - APIs must provide CRUD endpoints for Stratification Criteria.
+  - UI must allow authorized users to manage Stratification Criteria.
+  - Audit logs must track all modifications to Stratification Criteria.
+- **Inclusion/Exclusion Criteria Governance:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Inclusion/Exclusion Criteria Governance.
+  - APIs must provide CRUD endpoints for Inclusion/Exclusion Criteria Governance.
+  - UI must allow authorized users to manage Inclusion/Exclusion Criteria Governance.
+  - Audit logs must track all modifications to Inclusion/Exclusion Criteria Governance.
+- **Protocol Version Control:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Protocol Version Control.
+  - APIs must provide CRUD endpoints for Protocol Version Control.
+  - UI must allow authorized users to manage Protocol Version Control.
+  - Audit logs must track all modifications to Protocol Version Control.
+- **Study Phase Definitions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Study Phase Definitions.
+  - APIs must provide CRUD endpoints for Study Phase Definitions.
+  - UI must allow authorized users to manage Study Phase Definitions.
+  - Audit logs must track all modifications to Study Phase Definitions.
+- **Therapeutic Area Mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Therapeutic Area Mapping.
+  - APIs must provide CRUD endpoints for Therapeutic Area Mapping.
+  - UI must allow authorized users to manage Therapeutic Area Mapping.
+  - Audit logs must track all modifications to Therapeutic Area Mapping.
+- **Indication Mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Indication Mapping.
+  - APIs must provide CRUD endpoints for Indication Mapping.
+  - UI must allow authorized users to manage Indication Mapping.
+  - Audit logs must track all modifications to Indication Mapping.
+- **Study Type Configurations:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Study Type Configurations.
+  - APIs must provide CRUD endpoints for Study Type Configurations.
+  - UI must allow authorized users to manage Study Type Configurations.
+  - Audit logs must track all modifications to Study Type Configurations.
+- **Sponsor Specific Configurations:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Sponsor Specific Configurations.
+  - APIs must provide CRUD endpoints for Sponsor Specific Configurations.
+  - UI must allow authorized users to manage Sponsor Specific Configurations.
+  - Audit logs must track all modifications to Sponsor Specific Configurations.
+- **Regulatory Submission Metadata:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Regulatory Submission Metadata.
+  - APIs must provide CRUD endpoints for Regulatory Submission Metadata.
+  - UI must allow authorized users to manage Regulatory Submission Metadata.
+  - Audit logs must track all modifications to Regulatory Submission Metadata.
 
-### 2.2 Manual Verification Checklist: Study Design & MDR
-- [ ] **Step 1:** Define reusable Biomedical Concepts in the metadata repository.
-- [ ] **Step 2:** Associate CDISC Controlled Terminology versions with corresponding study items.
-- [ ] **Step 3:** Define a complex trial design containing multiple Study Arms, Cohorts, and Elements.
-- [ ] **Step 4:** **Verify Biomedical Concepts:** Ensure forms and datasets accurately reflect the mapped BCs.
-- [ ] **Step 5:** **Verify Standards Governance:** Ensure forms reject data that violates the applied Controlled Terminology.
-- [ ] **Step 6:** **Verify VLM:** Confirm that value-level validations fire appropriately for specific item conditions.
+### Manual Verification Checklist: Study Design & Metadata Repository (MDR)
+- [ ] **Step 1:** Validate that **Biomedical Concepts (BCs)** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Biomedical Concepts (BCs).
+  - Action: Update the Biomedical Concepts (BCs) entity and verify version bump.
+  - Action: Delete/Archive the Biomedical Concepts (BCs) and ensure soft-delete works.
+- [ ] **Step 2:** Validate that **Data Standards Governance** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Data Standards Governance.
+  - Action: Update the Data Standards Governance entity and verify version bump.
+  - Action: Delete/Archive the Data Standards Governance and ensure soft-delete works.
+- [ ] **Step 3:** Validate that **Study Elements & Arms** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Study Elements & Arms.
+  - Action: Update the Study Elements & Arms entity and verify version bump.
+  - Action: Delete/Archive the Study Elements & Arms and ensure soft-delete works.
+- [ ] **Step 4:** Validate that **Value-Level Metadata (VLM)** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Value-Level Metadata (VLM).
+  - Action: Update the Value-Level Metadata (VLM) entity and verify version bump.
+  - Action: Delete/Archive the Value-Level Metadata (VLM) and ensure soft-delete works.
+- [ ] **Step 5:** Validate that **Syntax and Dictionary Validations** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Syntax and Dictionary Validations.
+  - Action: Update the Syntax and Dictionary Validations entity and verify version bump.
+  - Action: Delete/Archive the Syntax and Dictionary Validations and ensure soft-delete works.
+- [ ] **Step 6:** Validate that **Study Objective Mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Study Objective Mapping.
+  - Action: Update the Study Objective Mapping entity and verify version bump.
+  - Action: Delete/Archive the Study Objective Mapping and ensure soft-delete works.
+- [ ] **Step 7:** Validate that **Endpoints Definition** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Endpoints Definition.
+  - Action: Update the Endpoints Definition entity and verify version bump.
+  - Action: Delete/Archive the Endpoints Definition and ensure soft-delete works.
+- [ ] **Step 8:** Validate that **Trial Activity Timelines** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Trial Activity Timelines.
+  - Action: Update the Trial Activity Timelines entity and verify version bump.
+  - Action: Delete/Archive the Trial Activity Timelines and ensure soft-delete works.
+- [ ] **Step 9:** Validate that **Complex Trial Designs** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Complex Trial Designs.
+  - Action: Update the Complex Trial Designs entity and verify version bump.
+  - Action: Delete/Archive the Complex Trial Designs and ensure soft-delete works.
+- [ ] **Step 10:** Validate that **Adaptive Trial Support** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Adaptive Trial Support.
+  - Action: Update the Adaptive Trial Support entity and verify version bump.
+  - Action: Delete/Archive the Adaptive Trial Support and ensure soft-delete works.
+- [ ] **Step 11:** Validate that **Basket Trial Design** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Basket Trial Design.
+  - Action: Update the Basket Trial Design entity and verify version bump.
+  - Action: Delete/Archive the Basket Trial Design and ensure soft-delete works.
+- [ ] **Step 12:** Validate that **Umbrella Trial Design** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Umbrella Trial Design.
+  - Action: Update the Umbrella Trial Design entity and verify version bump.
+  - Action: Delete/Archive the Umbrella Trial Design and ensure soft-delete works.
+- [ ] **Step 13:** Validate that **Platform Trial Configurations** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Platform Trial Configurations.
+  - Action: Update the Platform Trial Configurations entity and verify version bump.
+  - Action: Delete/Archive the Platform Trial Configurations and ensure soft-delete works.
+- [ ] **Step 14:** Validate that **Crossover Study Parameters** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Crossover Study Parameters.
+  - Action: Update the Crossover Study Parameters entity and verify version bump.
+  - Action: Delete/Archive the Crossover Study Parameters and ensure soft-delete works.
+- [ ] **Step 15:** Validate that **Dose Escalation Protocols** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Dose Escalation Protocols.
+  - Action: Update the Dose Escalation Protocols entity and verify version bump.
+  - Action: Delete/Archive the Dose Escalation Protocols and ensure soft-delete works.
+- [ ] **Step 16:** Validate that **Blinding Mechanisms** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Blinding Mechanisms.
+  - Action: Update the Blinding Mechanisms entity and verify version bump.
+  - Action: Delete/Archive the Blinding Mechanisms and ensure soft-delete works.
+- [ ] **Step 17:** Validate that **Stratification Criteria** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Stratification Criteria.
+  - Action: Update the Stratification Criteria entity and verify version bump.
+  - Action: Delete/Archive the Stratification Criteria and ensure soft-delete works.
+- [ ] **Step 18:** Validate that **Inclusion/Exclusion Criteria Governance** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Inclusion/Exclusion Criteria Governance.
+  - Action: Update the Inclusion/Exclusion Criteria Governance entity and verify version bump.
+  - Action: Delete/Archive the Inclusion/Exclusion Criteria Governance and ensure soft-delete works.
+- [ ] **Step 19:** Validate that **Protocol Version Control** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Protocol Version Control.
+  - Action: Update the Protocol Version Control entity and verify version bump.
+  - Action: Delete/Archive the Protocol Version Control and ensure soft-delete works.
+- [ ] **Step 20:** Validate that **Study Phase Definitions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Study Phase Definitions.
+  - Action: Update the Study Phase Definitions entity and verify version bump.
+  - Action: Delete/Archive the Study Phase Definitions and ensure soft-delete works.
+- [ ] **Step 21:** Validate that **Therapeutic Area Mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Therapeutic Area Mapping.
+  - Action: Update the Therapeutic Area Mapping entity and verify version bump.
+  - Action: Delete/Archive the Therapeutic Area Mapping and ensure soft-delete works.
+- [ ] **Step 22:** Validate that **Indication Mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Indication Mapping.
+  - Action: Update the Indication Mapping entity and verify version bump.
+  - Action: Delete/Archive the Indication Mapping and ensure soft-delete works.
+- [ ] **Step 23:** Validate that **Study Type Configurations** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Study Type Configurations.
+  - Action: Update the Study Type Configurations entity and verify version bump.
+  - Action: Delete/Archive the Study Type Configurations and ensure soft-delete works.
+- [ ] **Step 24:** Validate that **Sponsor Specific Configurations** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Sponsor Specific Configurations.
+  - Action: Update the Sponsor Specific Configurations entity and verify version bump.
+  - Action: Delete/Archive the Sponsor Specific Configurations and ensure soft-delete works.
+- [ ] **Step 25:** Validate that **Regulatory Submission Metadata** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Regulatory Submission Metadata.
+  - Action: Update the Regulatory Submission Metadata entity and verify version bump.
+  - Action: Delete/Archive the Regulatory Submission Metadata and ensure soft-delete works.
 
 ---
 
-## 3. USDM Study Versioning Parity (OpenStudyBuilder)
+## USDM Study Versioning Parity
+### Specification: USDM Study Versioning Parity Workflows
+The system must support the robust definition and governance of the following features:
+- **USDM Versioning Translation:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for USDM Versioning Translation.
+  - APIs must provide CRUD endpoints for USDM Versioning Translation.
+  - UI must allow authorized users to manage USDM Versioning Translation.
+  - Audit logs must track all modifications to USDM Versioning Translation.
+- **Version Extraction Rules:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Version Extraction Rules.
+  - APIs must provide CRUD endpoints for Version Extraction Rules.
+  - UI must allow authorized users to manage Version Extraction Rules.
+  - Audit logs must track all modifications to Version Extraction Rules.
+- **Graph Immutability:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Graph Immutability.
+  - APIs must provide CRUD endpoints for Graph Immutability.
+  - UI must allow authorized users to manage Graph Immutability.
+  - Audit logs must track all modifications to Graph Immutability.
+- **Node Revisions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Node Revisions.
+  - APIs must provide CRUD endpoints for Node Revisions.
+  - UI must allow authorized users to manage Node Revisions.
+  - Audit logs must track all modifications to Node Revisions.
+- **Audit Trail of Metadata Changes:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Audit Trail of Metadata Changes.
+  - APIs must provide CRUD endpoints for Audit Trail of Metadata Changes.
+  - UI must allow authorized users to manage Audit Trail of Metadata Changes.
+  - Audit logs must track all modifications to Audit Trail of Metadata Changes.
+- **Study Status Transitions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Study Status Transitions.
+  - APIs must provide CRUD endpoints for Study Status Transitions.
+  - UI must allow authorized users to manage Study Status Transitions.
+  - Audit logs must track all modifications to Study Status Transitions.
+- **Protocol Amendment Workflows:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Protocol Amendment Workflows.
+  - APIs must provide CRUD endpoints for Protocol Amendment Workflows.
+  - UI must allow authorized users to manage Protocol Amendment Workflows.
+  - Audit logs must track all modifications to Protocol Amendment Workflows.
+- **Historical State Preservation:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Historical State Preservation.
+  - APIs must provide CRUD endpoints for Historical State Preservation.
+  - UI must allow authorized users to manage Historical State Preservation.
+  - Audit logs must track all modifications to Historical State Preservation.
+- **Branching Protocols:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Branching Protocols.
+  - APIs must provide CRUD endpoints for Branching Protocols.
+  - UI must allow authorized users to manage Branching Protocols.
+  - Audit logs must track all modifications to Branching Protocols.
+- **Draft vs Final Study States:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Draft vs Final Study States.
+  - APIs must provide CRUD endpoints for Draft vs Final Study States.
+  - UI must allow authorized users to manage Draft vs Final Study States.
+  - Audit logs must track all modifications to Draft vs Final Study States.
+- **Semantic Versioning for Studies:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Semantic Versioning for Studies.
+  - APIs must provide CRUD endpoints for Semantic Versioning for Studies.
+  - UI must allow authorized users to manage Semantic Versioning for Studies.
+  - Audit logs must track all modifications to Semantic Versioning for Studies.
+- **Difference Tracking between versions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Difference Tracking between versions.
+  - APIs must provide CRUD endpoints for Difference Tracking between versions.
+  - UI must allow authorized users to manage Difference Tracking between versions.
+  - Audit logs must track all modifications to Difference Tracking between versions.
 
-### 3.1 Specification: USDM Versioning Translation
-The system must translate study metadata into CDISC USDM-compatible versioning models.
-- **Study Metadata Mapping:** Core study metadata (e.g., Title, Phase, Status) must map strictly to the USDM-defined fields.
-- **Version Extraction Rules:** Any mutation to the study design or metadata must trigger a version increment. The updated metadata must map to a new version indicator or `StudyVersion` entity in the underlying models.
-- **Graph Immutability:** Instead of overriding existing nodes, the current study status and version details must map to newly versioned nodes in the Neo4j graph, maintaining a clear `PREVIOUS_VERSION` relationship to the prior state.
-
-### 3.2 Manual Verification Checklist: USDM Versioning Model
-- [ ] **Step 1:** Start the local development environment and log into the Designer Service.
-- [ ] **Step 2:** Create a new Study Protocol with initial metadata and save it to establish the baseline version (Version 1).
-- [ ] **Step 3:** Trigger a USDM study metadata export and verify that the output correctly reflects the initial version indicators.
-- [ ] **Step 4:** Perform an update to the core study metadata (e.g., update the Phase or Status) and save the changes.
-- [ ] **Step 5:** Export the updated study metadata via the local data model output.
-- [ ] **Step 6:** **Verify Version Indicator:** Inspect the output and confirm that the version number has correctly incremented and matches the USDM version extraction rules.
-- [ ] **Step 7:** **Verify Metadata Translation:** Check that the updated status and metadata accurately map to the core USDM definitions in the new export.
-- [ ] **Step 8:** **Verify Graph History:** Query the local graph database to ensure the new version node links to the previous version node via a `PREVIOUS_VERSION` relationship, leaving the historical version intact.
-
----
-
-## 4. Schedule of Activities (SoA) Parity (OpenStudyBuilder/OpenClinica)
-
-### 4.1 Specification: SoA Definitions
-The system must correctly map visits, epochs, and scheduled activities in alignment with CDISC USDM standards.
-- **Epochs:** Trial periods (e.g., Screening, Treatment, Follow-up) must map correctly to USDM `Epoch` entities.
-- **Visits:** Study visits and encounters must be defined within their respective epochs as `StudyEventDef` entities.
-- **Activities:** Clinical procedures and assessments must map to scheduled activities and link to the relevant forms/CRFs.
-
-### 4.2 Manual Verification Checklist: SoA Definitions
-- [ ] **Step 1:** Define a study protocol with multiple epochs, visits, and assigned activities.
-- [ ] **Step 2:** Export the study definition to USDM format.
-- [ ] **Step 3:** **Verify Epochs:** Confirm all defined epochs are correctly mapped.
-- [ ] **Step 4:** **Verify Visits:** Ensure study events align with their parent epochs.
-- [ ] **Step 5:** **Verify Activities:** Check that scheduled procedures map to the correct CRFs and encounters.
-
----
-
-## 5. Electronic Data Capture (EDC) & eCRF Parity (OpenClinica)
-
-### 5.1 Specification: Excel CRF Parsing & eCRF Management
-The system must correctly parse clinical trial spreadsheets to translate workbook elements into corresponding clinical entities, ensuring full parity with competitor systems:
-- **Sheets:** Each sheet within the Excel workbook represents a distinct CRF or form.
-- **Sections:** Rows defined as section headers within the sheet are mapped to distinct layout containers or UI sections within the target form.
-- **Groups:** Repeating sets of questions (e.g., grids or repeating groups) designated by grouping columns must be mapped to `ItemGroupDef` clinical entities.
-- **Items:** Individual question rows are mapped to `ItemDef` clinical entities, translating their associated data types, constraints, and validation rules accordingly.
-
-### 5.2 Manual Verification Checklist: Spreadsheet Import
-- [ ] **Step 1:** Start the local development environment.
-- [ ] **Step 2:** Prepare a test Excel CRF spreadsheet containing multiple sheets, distinct section headers, grouped variables, and individual items.
-- [ ] **Step 3:** Upload the spreadsheet using the local eCRF import interface or API endpoint.
-- [ ] **Step 4:** Retrieve the mapped target entities from the local database or Designer UI.
-- [ ] **Step 5:** **Verify Sheets:** Check that each sheet in the spreadsheet has correctly translated into a distinct form entity.
-- [ ] **Step 6:** **Verify Sections:** Confirm that the section headers have correctly translated into corresponding layout sections within each form.
-- [ ] **Step 7:** **Verify Groups:** Ensure that grouped columns are accurately structured as `ItemGroupDef` entities with the correct repeating attributes.
-- [ ] **Step 8:** **Verify Items:** Compare the item rows in the spreadsheet against the created `ItemDef` entities, confirming that data types, constraints, and validation rules match exactly.
-
----
-
-## 6. OpenRosa/Enketo XForm Rendering Parity
-
-### 6.1 Specification: XForm Rendering Rules
-The system must render clinical data capture forms compliant with OpenRosa standards.
-- **Form UI Controls:** Data constraints and item definitions must map to valid XForm input controls.
-- **Relevance & Skip Logic:** Branching logic must correctly map to XForm `relevant` attributes.
-- **Calculations:** Computed fields must correctly translate to XForm `calculate` bindings.
-
-### 6.2 Manual Verification Checklist: XForm Rendering
-- [ ] **Step 1:** Define a CRF containing conditional logic and calculated fields.
-- [ ] **Step 2:** Generate the OpenRosa XForm XML payload.
-- [ ] **Step 3:** **Verify UI Controls:** Check that inputs match their defined data types.
-- [ ] **Step 4:** **Verify Skip Logic:** Confirm that `relevant` attributes hide/show fields properly.
-- [ ] **Step 5:** **Verify Calculations:** Test computed bindings in an Enketo-compatible renderer.
-
----
-
-## 7. Subject Management & Randomization Parity (OpenClinica)
-
-### 7.1 Specification: Subject State Machine & Randomization
-The system must govern participant statuses and enable integrated randomization mechanisms.
-- **State Integrity:** Participants can only transition between allowed states (e.g., Enrolled, Active, Completed, Withdrawn).
-- **Transition Logs:** Every state change must record the timestamp and responsible user.
-- **Randomization:** Integration with RTSM/IWRS systems to allocate treatments securely and blindly upon subject eligibility.
-
-### 7.2 Manual Verification Checklist: Subject Management
-- [ ] **Step 1:** Create a test subject in the "Enrolled" state.
-- [ ] **Step 2:** Attempt valid and invalid status transitions.
-- [ ] **Step 3:** **Verify Integrity:** Confirm invalid transitions are rejected by the system.
-- [ ] **Step 4:** **Verify Transition Logs:** Ensure valid state changes are recorded accurately.
-- [ ] **Step 5:** **Verify Randomization:** Confirm that upon marking a subject as "Eligible", the randomization module successfully assigns an appropriate arm/treatment without unblinding the investigator.
-
----
-
-## 8. Query Management & Discrepancy Notes Parity (OpenClinica)
-
-### 8.1 Specification: Query Workflows
-The system must support the complete lifecycle of clinical data queries (Open, Answered, Closed, Reassigned) and discrepancy management.
-- **Query Creation:** Automated cross-form edit checks and manual reviewers can flag discrepancies.
-- **Query Resolution:** Sites can provide answers, which data managers can subsequently close or re-open.
-- **SDV Integration:** Queries can be created during Source Data Verification (SDV) to flag source-to-CRF inconsistencies.
-
-### 8.2 Manual Verification Checklist: Query Management
-- [ ] **Step 1:** Trigger a validation discrepancy on an eCRF via an edit check to generate a query.
-- [ ] **Step 2:** Submit an answer to the query as a Site User.
-- [ ] **Step 3:** **Verify Workflow:** Ensure the query state moves from "Open" to "Answered".
-- [ ] **Step 4:** **Verify Resolution:** Close the query as a Data Manager and confirm it is locked.
-- [ ] **Step 5:** **Verify SDV Queries:** Flag an item during SDV and verify a Discrepancy Note is instantiated.
-
----
-
-## 9. Medical Coding & Dictionary Integration Parity (OpenClinica)
-
-### 9.1 Specification: Medical Coding Workflows
-The system must support auto-coding and manual coding for terms such as Adverse Events and Concomitant Medications.
-- **Dictionary Support:** MedDRA and WHODrug dictionary integrations must be supported.
-- **Auto-Coding:** The system must match verbatim terms to dictionary lowest level terms (LLT) where an exact match exists.
-- **Manual Coding:** Synonym lists and up-versioning mechanisms must be available for medical coders to handle non-exact matches.
-
-### 9.2 Manual Verification Checklist: Medical Coding
-- [ ] **Step 1:** Enter a verbatim term into an Adverse Event CRF that exactly matches a MedDRA LLT.
-- [ ] **Step 2:** **Verify Auto-Coding:** Check that the system automatically assigns the corresponding MedDRA code and hierarchical terms (PT, SOC, etc.).
-- [ ] **Step 3:** Enter an ambiguous verbatim term.
-- [ ] **Step 4:** **Verify Manual Coding:** Confirm that a Medical Coder role can search the dictionary, apply the correct code manually, and save the term to a synonym list.
+### Manual Verification Checklist: USDM Study Versioning Parity
+- [ ] **Step 1:** Validate that **USDM Versioning Translation** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for USDM Versioning Translation.
+  - Action: Update the USDM Versioning Translation entity and verify version bump.
+  - Action: Delete/Archive the USDM Versioning Translation and ensure soft-delete works.
+- [ ] **Step 2:** Validate that **Version Extraction Rules** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Version Extraction Rules.
+  - Action: Update the Version Extraction Rules entity and verify version bump.
+  - Action: Delete/Archive the Version Extraction Rules and ensure soft-delete works.
+- [ ] **Step 3:** Validate that **Graph Immutability** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Graph Immutability.
+  - Action: Update the Graph Immutability entity and verify version bump.
+  - Action: Delete/Archive the Graph Immutability and ensure soft-delete works.
+- [ ] **Step 4:** Validate that **Node Revisions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Node Revisions.
+  - Action: Update the Node Revisions entity and verify version bump.
+  - Action: Delete/Archive the Node Revisions and ensure soft-delete works.
+- [ ] **Step 5:** Validate that **Audit Trail of Metadata Changes** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Audit Trail of Metadata Changes.
+  - Action: Update the Audit Trail of Metadata Changes entity and verify version bump.
+  - Action: Delete/Archive the Audit Trail of Metadata Changes and ensure soft-delete works.
+- [ ] **Step 6:** Validate that **Study Status Transitions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Study Status Transitions.
+  - Action: Update the Study Status Transitions entity and verify version bump.
+  - Action: Delete/Archive the Study Status Transitions and ensure soft-delete works.
+- [ ] **Step 7:** Validate that **Protocol Amendment Workflows** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Protocol Amendment Workflows.
+  - Action: Update the Protocol Amendment Workflows entity and verify version bump.
+  - Action: Delete/Archive the Protocol Amendment Workflows and ensure soft-delete works.
+- [ ] **Step 8:** Validate that **Historical State Preservation** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Historical State Preservation.
+  - Action: Update the Historical State Preservation entity and verify version bump.
+  - Action: Delete/Archive the Historical State Preservation and ensure soft-delete works.
+- [ ] **Step 9:** Validate that **Branching Protocols** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Branching Protocols.
+  - Action: Update the Branching Protocols entity and verify version bump.
+  - Action: Delete/Archive the Branching Protocols and ensure soft-delete works.
+- [ ] **Step 10:** Validate that **Draft vs Final Study States** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Draft vs Final Study States.
+  - Action: Update the Draft vs Final Study States entity and verify version bump.
+  - Action: Delete/Archive the Draft vs Final Study States and ensure soft-delete works.
+- [ ] **Step 11:** Validate that **Semantic Versioning for Studies** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Semantic Versioning for Studies.
+  - Action: Update the Semantic Versioning for Studies entity and verify version bump.
+  - Action: Delete/Archive the Semantic Versioning for Studies and ensure soft-delete works.
+- [ ] **Step 12:** Validate that **Difference Tracking between versions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Difference Tracking between versions.
+  - Action: Update the Difference Tracking between versions entity and verify version bump.
+  - Action: Delete/Archive the Difference Tracking between versions and ensure soft-delete works.
 
 ---
 
-## 10. Data Extraction & Exporting Parity (OpenClinica)
+## Schedule of Activities (SoA) Parity
+### Specification: Schedule of Activities (SoA) Parity Workflows
+The system must support the robust definition and governance of the following features:
+- **Epoch Definitions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Epoch Definitions.
+  - APIs must provide CRUD endpoints for Epoch Definitions.
+  - UI must allow authorized users to manage Epoch Definitions.
+  - Audit logs must track all modifications to Epoch Definitions.
+- **Visit Definitions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Visit Definitions.
+  - APIs must provide CRUD endpoints for Visit Definitions.
+  - UI must allow authorized users to manage Visit Definitions.
+  - Audit logs must track all modifications to Visit Definitions.
+- **Activity Definitions:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Activity Definitions.
+  - APIs must provide CRUD endpoints for Activity Definitions.
+  - UI must allow authorized users to manage Activity Definitions.
+  - Audit logs must track all modifications to Activity Definitions.
+- **Encounter Management:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Encounter Management.
+  - APIs must provide CRUD endpoints for Encounter Management.
+  - UI must allow authorized users to manage Encounter Management.
+  - Audit logs must track all modifications to Encounter Management.
+- **Unscheduled Visits:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Unscheduled Visits.
+  - APIs must provide CRUD endpoints for Unscheduled Visits.
+  - UI must allow authorized users to manage Unscheduled Visits.
+  - Audit logs must track all modifications to Unscheduled Visits.
+- **Optional Visits:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Optional Visits.
+  - APIs must provide CRUD endpoints for Optional Visits.
+  - UI must allow authorized users to manage Optional Visits.
+  - Audit logs must track all modifications to Optional Visits.
+- **Conditional Visits:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Conditional Visits.
+  - APIs must provide CRUD endpoints for Conditional Visits.
+  - UI must allow authorized users to manage Conditional Visits.
+  - Audit logs must track all modifications to Conditional Visits.
+- **Visit Windows & Tolerances:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Visit Windows & Tolerances.
+  - APIs must provide CRUD endpoints for Visit Windows & Tolerances.
+  - UI must allow authorized users to manage Visit Windows & Tolerances.
+  - Audit logs must track all modifications to Visit Windows & Tolerances.
+- **Activity Grouping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Activity Grouping.
+  - APIs must provide CRUD endpoints for Activity Grouping.
+  - UI must allow authorized users to manage Activity Grouping.
+  - Audit logs must track all modifications to Activity Grouping.
+- **Timepoint Linking:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Timepoint Linking.
+  - APIs must provide CRUD endpoints for Timepoint Linking.
+  - UI must allow authorized users to manage Timepoint Linking.
+  - Audit logs must track all modifications to Timepoint Linking.
+- **Matrix View Generation:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Matrix View Generation.
+  - APIs must provide CRUD endpoints for Matrix View Generation.
+  - UI must allow authorized users to manage Matrix View Generation.
+  - Audit logs must track all modifications to Matrix View Generation.
+- **Procedure Mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Procedure Mapping.
+  - APIs must provide CRUD endpoints for Procedure Mapping.
+  - UI must allow authorized users to manage Procedure Mapping.
+  - Audit logs must track all modifications to Procedure Mapping.
+- **Assessment Scheduling:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Assessment Scheduling.
+  - APIs must provide CRUD endpoints for Assessment Scheduling.
+  - UI must allow authorized users to manage Assessment Scheduling.
+  - Audit logs must track all modifications to Assessment Scheduling.
 
-### 10.1 Specification: Export Formats
-The system must provide industry-standard exports for biostatistics and archival.
-- **CDISC ODM-XML:** Extracted data and metadata must strictly adhere to the Operational Data Model schema.
-- **CDISC SDTM / Dataset-JSON:** Output mapped clinical data dynamically to standard submission formats.
-- **SPSS/SAS/CSV:** Support flat and structured file exports for statistical analysis.
-
-### 10.2 Manual Verification Checklist: Data Extraction
-- [ ] **Step 1:** Populate multiple subjects and CRFs with test data.
-- [ ] **Step 2:** Execute a data export job selecting CDISC ODM-XML and Dataset-JSON.
-- [ ] **Step 3:** **Verify ODM-XML:** Validate the XML against the CDISC ODM XSD schema.
-- [ ] **Step 4:** **Verify SDTM/Dataset-JSON:** Check that datasets align with the requested SDTM mappings and structures.
+### Manual Verification Checklist: Schedule of Activities (SoA) Parity
+- [ ] **Step 1:** Validate that **Epoch Definitions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Epoch Definitions.
+  - Action: Update the Epoch Definitions entity and verify version bump.
+  - Action: Delete/Archive the Epoch Definitions and ensure soft-delete works.
+- [ ] **Step 2:** Validate that **Visit Definitions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Visit Definitions.
+  - Action: Update the Visit Definitions entity and verify version bump.
+  - Action: Delete/Archive the Visit Definitions and ensure soft-delete works.
+- [ ] **Step 3:** Validate that **Activity Definitions** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Activity Definitions.
+  - Action: Update the Activity Definitions entity and verify version bump.
+  - Action: Delete/Archive the Activity Definitions and ensure soft-delete works.
+- [ ] **Step 4:** Validate that **Encounter Management** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Encounter Management.
+  - Action: Update the Encounter Management entity and verify version bump.
+  - Action: Delete/Archive the Encounter Management and ensure soft-delete works.
+- [ ] **Step 5:** Validate that **Unscheduled Visits** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Unscheduled Visits.
+  - Action: Update the Unscheduled Visits entity and verify version bump.
+  - Action: Delete/Archive the Unscheduled Visits and ensure soft-delete works.
+- [ ] **Step 6:** Validate that **Optional Visits** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Optional Visits.
+  - Action: Update the Optional Visits entity and verify version bump.
+  - Action: Delete/Archive the Optional Visits and ensure soft-delete works.
+- [ ] **Step 7:** Validate that **Conditional Visits** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Conditional Visits.
+  - Action: Update the Conditional Visits entity and verify version bump.
+  - Action: Delete/Archive the Conditional Visits and ensure soft-delete works.
+- [ ] **Step 8:** Validate that **Visit Windows & Tolerances** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Visit Windows & Tolerances.
+  - Action: Update the Visit Windows & Tolerances entity and verify version bump.
+  - Action: Delete/Archive the Visit Windows & Tolerances and ensure soft-delete works.
+- [ ] **Step 9:** Validate that **Activity Grouping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Activity Grouping.
+  - Action: Update the Activity Grouping entity and verify version bump.
+  - Action: Delete/Archive the Activity Grouping and ensure soft-delete works.
+- [ ] **Step 10:** Validate that **Timepoint Linking** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Timepoint Linking.
+  - Action: Update the Timepoint Linking entity and verify version bump.
+  - Action: Delete/Archive the Timepoint Linking and ensure soft-delete works.
+- [ ] **Step 11:** Validate that **Matrix View Generation** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Matrix View Generation.
+  - Action: Update the Matrix View Generation entity and verify version bump.
+  - Action: Delete/Archive the Matrix View Generation and ensure soft-delete works.
+- [ ] **Step 12:** Validate that **Procedure Mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Procedure Mapping.
+  - Action: Update the Procedure Mapping entity and verify version bump.
+  - Action: Delete/Archive the Procedure Mapping and ensure soft-delete works.
+- [ ] **Step 13:** Validate that **Assessment Scheduling** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Assessment Scheduling.
+  - Action: Update the Assessment Scheduling entity and verify version bump.
+  - Action: Delete/Archive the Assessment Scheduling and ensure soft-delete works.
 
 ---
 
-## 11. Patient Reported Outcomes (ePRO) Parity (OpenClinica)
+## CDISC Standards & Dictionaries
+### Specification: CDISC Standards & Dictionaries Workflows
+The system must support the robust definition and governance of the following features:
+- **SDTM Mapping Governance:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for SDTM Mapping Governance.
+  - APIs must provide CRUD endpoints for SDTM Mapping Governance.
+  - UI must allow authorized users to manage SDTM Mapping Governance.
+  - Audit logs must track all modifications to SDTM Mapping Governance.
+- **ADaM Mapping Metadata:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for ADaM Mapping Metadata.
+  - APIs must provide CRUD endpoints for ADaM Mapping Metadata.
+  - UI must allow authorized users to manage ADaM Mapping Metadata.
+  - Audit logs must track all modifications to ADaM Mapping Metadata.
+- **CDASH Implementations:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for CDASH Implementations.
+  - APIs must provide CRUD endpoints for CDASH Implementations.
+  - UI must allow authorized users to manage CDASH Implementations.
+  - Audit logs must track all modifications to CDASH Implementations.
+- **Controlled Terminology (CT) Upgrades:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Controlled Terminology (CT) Upgrades.
+  - APIs must provide CRUD endpoints for Controlled Terminology (CT) Upgrades.
+  - UI must allow authorized users to manage Controlled Terminology (CT) Upgrades.
+  - Audit logs must track all modifications to Controlled Terminology (CT) Upgrades.
+- **Custom Dictionary Integration:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Custom Dictionary Integration.
+  - APIs must provide CRUD endpoints for Custom Dictionary Integration.
+  - UI must allow authorized users to manage Custom Dictionary Integration.
+  - Audit logs must track all modifications to Custom Dictionary Integration.
+- **MedDRA Versioning:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for MedDRA Versioning.
+  - APIs must provide CRUD endpoints for MedDRA Versioning.
+  - UI must allow authorized users to manage MedDRA Versioning.
+  - Audit logs must track all modifications to MedDRA Versioning.
+- **WHODrug Dictionary Alignment:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for WHODrug Dictionary Alignment.
+  - APIs must provide CRUD endpoints for WHODrug Dictionary Alignment.
+  - UI must allow authorized users to manage WHODrug Dictionary Alignment.
+  - Audit logs must track all modifications to WHODrug Dictionary Alignment.
+- **LOINC Code Mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for LOINC Code Mapping.
+  - APIs must provide CRUD endpoints for LOINC Code Mapping.
+  - UI must allow authorized users to manage LOINC Code Mapping.
+  - Audit logs must track all modifications to LOINC Code Mapping.
+- **SNOMED CT Usage:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for SNOMED CT Usage.
+  - APIs must provide CRUD endpoints for SNOMED CT Usage.
+  - UI must allow authorized users to manage SNOMED CT Usage.
+  - Audit logs must track all modifications to SNOMED CT Usage.
+- **UCUM Unit Standardization:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for UCUM Unit Standardization.
+  - APIs must provide CRUD endpoints for UCUM Unit Standardization.
+  - UI must allow authorized users to manage UCUM Unit Standardization.
+  - Audit logs must track all modifications to UCUM Unit Standardization.
+- **Local Terminology Management:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Local Terminology Management.
+  - APIs must provide CRUD endpoints for Local Terminology Management.
+  - UI must allow authorized users to manage Local Terminology Management.
+  - Audit logs must track all modifications to Local Terminology Management.
+- **Dictionary Synonym Lists:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Dictionary Synonym Lists.
+  - APIs must provide CRUD endpoints for Dictionary Synonym Lists.
+  - UI must allow authorized users to manage Dictionary Synonym Lists.
+  - Audit logs must track all modifications to Dictionary Synonym Lists.
+- **Concept Search APIs:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Concept Search APIs.
+  - APIs must provide CRUD endpoints for Concept Search APIs.
+  - UI must allow authorized users to manage Concept Search APIs.
+  - Audit logs must track all modifications to Concept Search APIs.
+- **Cross-dictionary mapping:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Cross-dictionary mapping.
+  - APIs must provide CRUD endpoints for Cross-dictionary mapping.
+  - UI must allow authorized users to manage Cross-dictionary mapping.
+  - Audit logs must track all modifications to Cross-dictionary mapping.
 
-### 11.1 Specification: ePRO & Wearables
-The system must support direct patient data entry through specialized portals or device integrations.
-- **Patient Portals:** Secure, simplified UIs adapted for patient entry (mobile-responsive).
-- **Notifications:** SMS and email reminders for upcoming questionnaires.
-- **BYOD/Wearables:** Support for passive data ingestion (e.g., activity trackers, continuous glucose monitors).
-
-### 11.2 Manual Verification Checklist: ePRO
-- [ ] **Step 1:** Provision a subject for ePRO and trigger a questionnaire notification.
-- [ ] **Step 2:** **Verify Notifications:** Confirm the SMS/Email contains a valid, secure link.
-- [ ] **Step 3:** **Verify Portal Access:** Complete the questionnaire via a mobile viewport.
-- [ ] **Step 4:** **Verify Data Flow:** Confirm the responses are instantly available within the clinical database, flagged as patient-entered source data.
+### Manual Verification Checklist: CDISC Standards & Dictionaries
+- [ ] **Step 1:** Validate that **SDTM Mapping Governance** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for SDTM Mapping Governance.
+  - Action: Update the SDTM Mapping Governance entity and verify version bump.
+  - Action: Delete/Archive the SDTM Mapping Governance and ensure soft-delete works.
+- [ ] **Step 2:** Validate that **ADaM Mapping Metadata** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for ADaM Mapping Metadata.
+  - Action: Update the ADaM Mapping Metadata entity and verify version bump.
+  - Action: Delete/Archive the ADaM Mapping Metadata and ensure soft-delete works.
+- [ ] **Step 3:** Validate that **CDASH Implementations** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for CDASH Implementations.
+  - Action: Update the CDASH Implementations entity and verify version bump.
+  - Action: Delete/Archive the CDASH Implementations and ensure soft-delete works.
+- [ ] **Step 4:** Validate that **Controlled Terminology (CT) Upgrades** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Controlled Terminology (CT) Upgrades.
+  - Action: Update the Controlled Terminology (CT) Upgrades entity and verify version bump.
+  - Action: Delete/Archive the Controlled Terminology (CT) Upgrades and ensure soft-delete works.
+- [ ] **Step 5:** Validate that **Custom Dictionary Integration** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Custom Dictionary Integration.
+  - Action: Update the Custom Dictionary Integration entity and verify version bump.
+  - Action: Delete/Archive the Custom Dictionary Integration and ensure soft-delete works.
+- [ ] **Step 6:** Validate that **MedDRA Versioning** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for MedDRA Versioning.
+  - Action: Update the MedDRA Versioning entity and verify version bump.
+  - Action: Delete/Archive the MedDRA Versioning and ensure soft-delete works.
+- [ ] **Step 7:** Validate that **WHODrug Dictionary Alignment** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for WHODrug Dictionary Alignment.
+  - Action: Update the WHODrug Dictionary Alignment entity and verify version bump.
+  - Action: Delete/Archive the WHODrug Dictionary Alignment and ensure soft-delete works.
+- [ ] **Step 8:** Validate that **LOINC Code Mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for LOINC Code Mapping.
+  - Action: Update the LOINC Code Mapping entity and verify version bump.
+  - Action: Delete/Archive the LOINC Code Mapping and ensure soft-delete works.
+- [ ] **Step 9:** Validate that **SNOMED CT Usage** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for SNOMED CT Usage.
+  - Action: Update the SNOMED CT Usage entity and verify version bump.
+  - Action: Delete/Archive the SNOMED CT Usage and ensure soft-delete works.
+- [ ] **Step 10:** Validate that **UCUM Unit Standardization** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for UCUM Unit Standardization.
+  - Action: Update the UCUM Unit Standardization entity and verify version bump.
+  - Action: Delete/Archive the UCUM Unit Standardization and ensure soft-delete works.
+- [ ] **Step 11:** Validate that **Local Terminology Management** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Local Terminology Management.
+  - Action: Update the Local Terminology Management entity and verify version bump.
+  - Action: Delete/Archive the Local Terminology Management and ensure soft-delete works.
+- [ ] **Step 12:** Validate that **Dictionary Synonym Lists** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Dictionary Synonym Lists.
+  - Action: Update the Dictionary Synonym Lists entity and verify version bump.
+  - Action: Delete/Archive the Dictionary Synonym Lists and ensure soft-delete works.
+- [ ] **Step 13:** Validate that **Concept Search APIs** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Concept Search APIs.
+  - Action: Update the Concept Search APIs entity and verify version bump.
+  - Action: Delete/Archive the Concept Search APIs and ensure soft-delete works.
+- [ ] **Step 14:** Validate that **Cross-dictionary mapping** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Cross-dictionary mapping.
+  - Action: Update the Cross-dictionary mapping entity and verify version bump.
+  - Action: Delete/Archive the Cross-dictionary mapping and ensure soft-delete works.
 
 ---
 
-## 12. Security, Permissions, and Part 11 Audit Log Parity
+## Biomedical Concepts & Data Modeling
+### Specification: Biomedical Concepts & Data Modeling Workflows
+The system must support the robust definition and governance of the following features:
+- **Concept Attributes:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Concept Attributes.
+  - APIs must provide CRUD endpoints for Concept Attributes.
+  - UI must allow authorized users to manage Concept Attributes.
+  - Audit logs must track all modifications to Concept Attributes.
+- **Concept Relationships:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Concept Relationships.
+  - APIs must provide CRUD endpoints for Concept Relationships.
+  - UI must allow authorized users to manage Concept Relationships.
+  - Audit logs must track all modifications to Concept Relationships.
+- **Concept Hierarchies:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Concept Hierarchies.
+  - APIs must provide CRUD endpoints for Concept Hierarchies.
+  - UI must allow authorized users to manage Concept Hierarchies.
+  - Audit logs must track all modifications to Concept Hierarchies.
+- **Value Sets:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Value Sets.
+  - APIs must provide CRUD endpoints for Value Sets.
+  - UI must allow authorized users to manage Value Sets.
+  - Audit logs must track all modifications to Value Sets.
+- **Data Type Enforcement:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Data Type Enforcement.
+  - APIs must provide CRUD endpoints for Data Type Enforcement.
+  - UI must allow authorized users to manage Data Type Enforcement.
+  - Audit logs must track all modifications to Data Type Enforcement.
+- **Null Flavor Handling:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Null Flavor Handling.
+  - APIs must provide CRUD endpoints for Null Flavor Handling.
+  - UI must allow authorized users to manage Null Flavor Handling.
+  - Audit logs must track all modifications to Null Flavor Handling.
+- **Data Standardization Pipelines:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Data Standardization Pipelines.
+  - APIs must provide CRUD endpoints for Data Standardization Pipelines.
+  - UI must allow authorized users to manage Data Standardization Pipelines.
+  - Audit logs must track all modifications to Data Standardization Pipelines.
+- **Semantic Interoperability:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Semantic Interoperability.
+  - APIs must provide CRUD endpoints for Semantic Interoperability.
+  - UI must allow authorized users to manage Semantic Interoperability.
+  - Audit logs must track all modifications to Semantic Interoperability.
+- **Concept Provenance:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Concept Provenance.
+  - APIs must provide CRUD endpoints for Concept Provenance.
+  - UI must allow authorized users to manage Concept Provenance.
+  - Audit logs must track all modifications to Concept Provenance.
+- **Data Quality Rules at Concept Level:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Data Quality Rules at Concept Level.
+  - APIs must provide CRUD endpoints for Data Quality Rules at Concept Level.
+  - UI must allow authorized users to manage Data Quality Rules at Concept Level.
+  - Audit logs must track all modifications to Data Quality Rules at Concept Level.
+- **Reusable Concept Libraries:** Must be fully configurable, strictly version-controlled, and validated against standard study design principles.
+  - System must ensure data integrity for Reusable Concept Libraries.
+  - APIs must provide CRUD endpoints for Reusable Concept Libraries.
+  - UI must allow authorized users to manage Reusable Concept Libraries.
+  - Audit logs must track all modifications to Reusable Concept Libraries.
 
-### 12.1 Specification: 21 CFR Part 11 Compliance
-The system must capture comprehensive, immutable audit trails, electronic signatures, and enforce Role-Based Access Control (RBAC).
-- **Audit Logs:** Capture `created_at`, `created_by`, `reason_for_change`, and `version_index`. Audit records must be immutable.
-- **Electronic Signatures:** Support affidavit agreements and re-authentication to sign off on CRFs or casebooks.
-- **RBAC & Site Segregation:** Roles (Site, Investigator, CRA, Data Manager) must strictly limit visibility. Sites cannot see other sites' data.
+### Manual Verification Checklist: Biomedical Concepts & Data Modeling
+- [ ] **Step 1:** Validate that **Concept Attributes** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Concept Attributes.
+  - Action: Update the Concept Attributes entity and verify version bump.
+  - Action: Delete/Archive the Concept Attributes and ensure soft-delete works.
+- [ ] **Step 2:** Validate that **Concept Relationships** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Concept Relationships.
+  - Action: Update the Concept Relationships entity and verify version bump.
+  - Action: Delete/Archive the Concept Relationships and ensure soft-delete works.
+- [ ] **Step 3:** Validate that **Concept Hierarchies** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Concept Hierarchies.
+  - Action: Update the Concept Hierarchies entity and verify version bump.
+  - Action: Delete/Archive the Concept Hierarchies and ensure soft-delete works.
+- [ ] **Step 4:** Validate that **Value Sets** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Value Sets.
+  - Action: Update the Value Sets entity and verify version bump.
+  - Action: Delete/Archive the Value Sets and ensure soft-delete works.
+- [ ] **Step 5:** Validate that **Data Type Enforcement** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Data Type Enforcement.
+  - Action: Update the Data Type Enforcement entity and verify version bump.
+  - Action: Delete/Archive the Data Type Enforcement and ensure soft-delete works.
+- [ ] **Step 6:** Validate that **Null Flavor Handling** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Null Flavor Handling.
+  - Action: Update the Null Flavor Handling entity and verify version bump.
+  - Action: Delete/Archive the Null Flavor Handling and ensure soft-delete works.
+- [ ] **Step 7:** Validate that **Data Standardization Pipelines** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Data Standardization Pipelines.
+  - Action: Update the Data Standardization Pipelines entity and verify version bump.
+  - Action: Delete/Archive the Data Standardization Pipelines and ensure soft-delete works.
+- [ ] **Step 8:** Validate that **Semantic Interoperability** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Semantic Interoperability.
+  - Action: Update the Semantic Interoperability entity and verify version bump.
+  - Action: Delete/Archive the Semantic Interoperability and ensure soft-delete works.
+- [ ] **Step 9:** Validate that **Concept Provenance** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Concept Provenance.
+  - Action: Update the Concept Provenance entity and verify version bump.
+  - Action: Delete/Archive the Concept Provenance and ensure soft-delete works.
+- [ ] **Step 10:** Validate that **Data Quality Rules at Concept Level** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Data Quality Rules at Concept Level.
+  - Action: Update the Data Quality Rules at Concept Level entity and verify version bump.
+  - Action: Delete/Archive the Data Quality Rules at Concept Level and ensure soft-delete works.
+- [ ] **Step 11:** Validate that **Reusable Concept Libraries** is correctly managed and tracked within the Study Builder interface.
+  - Action: Create a new entity for Reusable Concept Libraries.
+  - Action: Update the Reusable Concept Libraries entity and verify version bump.
+  - Action: Delete/Archive the Reusable Concept Libraries and ensure soft-delete works.
 
-### 12.2 Manual Verification Checklist: Compliance & Security
-- [ ] **Step 1:** Perform a data mutation (e.g., update a clinical observation).
-- [ ] **Step 2:** **Verify Audit Log:** Ensure the database audit row contains the correct user, timestamp, and reason, and that the API rejects attempts to modify it.
-- [ ] **Step 3:** Attempt to sign a CRF as an Investigator.
-- [ ] **Step 4:** **Verify Electronic Signature:** Ensure the system requires re-authentication (e.g., password prompt) before stamping the signature.
-- [ ] **Step 5:** Log in as a Site User for Site A and attempt to access a subject at Site B.
-- [ ] **Step 6:** **Verify Site Segregation:** Confirm access to Site B's data is blocked.
+---
+
+# PART 2: OpenClinica Features
+OpenClinica is a leading clinical data management and electronic data capture (EDC) system. The requirements here ensure feature parity for data capture, management, and compliance.
+
+## Electronic Data Capture (EDC) & eCRF
+### Specification: Electronic Data Capture (EDC) & eCRF Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Excel CRF Parsing:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Excel CRF Parsing.
+  - APIs must provide robust integration endpoints for Excel CRF Parsing.
+  - Role-based permissions must restrict access appropriately for Excel CRF Parsing.
+  - Full traceability must be maintained for Excel CRF Parsing.
+- **Sheet to Form Mapping:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Sheet to Form Mapping.
+  - APIs must provide robust integration endpoints for Sheet to Form Mapping.
+  - Role-based permissions must restrict access appropriately for Sheet to Form Mapping.
+  - Full traceability must be maintained for Sheet to Form Mapping.
+- **Section/Layout Headers:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Section/Layout Headers.
+  - APIs must provide robust integration endpoints for Section/Layout Headers.
+  - Role-based permissions must restrict access appropriately for Section/Layout Headers.
+  - Full traceability must be maintained for Section/Layout Headers.
+- **Repeating Groups/Grids:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Repeating Groups/Grids.
+  - APIs must provide robust integration endpoints for Repeating Groups/Grids.
+  - Role-based permissions must restrict access appropriately for Repeating Groups/Grids.
+  - Full traceability must be maintained for Repeating Groups/Grids.
+- **Item Definition Mapping:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Item Definition Mapping.
+  - APIs must provide robust integration endpoints for Item Definition Mapping.
+  - Role-based permissions must restrict access appropriately for Item Definition Mapping.
+  - Full traceability must be maintained for Item Definition Mapping.
+- **Data Type Conversions:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Type Conversions.
+  - APIs must provide robust integration endpoints for Data Type Conversions.
+  - Role-based permissions must restrict access appropriately for Data Type Conversions.
+  - Full traceability must be maintained for Data Type Conversions.
+- **Constraint Translations:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Constraint Translations.
+  - APIs must provide robust integration endpoints for Constraint Translations.
+  - Role-based permissions must restrict access appropriately for Constraint Translations.
+  - Full traceability must be maintained for Constraint Translations.
+- **Conditional Rendering:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Conditional Rendering.
+  - APIs must provide robust integration endpoints for Conditional Rendering.
+  - Role-based permissions must restrict access appropriately for Conditional Rendering.
+  - Full traceability must be maintained for Conditional Rendering.
+- **Required Field Enforcement:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Required Field Enforcement.
+  - APIs must provide robust integration endpoints for Required Field Enforcement.
+  - Role-based permissions must restrict access appropriately for Required Field Enforcement.
+  - Full traceability must be maintained for Required Field Enforcement.
+- **Calculated Fields:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Calculated Fields.
+  - APIs must provide robust integration endpoints for Calculated Fields.
+  - Role-based permissions must restrict access appropriately for Calculated Fields.
+  - Full traceability must be maintained for Calculated Fields.
+- **Multimedia Capture:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Multimedia Capture.
+  - APIs must provide robust integration endpoints for Multimedia Capture.
+  - Role-based permissions must restrict access appropriately for Multimedia Capture.
+  - Full traceability must be maintained for Multimedia Capture.
+- **Barcode Scanning fields:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Barcode Scanning fields.
+  - APIs must provide robust integration endpoints for Barcode Scanning fields.
+  - Role-based permissions must restrict access appropriately for Barcode Scanning fields.
+  - Full traceability must be maintained for Barcode Scanning fields.
+- **Signature Fields:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Signature Fields.
+  - APIs must provide robust integration endpoints for Signature Fields.
+  - Role-based permissions must restrict access appropriately for Signature Fields.
+  - Full traceability must be maintained for Signature Fields.
+- **Read-only displays:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Read-only displays.
+  - APIs must provide robust integration endpoints for Read-only displays.
+  - Role-based permissions must restrict access appropriately for Read-only displays.
+  - Full traceability must be maintained for Read-only displays.
+- **Form Locking:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Form Locking.
+  - APIs must provide robust integration endpoints for Form Locking.
+  - Role-based permissions must restrict access appropriately for Form Locking.
+  - Full traceability must be maintained for Form Locking.
+- **Form Version Migration:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Form Version Migration.
+  - APIs must provide robust integration endpoints for Form Version Migration.
+  - Role-based permissions must restrict access appropriately for Form Version Migration.
+  - Full traceability must be maintained for Form Version Migration.
+- **Batch Form Upgrades:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Batch Form Upgrades.
+  - APIs must provide robust integration endpoints for Batch Form Upgrades.
+  - Role-based permissions must restrict access appropriately for Batch Form Upgrades.
+  - Full traceability must be maintained for Batch Form Upgrades.
+- **Multi-language eCRF support:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Multi-language eCRF support.
+  - APIs must provide robust integration endpoints for Multi-language eCRF support.
+  - Role-based permissions must restrict access appropriately for Multi-language eCRF support.
+  - Full traceability must be maintained for Multi-language eCRF support.
+
+### Manual Verification Checklist: Electronic Data Capture (EDC) & eCRF
+- [ ] **Step 1:** Verify full functionality for **Excel CRF Parsing**.
+  - Action: Execute end-to-end workflow involving Excel CRF Parsing.
+  - Action: Ensure expected state transitions and outcomes for Excel CRF Parsing.
+  - Action: Confirm all logs are generated properly for Excel CRF Parsing.
+- [ ] **Step 2:** Verify full functionality for **Sheet to Form Mapping**.
+  - Action: Execute end-to-end workflow involving Sheet to Form Mapping.
+  - Action: Ensure expected state transitions and outcomes for Sheet to Form Mapping.
+  - Action: Confirm all logs are generated properly for Sheet to Form Mapping.
+- [ ] **Step 3:** Verify full functionality for **Section/Layout Headers**.
+  - Action: Execute end-to-end workflow involving Section/Layout Headers.
+  - Action: Ensure expected state transitions and outcomes for Section/Layout Headers.
+  - Action: Confirm all logs are generated properly for Section/Layout Headers.
+- [ ] **Step 4:** Verify full functionality for **Repeating Groups/Grids**.
+  - Action: Execute end-to-end workflow involving Repeating Groups/Grids.
+  - Action: Ensure expected state transitions and outcomes for Repeating Groups/Grids.
+  - Action: Confirm all logs are generated properly for Repeating Groups/Grids.
+- [ ] **Step 5:** Verify full functionality for **Item Definition Mapping**.
+  - Action: Execute end-to-end workflow involving Item Definition Mapping.
+  - Action: Ensure expected state transitions and outcomes for Item Definition Mapping.
+  - Action: Confirm all logs are generated properly for Item Definition Mapping.
+- [ ] **Step 6:** Verify full functionality for **Data Type Conversions**.
+  - Action: Execute end-to-end workflow involving Data Type Conversions.
+  - Action: Ensure expected state transitions and outcomes for Data Type Conversions.
+  - Action: Confirm all logs are generated properly for Data Type Conversions.
+- [ ] **Step 7:** Verify full functionality for **Constraint Translations**.
+  - Action: Execute end-to-end workflow involving Constraint Translations.
+  - Action: Ensure expected state transitions and outcomes for Constraint Translations.
+  - Action: Confirm all logs are generated properly for Constraint Translations.
+- [ ] **Step 8:** Verify full functionality for **Conditional Rendering**.
+  - Action: Execute end-to-end workflow involving Conditional Rendering.
+  - Action: Ensure expected state transitions and outcomes for Conditional Rendering.
+  - Action: Confirm all logs are generated properly for Conditional Rendering.
+- [ ] **Step 9:** Verify full functionality for **Required Field Enforcement**.
+  - Action: Execute end-to-end workflow involving Required Field Enforcement.
+  - Action: Ensure expected state transitions and outcomes for Required Field Enforcement.
+  - Action: Confirm all logs are generated properly for Required Field Enforcement.
+- [ ] **Step 10:** Verify full functionality for **Calculated Fields**.
+  - Action: Execute end-to-end workflow involving Calculated Fields.
+  - Action: Ensure expected state transitions and outcomes for Calculated Fields.
+  - Action: Confirm all logs are generated properly for Calculated Fields.
+- [ ] **Step 11:** Verify full functionality for **Multimedia Capture**.
+  - Action: Execute end-to-end workflow involving Multimedia Capture.
+  - Action: Ensure expected state transitions and outcomes for Multimedia Capture.
+  - Action: Confirm all logs are generated properly for Multimedia Capture.
+- [ ] **Step 12:** Verify full functionality for **Barcode Scanning fields**.
+  - Action: Execute end-to-end workflow involving Barcode Scanning fields.
+  - Action: Ensure expected state transitions and outcomes for Barcode Scanning fields.
+  - Action: Confirm all logs are generated properly for Barcode Scanning fields.
+- [ ] **Step 13:** Verify full functionality for **Signature Fields**.
+  - Action: Execute end-to-end workflow involving Signature Fields.
+  - Action: Ensure expected state transitions and outcomes for Signature Fields.
+  - Action: Confirm all logs are generated properly for Signature Fields.
+- [ ] **Step 14:** Verify full functionality for **Read-only displays**.
+  - Action: Execute end-to-end workflow involving Read-only displays.
+  - Action: Ensure expected state transitions and outcomes for Read-only displays.
+  - Action: Confirm all logs are generated properly for Read-only displays.
+- [ ] **Step 15:** Verify full functionality for **Form Locking**.
+  - Action: Execute end-to-end workflow involving Form Locking.
+  - Action: Ensure expected state transitions and outcomes for Form Locking.
+  - Action: Confirm all logs are generated properly for Form Locking.
+- [ ] **Step 16:** Verify full functionality for **Form Version Migration**.
+  - Action: Execute end-to-end workflow involving Form Version Migration.
+  - Action: Ensure expected state transitions and outcomes for Form Version Migration.
+  - Action: Confirm all logs are generated properly for Form Version Migration.
+- [ ] **Step 17:** Verify full functionality for **Batch Form Upgrades**.
+  - Action: Execute end-to-end workflow involving Batch Form Upgrades.
+  - Action: Ensure expected state transitions and outcomes for Batch Form Upgrades.
+  - Action: Confirm all logs are generated properly for Batch Form Upgrades.
+- [ ] **Step 18:** Verify full functionality for **Multi-language eCRF support**.
+  - Action: Execute end-to-end workflow involving Multi-language eCRF support.
+  - Action: Ensure expected state transitions and outcomes for Multi-language eCRF support.
+  - Action: Confirm all logs are generated properly for Multi-language eCRF support.
+
+---
+
+## OpenRosa/Enketo XForm Rendering Parity
+### Specification: OpenRosa/Enketo XForm Rendering Parity Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **XForm UI Controls:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for XForm UI Controls.
+  - APIs must provide robust integration endpoints for XForm UI Controls.
+  - Role-based permissions must restrict access appropriately for XForm UI Controls.
+  - Full traceability must be maintained for XForm UI Controls.
+- **Relevance & Skip Logic:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Relevance & Skip Logic.
+  - APIs must provide robust integration endpoints for Relevance & Skip Logic.
+  - Role-based permissions must restrict access appropriately for Relevance & Skip Logic.
+  - Full traceability must be maintained for Relevance & Skip Logic.
+- **Calculation Bindings:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Calculation Bindings.
+  - APIs must provide robust integration endpoints for Calculation Bindings.
+  - Role-based permissions must restrict access appropriately for Calculation Bindings.
+  - Full traceability must be maintained for Calculation Bindings.
+- **Repeat Node Management:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Repeat Node Management.
+  - APIs must provide robust integration endpoints for Repeat Node Management.
+  - Role-based permissions must restrict access appropriately for Repeat Node Management.
+  - Full traceability must be maintained for Repeat Node Management.
+- **Instance XML formatting:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Instance XML formatting.
+  - APIs must provide robust integration endpoints for Instance XML formatting.
+  - Role-based permissions must restrict access appropriately for Instance XML formatting.
+  - Full traceability must be maintained for Instance XML formatting.
+- **Offline Data Entry capabilities:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Offline Data Entry capabilities.
+  - APIs must provide robust integration endpoints for Offline Data Entry capabilities.
+  - Role-based permissions must restrict access appropriately for Offline Data Entry capabilities.
+  - Full traceability must be maintained for Offline Data Entry capabilities.
+- **Draft saving mechanism:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Draft saving mechanism.
+  - APIs must provide robust integration endpoints for Draft saving mechanism.
+  - Role-based permissions must restrict access appropriately for Draft saving mechanism.
+  - Full traceability must be maintained for Draft saving mechanism.
+- **Form validation on client:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Form validation on client.
+  - APIs must provide robust integration endpoints for Form validation on client.
+  - Role-based permissions must restrict access appropriately for Form validation on client.
+  - Full traceability must be maintained for Form validation on client.
+- **Form submission processing:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Form submission processing.
+  - APIs must provide robust integration endpoints for Form submission processing.
+  - Role-based permissions must restrict access appropriately for Form submission processing.
+  - Full traceability must be maintained for Form submission processing.
+- **Pagination UI:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Pagination UI.
+  - APIs must provide robust integration endpoints for Pagination UI.
+  - Role-based permissions must restrict access appropriately for Pagination UI.
+  - Full traceability must be maintained for Pagination UI.
+- **Warning messages vs Hard stops:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Warning messages vs Hard stops.
+  - APIs must provide robust integration endpoints for Warning messages vs Hard stops.
+  - Role-based permissions must restrict access appropriately for Warning messages vs Hard stops.
+  - Full traceability must be maintained for Warning messages vs Hard stops.
+- **Custom styling support:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Custom styling support.
+  - APIs must provide robust integration endpoints for Custom styling support.
+  - Role-based permissions must restrict access appropriately for Custom styling support.
+  - Full traceability must be maintained for Custom styling support.
+
+### Manual Verification Checklist: OpenRosa/Enketo XForm Rendering Parity
+- [ ] **Step 1:** Verify full functionality for **XForm UI Controls**.
+  - Action: Execute end-to-end workflow involving XForm UI Controls.
+  - Action: Ensure expected state transitions and outcomes for XForm UI Controls.
+  - Action: Confirm all logs are generated properly for XForm UI Controls.
+- [ ] **Step 2:** Verify full functionality for **Relevance & Skip Logic**.
+  - Action: Execute end-to-end workflow involving Relevance & Skip Logic.
+  - Action: Ensure expected state transitions and outcomes for Relevance & Skip Logic.
+  - Action: Confirm all logs are generated properly for Relevance & Skip Logic.
+- [ ] **Step 3:** Verify full functionality for **Calculation Bindings**.
+  - Action: Execute end-to-end workflow involving Calculation Bindings.
+  - Action: Ensure expected state transitions and outcomes for Calculation Bindings.
+  - Action: Confirm all logs are generated properly for Calculation Bindings.
+- [ ] **Step 4:** Verify full functionality for **Repeat Node Management**.
+  - Action: Execute end-to-end workflow involving Repeat Node Management.
+  - Action: Ensure expected state transitions and outcomes for Repeat Node Management.
+  - Action: Confirm all logs are generated properly for Repeat Node Management.
+- [ ] **Step 5:** Verify full functionality for **Instance XML formatting**.
+  - Action: Execute end-to-end workflow involving Instance XML formatting.
+  - Action: Ensure expected state transitions and outcomes for Instance XML formatting.
+  - Action: Confirm all logs are generated properly for Instance XML formatting.
+- [ ] **Step 6:** Verify full functionality for **Offline Data Entry capabilities**.
+  - Action: Execute end-to-end workflow involving Offline Data Entry capabilities.
+  - Action: Ensure expected state transitions and outcomes for Offline Data Entry capabilities.
+  - Action: Confirm all logs are generated properly for Offline Data Entry capabilities.
+- [ ] **Step 7:** Verify full functionality for **Draft saving mechanism**.
+  - Action: Execute end-to-end workflow involving Draft saving mechanism.
+  - Action: Ensure expected state transitions and outcomes for Draft saving mechanism.
+  - Action: Confirm all logs are generated properly for Draft saving mechanism.
+- [ ] **Step 8:** Verify full functionality for **Form validation on client**.
+  - Action: Execute end-to-end workflow involving Form validation on client.
+  - Action: Ensure expected state transitions and outcomes for Form validation on client.
+  - Action: Confirm all logs are generated properly for Form validation on client.
+- [ ] **Step 9:** Verify full functionality for **Form submission processing**.
+  - Action: Execute end-to-end workflow involving Form submission processing.
+  - Action: Ensure expected state transitions and outcomes for Form submission processing.
+  - Action: Confirm all logs are generated properly for Form submission processing.
+- [ ] **Step 10:** Verify full functionality for **Pagination UI**.
+  - Action: Execute end-to-end workflow involving Pagination UI.
+  - Action: Ensure expected state transitions and outcomes for Pagination UI.
+  - Action: Confirm all logs are generated properly for Pagination UI.
+- [ ] **Step 11:** Verify full functionality for **Warning messages vs Hard stops**.
+  - Action: Execute end-to-end workflow involving Warning messages vs Hard stops.
+  - Action: Ensure expected state transitions and outcomes for Warning messages vs Hard stops.
+  - Action: Confirm all logs are generated properly for Warning messages vs Hard stops.
+- [ ] **Step 12:** Verify full functionality for **Custom styling support**.
+  - Action: Execute end-to-end workflow involving Custom styling support.
+  - Action: Ensure expected state transitions and outcomes for Custom styling support.
+  - Action: Confirm all logs are generated properly for Custom styling support.
+
+---
+
+## Subject Management & Randomization
+### Specification: Subject Management & Randomization Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Subject State Machine:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Subject State Machine.
+  - APIs must provide robust integration endpoints for Subject State Machine.
+  - Role-based permissions must restrict access appropriately for Subject State Machine.
+  - Full traceability must be maintained for Subject State Machine.
+- **Status Transition Logs:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Status Transition Logs.
+  - APIs must provide robust integration endpoints for Status Transition Logs.
+  - Role-based permissions must restrict access appropriately for Status Transition Logs.
+  - Full traceability must be maintained for Status Transition Logs.
+- **RTSM/IWRS Integration:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for RTSM/IWRS Integration.
+  - APIs must provide robust integration endpoints for RTSM/IWRS Integration.
+  - Role-based permissions must restrict access appropriately for RTSM/IWRS Integration.
+  - Full traceability must be maintained for RTSM/IWRS Integration.
+- **Subject Enrollment:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Subject Enrollment.
+  - APIs must provide robust integration endpoints for Subject Enrollment.
+  - Role-based permissions must restrict access appropriately for Subject Enrollment.
+  - Full traceability must be maintained for Subject Enrollment.
+- **Screen Failure Processing:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Screen Failure Processing.
+  - APIs must provide robust integration endpoints for Screen Failure Processing.
+  - Role-based permissions must restrict access appropriately for Screen Failure Processing.
+  - Full traceability must be maintained for Screen Failure Processing.
+- **Subject Withdrawal:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Subject Withdrawal.
+  - APIs must provide robust integration endpoints for Subject Withdrawal.
+  - Role-based permissions must restrict access appropriately for Subject Withdrawal.
+  - Full traceability must be maintained for Subject Withdrawal.
+- **Re-enrollment handling:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Re-enrollment handling.
+  - APIs must provide robust integration endpoints for Re-enrollment handling.
+  - Role-based permissions must restrict access appropriately for Re-enrollment handling.
+  - Full traceability must be maintained for Re-enrollment handling.
+- **Blinded Arm Allocation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Blinded Arm Allocation.
+  - APIs must provide robust integration endpoints for Blinded Arm Allocation.
+  - Role-based permissions must restrict access appropriately for Blinded Arm Allocation.
+  - Full traceability must be maintained for Blinded Arm Allocation.
+- **Randomization Seed Management:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Randomization Seed Management.
+  - APIs must provide robust integration endpoints for Randomization Seed Management.
+  - Role-based permissions must restrict access appropriately for Randomization Seed Management.
+  - Full traceability must be maintained for Randomization Seed Management.
+- **Block Randomization:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Block Randomization.
+  - APIs must provide robust integration endpoints for Block Randomization.
+  - Role-based permissions must restrict access appropriately for Block Randomization.
+  - Full traceability must be maintained for Block Randomization.
+- **Stratified Randomization:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Stratified Randomization.
+  - APIs must provide robust integration endpoints for Stratified Randomization.
+  - Role-based permissions must restrict access appropriately for Stratified Randomization.
+  - Full traceability must be maintained for Stratified Randomization.
+- **Dynamic Randomization:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Dynamic Randomization.
+  - APIs must provide robust integration endpoints for Dynamic Randomization.
+  - Role-based permissions must restrict access appropriately for Dynamic Randomization.
+  - Full traceability must be maintained for Dynamic Randomization.
+- **Subject Transfer between Sites:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Subject Transfer between Sites.
+  - APIs must provide robust integration endpoints for Subject Transfer between Sites.
+  - Role-based permissions must restrict access appropriately for Subject Transfer between Sites.
+  - Full traceability must be maintained for Subject Transfer between Sites.
+
+### Manual Verification Checklist: Subject Management & Randomization
+- [ ] **Step 1:** Verify full functionality for **Subject State Machine**.
+  - Action: Execute end-to-end workflow involving Subject State Machine.
+  - Action: Ensure expected state transitions and outcomes for Subject State Machine.
+  - Action: Confirm all logs are generated properly for Subject State Machine.
+- [ ] **Step 2:** Verify full functionality for **Status Transition Logs**.
+  - Action: Execute end-to-end workflow involving Status Transition Logs.
+  - Action: Ensure expected state transitions and outcomes for Status Transition Logs.
+  - Action: Confirm all logs are generated properly for Status Transition Logs.
+- [ ] **Step 3:** Verify full functionality for **RTSM/IWRS Integration**.
+  - Action: Execute end-to-end workflow involving RTSM/IWRS Integration.
+  - Action: Ensure expected state transitions and outcomes for RTSM/IWRS Integration.
+  - Action: Confirm all logs are generated properly for RTSM/IWRS Integration.
+- [ ] **Step 4:** Verify full functionality for **Subject Enrollment**.
+  - Action: Execute end-to-end workflow involving Subject Enrollment.
+  - Action: Ensure expected state transitions and outcomes for Subject Enrollment.
+  - Action: Confirm all logs are generated properly for Subject Enrollment.
+- [ ] **Step 5:** Verify full functionality for **Screen Failure Processing**.
+  - Action: Execute end-to-end workflow involving Screen Failure Processing.
+  - Action: Ensure expected state transitions and outcomes for Screen Failure Processing.
+  - Action: Confirm all logs are generated properly for Screen Failure Processing.
+- [ ] **Step 6:** Verify full functionality for **Subject Withdrawal**.
+  - Action: Execute end-to-end workflow involving Subject Withdrawal.
+  - Action: Ensure expected state transitions and outcomes for Subject Withdrawal.
+  - Action: Confirm all logs are generated properly for Subject Withdrawal.
+- [ ] **Step 7:** Verify full functionality for **Re-enrollment handling**.
+  - Action: Execute end-to-end workflow involving Re-enrollment handling.
+  - Action: Ensure expected state transitions and outcomes for Re-enrollment handling.
+  - Action: Confirm all logs are generated properly for Re-enrollment handling.
+- [ ] **Step 8:** Verify full functionality for **Blinded Arm Allocation**.
+  - Action: Execute end-to-end workflow involving Blinded Arm Allocation.
+  - Action: Ensure expected state transitions and outcomes for Blinded Arm Allocation.
+  - Action: Confirm all logs are generated properly for Blinded Arm Allocation.
+- [ ] **Step 9:** Verify full functionality for **Randomization Seed Management**.
+  - Action: Execute end-to-end workflow involving Randomization Seed Management.
+  - Action: Ensure expected state transitions and outcomes for Randomization Seed Management.
+  - Action: Confirm all logs are generated properly for Randomization Seed Management.
+- [ ] **Step 10:** Verify full functionality for **Block Randomization**.
+  - Action: Execute end-to-end workflow involving Block Randomization.
+  - Action: Ensure expected state transitions and outcomes for Block Randomization.
+  - Action: Confirm all logs are generated properly for Block Randomization.
+- [ ] **Step 11:** Verify full functionality for **Stratified Randomization**.
+  - Action: Execute end-to-end workflow involving Stratified Randomization.
+  - Action: Ensure expected state transitions and outcomes for Stratified Randomization.
+  - Action: Confirm all logs are generated properly for Stratified Randomization.
+- [ ] **Step 12:** Verify full functionality for **Dynamic Randomization**.
+  - Action: Execute end-to-end workflow involving Dynamic Randomization.
+  - Action: Ensure expected state transitions and outcomes for Dynamic Randomization.
+  - Action: Confirm all logs are generated properly for Dynamic Randomization.
+- [ ] **Step 13:** Verify full functionality for **Subject Transfer between Sites**.
+  - Action: Execute end-to-end workflow involving Subject Transfer between Sites.
+  - Action: Ensure expected state transitions and outcomes for Subject Transfer between Sites.
+  - Action: Confirm all logs are generated properly for Subject Transfer between Sites.
+
+---
+
+## Query Management & Discrepancy Notes
+### Specification: Query Management & Discrepancy Notes Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Query Creation Automation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query Creation Automation.
+  - APIs must provide robust integration endpoints for Query Creation Automation.
+  - Role-based permissions must restrict access appropriately for Query Creation Automation.
+  - Full traceability must be maintained for Query Creation Automation.
+- **Manual Query Generation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Manual Query Generation.
+  - APIs must provide robust integration endpoints for Manual Query Generation.
+  - Role-based permissions must restrict access appropriately for Manual Query Generation.
+  - Full traceability must be maintained for Manual Query Generation.
+- **Query State Machine (Open, Answered, Closed):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query State Machine (Open, Answered, Closed).
+  - APIs must provide robust integration endpoints for Query State Machine (Open, Answered, Closed).
+  - Role-based permissions must restrict access appropriately for Query State Machine (Open, Answered, Closed).
+  - Full traceability must be maintained for Query State Machine (Open, Answered, Closed).
+- **Query Reassignment:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query Reassignment.
+  - APIs must provide robust integration endpoints for Query Reassignment.
+  - Role-based permissions must restrict access appropriately for Query Reassignment.
+  - Full traceability must be maintained for Query Reassignment.
+- **Source Data Verification (SDV) Queries:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Source Data Verification (SDV) Queries.
+  - APIs must provide robust integration endpoints for Source Data Verification (SDV) Queries.
+  - Role-based permissions must restrict access appropriately for Source Data Verification (SDV) Queries.
+  - Full traceability must be maintained for Source Data Verification (SDV) Queries.
+- **System vs User Discrepancies:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for System vs User Discrepancies.
+  - APIs must provide robust integration endpoints for System vs User Discrepancies.
+  - Role-based permissions must restrict access appropriately for System vs User Discrepancies.
+  - Full traceability must be maintained for System vs User Discrepancies.
+- **Query Aging Reports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query Aging Reports.
+  - APIs must provide robust integration endpoints for Query Aging Reports.
+  - Role-based permissions must restrict access appropriately for Query Aging Reports.
+  - Full traceability must be maintained for Query Aging Reports.
+- **Query Escalation Rules:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query Escalation Rules.
+  - APIs must provide robust integration endpoints for Query Escalation Rules.
+  - Role-based permissions must restrict access appropriately for Query Escalation Rules.
+  - Full traceability must be maintained for Query Escalation Rules.
+- **Contextual Note Threads:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Contextual Note Threads.
+  - APIs must provide robust integration endpoints for Contextual Note Threads.
+  - Role-based permissions must restrict access appropriately for Contextual Note Threads.
+  - Full traceability must be maintained for Contextual Note Threads.
+- **Bulk Query Closing:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Bulk Query Closing.
+  - APIs must provide robust integration endpoints for Bulk Query Closing.
+  - Role-based permissions must restrict access appropriately for Bulk Query Closing.
+  - Full traceability must be maintained for Bulk Query Closing.
+- **Query Resolution Metrics:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Query Resolution Metrics.
+  - APIs must provide robust integration endpoints for Query Resolution Metrics.
+  - Role-based permissions must restrict access appropriately for Query Resolution Metrics.
+  - Full traceability must be maintained for Query Resolution Metrics.
+
+### Manual Verification Checklist: Query Management & Discrepancy Notes
+- [ ] **Step 1:** Verify full functionality for **Query Creation Automation**.
+  - Action: Execute end-to-end workflow involving Query Creation Automation.
+  - Action: Ensure expected state transitions and outcomes for Query Creation Automation.
+  - Action: Confirm all logs are generated properly for Query Creation Automation.
+- [ ] **Step 2:** Verify full functionality for **Manual Query Generation**.
+  - Action: Execute end-to-end workflow involving Manual Query Generation.
+  - Action: Ensure expected state transitions and outcomes for Manual Query Generation.
+  - Action: Confirm all logs are generated properly for Manual Query Generation.
+- [ ] **Step 3:** Verify full functionality for **Query State Machine (Open, Answered, Closed)**.
+  - Action: Execute end-to-end workflow involving Query State Machine (Open, Answered, Closed).
+  - Action: Ensure expected state transitions and outcomes for Query State Machine (Open, Answered, Closed).
+  - Action: Confirm all logs are generated properly for Query State Machine (Open, Answered, Closed).
+- [ ] **Step 4:** Verify full functionality for **Query Reassignment**.
+  - Action: Execute end-to-end workflow involving Query Reassignment.
+  - Action: Ensure expected state transitions and outcomes for Query Reassignment.
+  - Action: Confirm all logs are generated properly for Query Reassignment.
+- [ ] **Step 5:** Verify full functionality for **Source Data Verification (SDV) Queries**.
+  - Action: Execute end-to-end workflow involving Source Data Verification (SDV) Queries.
+  - Action: Ensure expected state transitions and outcomes for Source Data Verification (SDV) Queries.
+  - Action: Confirm all logs are generated properly for Source Data Verification (SDV) Queries.
+- [ ] **Step 6:** Verify full functionality for **System vs User Discrepancies**.
+  - Action: Execute end-to-end workflow involving System vs User Discrepancies.
+  - Action: Ensure expected state transitions and outcomes for System vs User Discrepancies.
+  - Action: Confirm all logs are generated properly for System vs User Discrepancies.
+- [ ] **Step 7:** Verify full functionality for **Query Aging Reports**.
+  - Action: Execute end-to-end workflow involving Query Aging Reports.
+  - Action: Ensure expected state transitions and outcomes for Query Aging Reports.
+  - Action: Confirm all logs are generated properly for Query Aging Reports.
+- [ ] **Step 8:** Verify full functionality for **Query Escalation Rules**.
+  - Action: Execute end-to-end workflow involving Query Escalation Rules.
+  - Action: Ensure expected state transitions and outcomes for Query Escalation Rules.
+  - Action: Confirm all logs are generated properly for Query Escalation Rules.
+- [ ] **Step 9:** Verify full functionality for **Contextual Note Threads**.
+  - Action: Execute end-to-end workflow involving Contextual Note Threads.
+  - Action: Ensure expected state transitions and outcomes for Contextual Note Threads.
+  - Action: Confirm all logs are generated properly for Contextual Note Threads.
+- [ ] **Step 10:** Verify full functionality for **Bulk Query Closing**.
+  - Action: Execute end-to-end workflow involving Bulk Query Closing.
+  - Action: Ensure expected state transitions and outcomes for Bulk Query Closing.
+  - Action: Confirm all logs are generated properly for Bulk Query Closing.
+- [ ] **Step 11:** Verify full functionality for **Query Resolution Metrics**.
+  - Action: Execute end-to-end workflow involving Query Resolution Metrics.
+  - Action: Ensure expected state transitions and outcomes for Query Resolution Metrics.
+  - Action: Confirm all logs are generated properly for Query Resolution Metrics.
+
+---
+
+## Medical Coding & Dictionary Integration
+### Specification: Medical Coding & Dictionary Integration Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **MedDRA Dictionary Support:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for MedDRA Dictionary Support.
+  - APIs must provide robust integration endpoints for MedDRA Dictionary Support.
+  - Role-based permissions must restrict access appropriately for MedDRA Dictionary Support.
+  - Full traceability must be maintained for MedDRA Dictionary Support.
+- **WHODrug Dictionary Support:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for WHODrug Dictionary Support.
+  - APIs must provide robust integration endpoints for WHODrug Dictionary Support.
+  - Role-based permissions must restrict access appropriately for WHODrug Dictionary Support.
+  - Full traceability must be maintained for WHODrug Dictionary Support.
+- **Auto-Coding Verbatim Terms:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Auto-Coding Verbatim Terms.
+  - APIs must provide robust integration endpoints for Auto-Coding Verbatim Terms.
+  - Role-based permissions must restrict access appropriately for Auto-Coding Verbatim Terms.
+  - Full traceability must be maintained for Auto-Coding Verbatim Terms.
+- **Manual Coding Interface:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Manual Coding Interface.
+  - APIs must provide robust integration endpoints for Manual Coding Interface.
+  - Role-based permissions must restrict access appropriately for Manual Coding Interface.
+  - Full traceability must be maintained for Manual Coding Interface.
+- **Coding Synonym Lists:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Coding Synonym Lists.
+  - APIs must provide robust integration endpoints for Coding Synonym Lists.
+  - Role-based permissions must restrict access appropriately for Coding Synonym Lists.
+  - Full traceability must be maintained for Coding Synonym Lists.
+- **Up-versioning mechanisms:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Up-versioning mechanisms.
+  - APIs must provide robust integration endpoints for Up-versioning mechanisms.
+  - Role-based permissions must restrict access appropriately for Up-versioning mechanisms.
+  - Full traceability must be maintained for Up-versioning mechanisms.
+- **Medical Coder Role restrictions:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Medical Coder Role restrictions.
+  - APIs must provide robust integration endpoints for Medical Coder Role restrictions.
+  - Role-based permissions must restrict access appropriately for Medical Coder Role restrictions.
+  - Full traceability must be maintained for Medical Coder Role restrictions.
+- **Coding Approval Workflows:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Coding Approval Workflows.
+  - APIs must provide robust integration endpoints for Coding Approval Workflows.
+  - Role-based permissions must restrict access appropriately for Coding Approval Workflows.
+  - Full traceability must be maintained for Coding Approval Workflows.
+- **Contextual coding (e.g. Indication linked to Medication):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Contextual coding (e.g. Indication linked to Medication).
+  - APIs must provide robust integration endpoints for Contextual coding (e.g. Indication linked to Medication).
+  - Role-based permissions must restrict access appropriately for Contextual coding (e.g. Indication linked to Medication).
+  - Full traceability must be maintained for Contextual coding (e.g. Indication linked to Medication).
+- **Uncoded Term Reporting:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Uncoded Term Reporting.
+  - APIs must provide robust integration endpoints for Uncoded Term Reporting.
+  - Role-based permissions must restrict access appropriately for Uncoded Term Reporting.
+  - Full traceability must be maintained for Uncoded Term Reporting.
+
+### Manual Verification Checklist: Medical Coding & Dictionary Integration
+- [ ] **Step 1:** Verify full functionality for **MedDRA Dictionary Support**.
+  - Action: Execute end-to-end workflow involving MedDRA Dictionary Support.
+  - Action: Ensure expected state transitions and outcomes for MedDRA Dictionary Support.
+  - Action: Confirm all logs are generated properly for MedDRA Dictionary Support.
+- [ ] **Step 2:** Verify full functionality for **WHODrug Dictionary Support**.
+  - Action: Execute end-to-end workflow involving WHODrug Dictionary Support.
+  - Action: Ensure expected state transitions and outcomes for WHODrug Dictionary Support.
+  - Action: Confirm all logs are generated properly for WHODrug Dictionary Support.
+- [ ] **Step 3:** Verify full functionality for **Auto-Coding Verbatim Terms**.
+  - Action: Execute end-to-end workflow involving Auto-Coding Verbatim Terms.
+  - Action: Ensure expected state transitions and outcomes for Auto-Coding Verbatim Terms.
+  - Action: Confirm all logs are generated properly for Auto-Coding Verbatim Terms.
+- [ ] **Step 4:** Verify full functionality for **Manual Coding Interface**.
+  - Action: Execute end-to-end workflow involving Manual Coding Interface.
+  - Action: Ensure expected state transitions and outcomes for Manual Coding Interface.
+  - Action: Confirm all logs are generated properly for Manual Coding Interface.
+- [ ] **Step 5:** Verify full functionality for **Coding Synonym Lists**.
+  - Action: Execute end-to-end workflow involving Coding Synonym Lists.
+  - Action: Ensure expected state transitions and outcomes for Coding Synonym Lists.
+  - Action: Confirm all logs are generated properly for Coding Synonym Lists.
+- [ ] **Step 6:** Verify full functionality for **Up-versioning mechanisms**.
+  - Action: Execute end-to-end workflow involving Up-versioning mechanisms.
+  - Action: Ensure expected state transitions and outcomes for Up-versioning mechanisms.
+  - Action: Confirm all logs are generated properly for Up-versioning mechanisms.
+- [ ] **Step 7:** Verify full functionality for **Medical Coder Role restrictions**.
+  - Action: Execute end-to-end workflow involving Medical Coder Role restrictions.
+  - Action: Ensure expected state transitions and outcomes for Medical Coder Role restrictions.
+  - Action: Confirm all logs are generated properly for Medical Coder Role restrictions.
+- [ ] **Step 8:** Verify full functionality for **Coding Approval Workflows**.
+  - Action: Execute end-to-end workflow involving Coding Approval Workflows.
+  - Action: Ensure expected state transitions and outcomes for Coding Approval Workflows.
+  - Action: Confirm all logs are generated properly for Coding Approval Workflows.
+- [ ] **Step 9:** Verify full functionality for **Contextual coding (e.g. Indication linked to Medication)**.
+  - Action: Execute end-to-end workflow involving Contextual coding (e.g. Indication linked to Medication).
+  - Action: Ensure expected state transitions and outcomes for Contextual coding (e.g. Indication linked to Medication).
+  - Action: Confirm all logs are generated properly for Contextual coding (e.g. Indication linked to Medication).
+- [ ] **Step 10:** Verify full functionality for **Uncoded Term Reporting**.
+  - Action: Execute end-to-end workflow involving Uncoded Term Reporting.
+  - Action: Ensure expected state transitions and outcomes for Uncoded Term Reporting.
+  - Action: Confirm all logs are generated properly for Uncoded Term Reporting.
+
+---
+
+## Data Extraction & Exporting
+### Specification: Data Extraction & Exporting Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **CDISC ODM-XML Extracts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for CDISC ODM-XML Extracts.
+  - APIs must provide robust integration endpoints for CDISC ODM-XML Extracts.
+  - Role-based permissions must restrict access appropriately for CDISC ODM-XML Extracts.
+  - Full traceability must be maintained for CDISC ODM-XML Extracts.
+- **CDISC SDTM Mapping:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for CDISC SDTM Mapping.
+  - APIs must provide robust integration endpoints for CDISC SDTM Mapping.
+  - Role-based permissions must restrict access appropriately for CDISC SDTM Mapping.
+  - Full traceability must be maintained for CDISC SDTM Mapping.
+- **Dataset-JSON format:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Dataset-JSON format.
+  - APIs must provide robust integration endpoints for Dataset-JSON format.
+  - Role-based permissions must restrict access appropriately for Dataset-JSON format.
+  - Full traceability must be maintained for Dataset-JSON format.
+- **SPSS exports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for SPSS exports.
+  - APIs must provide robust integration endpoints for SPSS exports.
+  - Role-based permissions must restrict access appropriately for SPSS exports.
+  - Full traceability must be maintained for SPSS exports.
+- **SAS transport files (XPT):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for SAS transport files (XPT).
+  - APIs must provide robust integration endpoints for SAS transport files (XPT).
+  - Role-based permissions must restrict access appropriately for SAS transport files (XPT).
+  - Full traceability must be maintained for SAS transport files (XPT).
+- **CSV flat files:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for CSV flat files.
+  - APIs must provide robust integration endpoints for CSV flat files.
+  - Role-based permissions must restrict access appropriately for CSV flat files.
+  - Full traceability must be maintained for CSV flat files.
+- **Scheduled Data Exports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Scheduled Data Exports.
+  - APIs must provide robust integration endpoints for Scheduled Data Exports.
+  - Role-based permissions must restrict access appropriately for Scheduled Data Exports.
+  - Full traceability must be maintained for Scheduled Data Exports.
+- **Incremental Data Exports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Incremental Data Exports.
+  - APIs must provide robust integration endpoints for Incremental Data Exports.
+  - Role-based permissions must restrict access appropriately for Incremental Data Exports.
+  - Full traceability must be maintained for Incremental Data Exports.
+- **Metadata-only exports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Metadata-only exports.
+  - APIs must provide robust integration endpoints for Metadata-only exports.
+  - Role-based permissions must restrict access appropriately for Metadata-only exports.
+  - Full traceability must be maintained for Metadata-only exports.
+- **Audit Trail exports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Audit Trail exports.
+  - APIs must provide robust integration endpoints for Audit Trail exports.
+  - Role-based permissions must restrict access appropriately for Audit Trail exports.
+  - Full traceability must be maintained for Audit Trail exports.
+- **PDF Archive generation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for PDF Archive generation.
+  - APIs must provide robust integration endpoints for PDF Archive generation.
+  - Role-based permissions must restrict access appropriately for PDF Archive generation.
+  - Full traceability must be maintained for PDF Archive generation.
+- **De-identified Data Extracts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for De-identified Data Extracts.
+  - APIs must provide robust integration endpoints for De-identified Data Extracts.
+  - Role-based permissions must restrict access appropriately for De-identified Data Extracts.
+  - Full traceability must be maintained for De-identified Data Extracts.
+- **Export Job Management:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Export Job Management.
+  - APIs must provide robust integration endpoints for Export Job Management.
+  - Role-based permissions must restrict access appropriately for Export Job Management.
+  - Full traceability must be maintained for Export Job Management.
+
+### Manual Verification Checklist: Data Extraction & Exporting
+- [ ] **Step 1:** Verify full functionality for **CDISC ODM-XML Extracts**.
+  - Action: Execute end-to-end workflow involving CDISC ODM-XML Extracts.
+  - Action: Ensure expected state transitions and outcomes for CDISC ODM-XML Extracts.
+  - Action: Confirm all logs are generated properly for CDISC ODM-XML Extracts.
+- [ ] **Step 2:** Verify full functionality for **CDISC SDTM Mapping**.
+  - Action: Execute end-to-end workflow involving CDISC SDTM Mapping.
+  - Action: Ensure expected state transitions and outcomes for CDISC SDTM Mapping.
+  - Action: Confirm all logs are generated properly for CDISC SDTM Mapping.
+- [ ] **Step 3:** Verify full functionality for **Dataset-JSON format**.
+  - Action: Execute end-to-end workflow involving Dataset-JSON format.
+  - Action: Ensure expected state transitions and outcomes for Dataset-JSON format.
+  - Action: Confirm all logs are generated properly for Dataset-JSON format.
+- [ ] **Step 4:** Verify full functionality for **SPSS exports**.
+  - Action: Execute end-to-end workflow involving SPSS exports.
+  - Action: Ensure expected state transitions and outcomes for SPSS exports.
+  - Action: Confirm all logs are generated properly for SPSS exports.
+- [ ] **Step 5:** Verify full functionality for **SAS transport files (XPT)**.
+  - Action: Execute end-to-end workflow involving SAS transport files (XPT).
+  - Action: Ensure expected state transitions and outcomes for SAS transport files (XPT).
+  - Action: Confirm all logs are generated properly for SAS transport files (XPT).
+- [ ] **Step 6:** Verify full functionality for **CSV flat files**.
+  - Action: Execute end-to-end workflow involving CSV flat files.
+  - Action: Ensure expected state transitions and outcomes for CSV flat files.
+  - Action: Confirm all logs are generated properly for CSV flat files.
+- [ ] **Step 7:** Verify full functionality for **Scheduled Data Exports**.
+  - Action: Execute end-to-end workflow involving Scheduled Data Exports.
+  - Action: Ensure expected state transitions and outcomes for Scheduled Data Exports.
+  - Action: Confirm all logs are generated properly for Scheduled Data Exports.
+- [ ] **Step 8:** Verify full functionality for **Incremental Data Exports**.
+  - Action: Execute end-to-end workflow involving Incremental Data Exports.
+  - Action: Ensure expected state transitions and outcomes for Incremental Data Exports.
+  - Action: Confirm all logs are generated properly for Incremental Data Exports.
+- [ ] **Step 9:** Verify full functionality for **Metadata-only exports**.
+  - Action: Execute end-to-end workflow involving Metadata-only exports.
+  - Action: Ensure expected state transitions and outcomes for Metadata-only exports.
+  - Action: Confirm all logs are generated properly for Metadata-only exports.
+- [ ] **Step 10:** Verify full functionality for **Audit Trail exports**.
+  - Action: Execute end-to-end workflow involving Audit Trail exports.
+  - Action: Ensure expected state transitions and outcomes for Audit Trail exports.
+  - Action: Confirm all logs are generated properly for Audit Trail exports.
+- [ ] **Step 11:** Verify full functionality for **PDF Archive generation**.
+  - Action: Execute end-to-end workflow involving PDF Archive generation.
+  - Action: Ensure expected state transitions and outcomes for PDF Archive generation.
+  - Action: Confirm all logs are generated properly for PDF Archive generation.
+- [ ] **Step 12:** Verify full functionality for **De-identified Data Extracts**.
+  - Action: Execute end-to-end workflow involving De-identified Data Extracts.
+  - Action: Ensure expected state transitions and outcomes for De-identified Data Extracts.
+  - Action: Confirm all logs are generated properly for De-identified Data Extracts.
+- [ ] **Step 13:** Verify full functionality for **Export Job Management**.
+  - Action: Execute end-to-end workflow involving Export Job Management.
+  - Action: Ensure expected state transitions and outcomes for Export Job Management.
+  - Action: Confirm all logs are generated properly for Export Job Management.
+
+---
+
+## Patient Reported Outcomes (ePRO)
+### Specification: Patient Reported Outcomes (ePRO) Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Patient Portal Access:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Patient Portal Access.
+  - APIs must provide robust integration endpoints for Patient Portal Access.
+  - Role-based permissions must restrict access appropriately for Patient Portal Access.
+  - Full traceability must be maintained for Patient Portal Access.
+- **Mobile Responsive UIs:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Mobile Responsive UIs.
+  - APIs must provide robust integration endpoints for Mobile Responsive UIs.
+  - Role-based permissions must restrict access appropriately for Mobile Responsive UIs.
+  - Full traceability must be maintained for Mobile Responsive UIs.
+- **SMS Notifications:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for SMS Notifications.
+  - APIs must provide robust integration endpoints for SMS Notifications.
+  - Role-based permissions must restrict access appropriately for SMS Notifications.
+  - Full traceability must be maintained for SMS Notifications.
+- **Email Reminders:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Email Reminders.
+  - APIs must provide robust integration endpoints for Email Reminders.
+  - Role-based permissions must restrict access appropriately for Email Reminders.
+  - Full traceability must be maintained for Email Reminders.
+- **Wearable Device Integration:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Wearable Device Integration.
+  - APIs must provide robust integration endpoints for Wearable Device Integration.
+  - Role-based permissions must restrict access appropriately for Wearable Device Integration.
+  - Full traceability must be maintained for Wearable Device Integration.
+- **BYOD Data Ingestion:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for BYOD Data Ingestion.
+  - APIs must provide robust integration endpoints for BYOD Data Ingestion.
+  - Role-based permissions must restrict access appropriately for BYOD Data Ingestion.
+  - Full traceability must be maintained for BYOD Data Ingestion.
+- **Daily Diary Forms:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Daily Diary Forms.
+  - APIs must provide robust integration endpoints for Daily Diary Forms.
+  - Role-based permissions must restrict access appropriately for Daily Diary Forms.
+  - Full traceability must be maintained for Daily Diary Forms.
+- **Visit-specific Questionnaires:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Visit-specific Questionnaires.
+  - APIs must provide robust integration endpoints for Visit-specific Questionnaires.
+  - Role-based permissions must restrict access appropriately for Visit-specific Questionnaires.
+  - Full traceability must be maintained for Visit-specific Questionnaires.
+- **Patient Authentication:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Patient Authentication.
+  - APIs must provide robust integration endpoints for Patient Authentication.
+  - Role-based permissions must restrict access appropriately for Patient Authentication.
+  - Full traceability must be maintained for Patient Authentication.
+- **Reminder Escalations:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Reminder Escalations.
+  - APIs must provide robust integration endpoints for Reminder Escalations.
+  - Role-based permissions must restrict access appropriately for Reminder Escalations.
+  - Full traceability must be maintained for Reminder Escalations.
+- **Missed form handling:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Missed form handling.
+  - APIs must provide robust integration endpoints for Missed form handling.
+  - Role-based permissions must restrict access appropriately for Missed form handling.
+  - Full traceability must be maintained for Missed form handling.
+- **Caregiver Form Support:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Caregiver Form Support.
+  - APIs must provide robust integration endpoints for Caregiver Form Support.
+  - Role-based permissions must restrict access appropriately for Caregiver Form Support.
+  - Full traceability must be maintained for Caregiver Form Support.
+
+### Manual Verification Checklist: Patient Reported Outcomes (ePRO)
+- [ ] **Step 1:** Verify full functionality for **Patient Portal Access**.
+  - Action: Execute end-to-end workflow involving Patient Portal Access.
+  - Action: Ensure expected state transitions and outcomes for Patient Portal Access.
+  - Action: Confirm all logs are generated properly for Patient Portal Access.
+- [ ] **Step 2:** Verify full functionality for **Mobile Responsive UIs**.
+  - Action: Execute end-to-end workflow involving Mobile Responsive UIs.
+  - Action: Ensure expected state transitions and outcomes for Mobile Responsive UIs.
+  - Action: Confirm all logs are generated properly for Mobile Responsive UIs.
+- [ ] **Step 3:** Verify full functionality for **SMS Notifications**.
+  - Action: Execute end-to-end workflow involving SMS Notifications.
+  - Action: Ensure expected state transitions and outcomes for SMS Notifications.
+  - Action: Confirm all logs are generated properly for SMS Notifications.
+- [ ] **Step 4:** Verify full functionality for **Email Reminders**.
+  - Action: Execute end-to-end workflow involving Email Reminders.
+  - Action: Ensure expected state transitions and outcomes for Email Reminders.
+  - Action: Confirm all logs are generated properly for Email Reminders.
+- [ ] **Step 5:** Verify full functionality for **Wearable Device Integration**.
+  - Action: Execute end-to-end workflow involving Wearable Device Integration.
+  - Action: Ensure expected state transitions and outcomes for Wearable Device Integration.
+  - Action: Confirm all logs are generated properly for Wearable Device Integration.
+- [ ] **Step 6:** Verify full functionality for **BYOD Data Ingestion**.
+  - Action: Execute end-to-end workflow involving BYOD Data Ingestion.
+  - Action: Ensure expected state transitions and outcomes for BYOD Data Ingestion.
+  - Action: Confirm all logs are generated properly for BYOD Data Ingestion.
+- [ ] **Step 7:** Verify full functionality for **Daily Diary Forms**.
+  - Action: Execute end-to-end workflow involving Daily Diary Forms.
+  - Action: Ensure expected state transitions and outcomes for Daily Diary Forms.
+  - Action: Confirm all logs are generated properly for Daily Diary Forms.
+- [ ] **Step 8:** Verify full functionality for **Visit-specific Questionnaires**.
+  - Action: Execute end-to-end workflow involving Visit-specific Questionnaires.
+  - Action: Ensure expected state transitions and outcomes for Visit-specific Questionnaires.
+  - Action: Confirm all logs are generated properly for Visit-specific Questionnaires.
+- [ ] **Step 9:** Verify full functionality for **Patient Authentication**.
+  - Action: Execute end-to-end workflow involving Patient Authentication.
+  - Action: Ensure expected state transitions and outcomes for Patient Authentication.
+  - Action: Confirm all logs are generated properly for Patient Authentication.
+- [ ] **Step 10:** Verify full functionality for **Reminder Escalations**.
+  - Action: Execute end-to-end workflow involving Reminder Escalations.
+  - Action: Ensure expected state transitions and outcomes for Reminder Escalations.
+  - Action: Confirm all logs are generated properly for Reminder Escalations.
+- [ ] **Step 11:** Verify full functionality for **Missed form handling**.
+  - Action: Execute end-to-end workflow involving Missed form handling.
+  - Action: Ensure expected state transitions and outcomes for Missed form handling.
+  - Action: Confirm all logs are generated properly for Missed form handling.
+- [ ] **Step 12:** Verify full functionality for **Caregiver Form Support**.
+  - Action: Execute end-to-end workflow involving Caregiver Form Support.
+  - Action: Ensure expected state transitions and outcomes for Caregiver Form Support.
+  - Action: Confirm all logs are generated properly for Caregiver Form Support.
+
+---
+
+## Security, Permissions, and Part 11 Audit Log
+### Specification: Security, Permissions, and Part 11 Audit Log Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **21 CFR Part 11 Audit Trails:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for 21 CFR Part 11 Audit Trails.
+  - APIs must provide robust integration endpoints for 21 CFR Part 11 Audit Trails.
+  - Role-based permissions must restrict access appropriately for 21 CFR Part 11 Audit Trails.
+  - Full traceability must be maintained for 21 CFR Part 11 Audit Trails.
+- **Immutable Audit Records:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Immutable Audit Records.
+  - APIs must provide robust integration endpoints for Immutable Audit Records.
+  - Role-based permissions must restrict access appropriately for Immutable Audit Records.
+  - Full traceability must be maintained for Immutable Audit Records.
+- **Electronic Signatures:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Electronic Signatures.
+  - APIs must provide robust integration endpoints for Electronic Signatures.
+  - Role-based permissions must restrict access appropriately for Electronic Signatures.
+  - Full traceability must be maintained for Electronic Signatures.
+- **Re-authentication prompts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Re-authentication prompts.
+  - APIs must provide robust integration endpoints for Re-authentication prompts.
+  - Role-based permissions must restrict access appropriately for Re-authentication prompts.
+  - Full traceability must be maintained for Re-authentication prompts.
+- **Role-Based Access Control (RBAC):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Role-Based Access Control (RBAC).
+  - APIs must provide robust integration endpoints for Role-Based Access Control (RBAC).
+  - Role-based permissions must restrict access appropriately for Role-Based Access Control (RBAC).
+  - Full traceability must be maintained for Role-Based Access Control (RBAC).
+- **Site-Level Segregation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Site-Level Segregation.
+  - APIs must provide robust integration endpoints for Site-Level Segregation.
+  - Role-based permissions must restrict access appropriately for Site-Level Segregation.
+  - Full traceability must be maintained for Site-Level Segregation.
+- **Study-Level Segregation:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Study-Level Segregation.
+  - APIs must provide robust integration endpoints for Study-Level Segregation.
+  - Role-based permissions must restrict access appropriately for Study-Level Segregation.
+  - Full traceability must be maintained for Study-Level Segregation.
+- **User Provisioning Workflows:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for User Provisioning Workflows.
+  - APIs must provide robust integration endpoints for User Provisioning Workflows.
+  - Role-based permissions must restrict access appropriately for User Provisioning Workflows.
+  - Full traceability must be maintained for User Provisioning Workflows.
+- **Password Complexity Rules:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Password Complexity Rules.
+  - APIs must provide robust integration endpoints for Password Complexity Rules.
+  - Role-based permissions must restrict access appropriately for Password Complexity Rules.
+  - Full traceability must be maintained for Password Complexity Rules.
+- **Session Timeouts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Session Timeouts.
+  - APIs must provide robust integration endpoints for Session Timeouts.
+  - Role-based permissions must restrict access appropriately for Session Timeouts.
+  - Full traceability must be maintained for Session Timeouts.
+- **Account Lockouts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Account Lockouts.
+  - APIs must provide robust integration endpoints for Account Lockouts.
+  - Role-based permissions must restrict access appropriately for Account Lockouts.
+  - Full traceability must be maintained for Account Lockouts.
+- **Two-Factor Authentication (2FA):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Two-Factor Authentication (2FA).
+  - APIs must provide robust integration endpoints for Two-Factor Authentication (2FA).
+  - Role-based permissions must restrict access appropriately for Two-Factor Authentication (2FA).
+  - Full traceability must be maintained for Two-Factor Authentication (2FA).
+- **Data Privacy Compliance (GDPR/HIPAA):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Privacy Compliance (GDPR/HIPAA).
+  - APIs must provide robust integration endpoints for Data Privacy Compliance (GDPR/HIPAA).
+  - Role-based permissions must restrict access appropriately for Data Privacy Compliance (GDPR/HIPAA).
+  - Full traceability must be maintained for Data Privacy Compliance (GDPR/HIPAA).
+- **System Administration Logs:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for System Administration Logs.
+  - APIs must provide robust integration endpoints for System Administration Logs.
+  - Role-based permissions must restrict access appropriately for System Administration Logs.
+  - Full traceability must be maintained for System Administration Logs.
+- **IP Allowlisting:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for IP Allowlisting.
+  - APIs must provide robust integration endpoints for IP Allowlisting.
+  - Role-based permissions must restrict access appropriately for IP Allowlisting.
+  - Full traceability must be maintained for IP Allowlisting.
+
+### Manual Verification Checklist: Security, Permissions, and Part 11 Audit Log
+- [ ] **Step 1:** Verify full functionality for **21 CFR Part 11 Audit Trails**.
+  - Action: Execute end-to-end workflow involving 21 CFR Part 11 Audit Trails.
+  - Action: Ensure expected state transitions and outcomes for 21 CFR Part 11 Audit Trails.
+  - Action: Confirm all logs are generated properly for 21 CFR Part 11 Audit Trails.
+- [ ] **Step 2:** Verify full functionality for **Immutable Audit Records**.
+  - Action: Execute end-to-end workflow involving Immutable Audit Records.
+  - Action: Ensure expected state transitions and outcomes for Immutable Audit Records.
+  - Action: Confirm all logs are generated properly for Immutable Audit Records.
+- [ ] **Step 3:** Verify full functionality for **Electronic Signatures**.
+  - Action: Execute end-to-end workflow involving Electronic Signatures.
+  - Action: Ensure expected state transitions and outcomes for Electronic Signatures.
+  - Action: Confirm all logs are generated properly for Electronic Signatures.
+- [ ] **Step 4:** Verify full functionality for **Re-authentication prompts**.
+  - Action: Execute end-to-end workflow involving Re-authentication prompts.
+  - Action: Ensure expected state transitions and outcomes for Re-authentication prompts.
+  - Action: Confirm all logs are generated properly for Re-authentication prompts.
+- [ ] **Step 5:** Verify full functionality for **Role-Based Access Control (RBAC)**.
+  - Action: Execute end-to-end workflow involving Role-Based Access Control (RBAC).
+  - Action: Ensure expected state transitions and outcomes for Role-Based Access Control (RBAC).
+  - Action: Confirm all logs are generated properly for Role-Based Access Control (RBAC).
+- [ ] **Step 6:** Verify full functionality for **Site-Level Segregation**.
+  - Action: Execute end-to-end workflow involving Site-Level Segregation.
+  - Action: Ensure expected state transitions and outcomes for Site-Level Segregation.
+  - Action: Confirm all logs are generated properly for Site-Level Segregation.
+- [ ] **Step 7:** Verify full functionality for **Study-Level Segregation**.
+  - Action: Execute end-to-end workflow involving Study-Level Segregation.
+  - Action: Ensure expected state transitions and outcomes for Study-Level Segregation.
+  - Action: Confirm all logs are generated properly for Study-Level Segregation.
+- [ ] **Step 8:** Verify full functionality for **User Provisioning Workflows**.
+  - Action: Execute end-to-end workflow involving User Provisioning Workflows.
+  - Action: Ensure expected state transitions and outcomes for User Provisioning Workflows.
+  - Action: Confirm all logs are generated properly for User Provisioning Workflows.
+- [ ] **Step 9:** Verify full functionality for **Password Complexity Rules**.
+  - Action: Execute end-to-end workflow involving Password Complexity Rules.
+  - Action: Ensure expected state transitions and outcomes for Password Complexity Rules.
+  - Action: Confirm all logs are generated properly for Password Complexity Rules.
+- [ ] **Step 10:** Verify full functionality for **Session Timeouts**.
+  - Action: Execute end-to-end workflow involving Session Timeouts.
+  - Action: Ensure expected state transitions and outcomes for Session Timeouts.
+  - Action: Confirm all logs are generated properly for Session Timeouts.
+- [ ] **Step 11:** Verify full functionality for **Account Lockouts**.
+  - Action: Execute end-to-end workflow involving Account Lockouts.
+  - Action: Ensure expected state transitions and outcomes for Account Lockouts.
+  - Action: Confirm all logs are generated properly for Account Lockouts.
+- [ ] **Step 12:** Verify full functionality for **Two-Factor Authentication (2FA)**.
+  - Action: Execute end-to-end workflow involving Two-Factor Authentication (2FA).
+  - Action: Ensure expected state transitions and outcomes for Two-Factor Authentication (2FA).
+  - Action: Confirm all logs are generated properly for Two-Factor Authentication (2FA).
+- [ ] **Step 13:** Verify full functionality for **Data Privacy Compliance (GDPR/HIPAA)**.
+  - Action: Execute end-to-end workflow involving Data Privacy Compliance (GDPR/HIPAA).
+  - Action: Ensure expected state transitions and outcomes for Data Privacy Compliance (GDPR/HIPAA).
+  - Action: Confirm all logs are generated properly for Data Privacy Compliance (GDPR/HIPAA).
+- [ ] **Step 14:** Verify full functionality for **System Administration Logs**.
+  - Action: Execute end-to-end workflow involving System Administration Logs.
+  - Action: Ensure expected state transitions and outcomes for System Administration Logs.
+  - Action: Confirm all logs are generated properly for System Administration Logs.
+- [ ] **Step 15:** Verify full functionality for **IP Allowlisting**.
+  - Action: Execute end-to-end workflow involving IP Allowlisting.
+  - Action: Ensure expected state transitions and outcomes for IP Allowlisting.
+  - Action: Confirm all logs are generated properly for IP Allowlisting.
+
+---
+
+## Site Management and Monitoring
+### Specification: Site Management and Monitoring Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Site Activation Workflows:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Site Activation Workflows.
+  - APIs must provide robust integration endpoints for Site Activation Workflows.
+  - Role-based permissions must restrict access appropriately for Site Activation Workflows.
+  - Full traceability must be maintained for Site Activation Workflows.
+- **PI Assignment:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for PI Assignment.
+  - APIs must provide robust integration endpoints for PI Assignment.
+  - Role-based permissions must restrict access appropriately for PI Assignment.
+  - Full traceability must be maintained for PI Assignment.
+- **Site Personnel Management:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Site Personnel Management.
+  - APIs must provide robust integration endpoints for Site Personnel Management.
+  - Role-based permissions must restrict access appropriately for Site Personnel Management.
+  - Full traceability must be maintained for Site Personnel Management.
+- **Monitoring Visit Reports:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Monitoring Visit Reports.
+  - APIs must provide robust integration endpoints for Monitoring Visit Reports.
+  - Role-based permissions must restrict access appropriately for Monitoring Visit Reports.
+  - Full traceability must be maintained for Monitoring Visit Reports.
+- **SDV Tracking Metrics:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for SDV Tracking Metrics.
+  - APIs must provide robust integration endpoints for SDV Tracking Metrics.
+  - Role-based permissions must restrict access appropriately for SDV Tracking Metrics.
+  - Full traceability must be maintained for SDV Tracking Metrics.
+- **Site Performance Dashboards:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Site Performance Dashboards.
+  - APIs must provide robust integration endpoints for Site Performance Dashboards.
+  - Role-based permissions must restrict access appropriately for Site Performance Dashboards.
+  - Full traceability must be maintained for Site Performance Dashboards.
+- **Target Enrollment tracking:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Target Enrollment tracking.
+  - APIs must provide robust integration endpoints for Target Enrollment tracking.
+  - Role-based permissions must restrict access appropriately for Target Enrollment tracking.
+  - Full traceability must be maintained for Target Enrollment tracking.
+- **Site Document Repository:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Site Document Repository.
+  - APIs must provide robust integration endpoints for Site Document Repository.
+  - Role-based permissions must restrict access appropriately for Site Document Repository.
+  - Full traceability must be maintained for Site Document Repository.
+- **Central Monitoring Alerts:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Central Monitoring Alerts.
+  - APIs must provide robust integration endpoints for Central Monitoring Alerts.
+  - Role-based permissions must restrict access appropriately for Central Monitoring Alerts.
+  - Full traceability must be maintained for Central Monitoring Alerts.
+- **Risk-Based Monitoring integrations:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Risk-Based Monitoring integrations.
+  - APIs must provide robust integration endpoints for Risk-Based Monitoring integrations.
+  - Role-based permissions must restrict access appropriately for Risk-Based Monitoring integrations.
+  - Full traceability must be maintained for Risk-Based Monitoring integrations.
+
+### Manual Verification Checklist: Site Management and Monitoring
+- [ ] **Step 1:** Verify full functionality for **Site Activation Workflows**.
+  - Action: Execute end-to-end workflow involving Site Activation Workflows.
+  - Action: Ensure expected state transitions and outcomes for Site Activation Workflows.
+  - Action: Confirm all logs are generated properly for Site Activation Workflows.
+- [ ] **Step 2:** Verify full functionality for **PI Assignment**.
+  - Action: Execute end-to-end workflow involving PI Assignment.
+  - Action: Ensure expected state transitions and outcomes for PI Assignment.
+  - Action: Confirm all logs are generated properly for PI Assignment.
+- [ ] **Step 3:** Verify full functionality for **Site Personnel Management**.
+  - Action: Execute end-to-end workflow involving Site Personnel Management.
+  - Action: Ensure expected state transitions and outcomes for Site Personnel Management.
+  - Action: Confirm all logs are generated properly for Site Personnel Management.
+- [ ] **Step 4:** Verify full functionality for **Monitoring Visit Reports**.
+  - Action: Execute end-to-end workflow involving Monitoring Visit Reports.
+  - Action: Ensure expected state transitions and outcomes for Monitoring Visit Reports.
+  - Action: Confirm all logs are generated properly for Monitoring Visit Reports.
+- [ ] **Step 5:** Verify full functionality for **SDV Tracking Metrics**.
+  - Action: Execute end-to-end workflow involving SDV Tracking Metrics.
+  - Action: Ensure expected state transitions and outcomes for SDV Tracking Metrics.
+  - Action: Confirm all logs are generated properly for SDV Tracking Metrics.
+- [ ] **Step 6:** Verify full functionality for **Site Performance Dashboards**.
+  - Action: Execute end-to-end workflow involving Site Performance Dashboards.
+  - Action: Ensure expected state transitions and outcomes for Site Performance Dashboards.
+  - Action: Confirm all logs are generated properly for Site Performance Dashboards.
+- [ ] **Step 7:** Verify full functionality for **Target Enrollment tracking**.
+  - Action: Execute end-to-end workflow involving Target Enrollment tracking.
+  - Action: Ensure expected state transitions and outcomes for Target Enrollment tracking.
+  - Action: Confirm all logs are generated properly for Target Enrollment tracking.
+- [ ] **Step 8:** Verify full functionality for **Site Document Repository**.
+  - Action: Execute end-to-end workflow involving Site Document Repository.
+  - Action: Ensure expected state transitions and outcomes for Site Document Repository.
+  - Action: Confirm all logs are generated properly for Site Document Repository.
+- [ ] **Step 9:** Verify full functionality for **Central Monitoring Alerts**.
+  - Action: Execute end-to-end workflow involving Central Monitoring Alerts.
+  - Action: Ensure expected state transitions and outcomes for Central Monitoring Alerts.
+  - Action: Confirm all logs are generated properly for Central Monitoring Alerts.
+- [ ] **Step 10:** Verify full functionality for **Risk-Based Monitoring integrations**.
+  - Action: Execute end-to-end workflow involving Risk-Based Monitoring integrations.
+  - Action: Ensure expected state transitions and outcomes for Risk-Based Monitoring integrations.
+  - Action: Confirm all logs are generated properly for Risk-Based Monitoring integrations.
+
+---
+
+## Data Management & Cleaning
+### Specification: Data Management & Cleaning Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **Cross-form Edit Checks:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Cross-form Edit Checks.
+  - APIs must provide robust integration endpoints for Cross-form Edit Checks.
+  - Role-based permissions must restrict access appropriately for Cross-form Edit Checks.
+  - Full traceability must be maintained for Cross-form Edit Checks.
+- **Longitudinal Edit Checks:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Longitudinal Edit Checks.
+  - APIs must provide robust integration endpoints for Longitudinal Edit Checks.
+  - Role-based permissions must restrict access appropriately for Longitudinal Edit Checks.
+  - Full traceability must be maintained for Longitudinal Edit Checks.
+- **Data Freezing:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Freezing.
+  - APIs must provide robust integration endpoints for Data Freezing.
+  - Role-based permissions must restrict access appropriately for Data Freezing.
+  - Full traceability must be maintained for Data Freezing.
+- **Data Locking (Site level):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Locking (Site level).
+  - APIs must provide robust integration endpoints for Data Locking (Site level).
+  - Role-based permissions must restrict access appropriately for Data Locking (Site level).
+  - Full traceability must be maintained for Data Locking (Site level).
+- **Data Locking (Study level):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Locking (Study level).
+  - APIs must provide robust integration endpoints for Data Locking (Study level).
+  - Role-based permissions must restrict access appropriately for Data Locking (Study level).
+  - Full traceability must be maintained for Data Locking (Study level).
+- **Soft vs Hard Locks:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Soft vs Hard Locks.
+  - APIs must provide robust integration endpoints for Soft vs Hard Locks.
+  - Role-based permissions must restrict access appropriately for Soft vs Hard Locks.
+  - Full traceability must be maintained for Soft vs Hard Locks.
+- **Data Review Workflows:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Review Workflows.
+  - APIs must provide robust integration endpoints for Data Review Workflows.
+  - Role-based permissions must restrict access appropriately for Data Review Workflows.
+  - Full traceability must be maintained for Data Review Workflows.
+- **Clinical Data Reviewer sign-offs:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Clinical Data Reviewer sign-offs.
+  - APIs must provide robust integration endpoints for Clinical Data Reviewer sign-offs.
+  - Role-based permissions must restrict access appropriately for Clinical Data Reviewer sign-offs.
+  - Full traceability must be maintained for Clinical Data Reviewer sign-offs.
+- **Medical Monitor sign-offs:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Medical Monitor sign-offs.
+  - APIs must provide robust integration endpoints for Medical Monitor sign-offs.
+  - Role-based permissions must restrict access appropriately for Medical Monitor sign-offs.
+  - Full traceability must be maintained for Medical Monitor sign-offs.
+- **Data Entry Metrics:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Data Entry Metrics.
+  - APIs must provide robust integration endpoints for Data Entry Metrics.
+  - Role-based permissions must restrict access appropriately for Data Entry Metrics.
+  - Full traceability must be maintained for Data Entry Metrics.
+- **Missing Data Analysis:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Missing Data Analysis.
+  - APIs must provide robust integration endpoints for Missing Data Analysis.
+  - Role-based permissions must restrict access appropriately for Missing Data Analysis.
+  - Full traceability must be maintained for Missing Data Analysis.
+
+### Manual Verification Checklist: Data Management & Cleaning
+- [ ] **Step 1:** Verify full functionality for **Cross-form Edit Checks**.
+  - Action: Execute end-to-end workflow involving Cross-form Edit Checks.
+  - Action: Ensure expected state transitions and outcomes for Cross-form Edit Checks.
+  - Action: Confirm all logs are generated properly for Cross-form Edit Checks.
+- [ ] **Step 2:** Verify full functionality for **Longitudinal Edit Checks**.
+  - Action: Execute end-to-end workflow involving Longitudinal Edit Checks.
+  - Action: Ensure expected state transitions and outcomes for Longitudinal Edit Checks.
+  - Action: Confirm all logs are generated properly for Longitudinal Edit Checks.
+- [ ] **Step 3:** Verify full functionality for **Data Freezing**.
+  - Action: Execute end-to-end workflow involving Data Freezing.
+  - Action: Ensure expected state transitions and outcomes for Data Freezing.
+  - Action: Confirm all logs are generated properly for Data Freezing.
+- [ ] **Step 4:** Verify full functionality for **Data Locking (Site level)**.
+  - Action: Execute end-to-end workflow involving Data Locking (Site level).
+  - Action: Ensure expected state transitions and outcomes for Data Locking (Site level).
+  - Action: Confirm all logs are generated properly for Data Locking (Site level).
+- [ ] **Step 5:** Verify full functionality for **Data Locking (Study level)**.
+  - Action: Execute end-to-end workflow involving Data Locking (Study level).
+  - Action: Ensure expected state transitions and outcomes for Data Locking (Study level).
+  - Action: Confirm all logs are generated properly for Data Locking (Study level).
+- [ ] **Step 6:** Verify full functionality for **Soft vs Hard Locks**.
+  - Action: Execute end-to-end workflow involving Soft vs Hard Locks.
+  - Action: Ensure expected state transitions and outcomes for Soft vs Hard Locks.
+  - Action: Confirm all logs are generated properly for Soft vs Hard Locks.
+- [ ] **Step 7:** Verify full functionality for **Data Review Workflows**.
+  - Action: Execute end-to-end workflow involving Data Review Workflows.
+  - Action: Ensure expected state transitions and outcomes for Data Review Workflows.
+  - Action: Confirm all logs are generated properly for Data Review Workflows.
+- [ ] **Step 8:** Verify full functionality for **Clinical Data Reviewer sign-offs**.
+  - Action: Execute end-to-end workflow involving Clinical Data Reviewer sign-offs.
+  - Action: Ensure expected state transitions and outcomes for Clinical Data Reviewer sign-offs.
+  - Action: Confirm all logs are generated properly for Clinical Data Reviewer sign-offs.
+- [ ] **Step 9:** Verify full functionality for **Medical Monitor sign-offs**.
+  - Action: Execute end-to-end workflow involving Medical Monitor sign-offs.
+  - Action: Ensure expected state transitions and outcomes for Medical Monitor sign-offs.
+  - Action: Confirm all logs are generated properly for Medical Monitor sign-offs.
+- [ ] **Step 10:** Verify full functionality for **Data Entry Metrics**.
+  - Action: Execute end-to-end workflow involving Data Entry Metrics.
+  - Action: Ensure expected state transitions and outcomes for Data Entry Metrics.
+  - Action: Confirm all logs are generated properly for Data Entry Metrics.
+- [ ] **Step 11:** Verify full functionality for **Missing Data Analysis**.
+  - Action: Execute end-to-end workflow involving Missing Data Analysis.
+  - Action: Ensure expected state transitions and outcomes for Missing Data Analysis.
+  - Action: Confirm all logs are generated properly for Missing Data Analysis.
+
+---
+
+## Integration APIs & Webhooks
+### Specification: Integration APIs & Webhooks Workflows
+The system must seamlessly support the features of the electronic data capture and clinical trial management system.
+- **RESTful API endpoints:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for RESTful API endpoints.
+  - APIs must provide robust integration endpoints for RESTful API endpoints.
+  - Role-based permissions must restrict access appropriately for RESTful API endpoints.
+  - Full traceability must be maintained for RESTful API endpoints.
+- **GraphQL Interfaces:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for GraphQL Interfaces.
+  - APIs must provide robust integration endpoints for GraphQL Interfaces.
+  - Role-based permissions must restrict access appropriately for GraphQL Interfaces.
+  - Full traceability must be maintained for GraphQL Interfaces.
+- **Webhook subscriptions for Subject events:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Webhook subscriptions for Subject events.
+  - APIs must provide robust integration endpoints for Webhook subscriptions for Subject events.
+  - Role-based permissions must restrict access appropriately for Webhook subscriptions for Subject events.
+  - Full traceability must be maintained for Webhook subscriptions for Subject events.
+- **Webhook subscriptions for Data events:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Webhook subscriptions for Data events.
+  - APIs must provide robust integration endpoints for Webhook subscriptions for Data events.
+  - Role-based permissions must restrict access appropriately for Webhook subscriptions for Data events.
+  - Full traceability must be maintained for Webhook subscriptions for Data events.
+- **EHR/EMR integration support (FHIR):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for EHR/EMR integration support (FHIR).
+  - APIs must provide robust integration endpoints for EHR/EMR integration support (FHIR).
+  - Role-based permissions must restrict access appropriately for EHR/EMR integration support (FHIR).
+  - Full traceability must be maintained for EHR/EMR integration support (FHIR).
+- **Laboratory data imports (HL7):** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Laboratory data imports (HL7).
+  - APIs must provide robust integration endpoints for Laboratory data imports (HL7).
+  - Role-based permissions must restrict access appropriately for Laboratory data imports (HL7).
+  - Full traceability must be maintained for Laboratory data imports (HL7).
+- **Authentication Tokens:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for Authentication Tokens.
+  - APIs must provide robust integration endpoints for Authentication Tokens.
+  - Role-based permissions must restrict access appropriately for Authentication Tokens.
+  - Full traceability must be maintained for Authentication Tokens.
+- **API Rate Limiting:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for API Rate Limiting.
+  - APIs must provide robust integration endpoints for API Rate Limiting.
+  - Role-based permissions must restrict access appropriately for API Rate Limiting.
+  - Full traceability must be maintained for API Rate Limiting.
+- **API Request logging:** Must ensure 100% feature parity with OpenClinica implementations.
+  - System must execute business logic for API Request logging.
+  - APIs must provide robust integration endpoints for API Request logging.
+  - Role-based permissions must restrict access appropriately for API Request logging.
+  - Full traceability must be maintained for API Request logging.
+
+### Manual Verification Checklist: Integration APIs & Webhooks
+- [ ] **Step 1:** Verify full functionality for **RESTful API endpoints**.
+  - Action: Execute end-to-end workflow involving RESTful API endpoints.
+  - Action: Ensure expected state transitions and outcomes for RESTful API endpoints.
+  - Action: Confirm all logs are generated properly for RESTful API endpoints.
+- [ ] **Step 2:** Verify full functionality for **GraphQL Interfaces**.
+  - Action: Execute end-to-end workflow involving GraphQL Interfaces.
+  - Action: Ensure expected state transitions and outcomes for GraphQL Interfaces.
+  - Action: Confirm all logs are generated properly for GraphQL Interfaces.
+- [ ] **Step 3:** Verify full functionality for **Webhook subscriptions for Subject events**.
+  - Action: Execute end-to-end workflow involving Webhook subscriptions for Subject events.
+  - Action: Ensure expected state transitions and outcomes for Webhook subscriptions for Subject events.
+  - Action: Confirm all logs are generated properly for Webhook subscriptions for Subject events.
+- [ ] **Step 4:** Verify full functionality for **Webhook subscriptions for Data events**.
+  - Action: Execute end-to-end workflow involving Webhook subscriptions for Data events.
+  - Action: Ensure expected state transitions and outcomes for Webhook subscriptions for Data events.
+  - Action: Confirm all logs are generated properly for Webhook subscriptions for Data events.
+- [ ] **Step 5:** Verify full functionality for **EHR/EMR integration support (FHIR)**.
+  - Action: Execute end-to-end workflow involving EHR/EMR integration support (FHIR).
+  - Action: Ensure expected state transitions and outcomes for EHR/EMR integration support (FHIR).
+  - Action: Confirm all logs are generated properly for EHR/EMR integration support (FHIR).
+- [ ] **Step 6:** Verify full functionality for **Laboratory data imports (HL7)**.
+  - Action: Execute end-to-end workflow involving Laboratory data imports (HL7).
+  - Action: Ensure expected state transitions and outcomes for Laboratory data imports (HL7).
+  - Action: Confirm all logs are generated properly for Laboratory data imports (HL7).
+- [ ] **Step 7:** Verify full functionality for **Authentication Tokens**.
+  - Action: Execute end-to-end workflow involving Authentication Tokens.
+  - Action: Ensure expected state transitions and outcomes for Authentication Tokens.
+  - Action: Confirm all logs are generated properly for Authentication Tokens.
+- [ ] **Step 8:** Verify full functionality for **API Rate Limiting**.
+  - Action: Execute end-to-end workflow involving API Rate Limiting.
+  - Action: Ensure expected state transitions and outcomes for API Rate Limiting.
+  - Action: Confirm all logs are generated properly for API Rate Limiting.
+- [ ] **Step 9:** Verify full functionality for **API Request logging**.
+  - Action: Execute end-to-end workflow involving API Request logging.
+  - Action: Ensure expected state transitions and outcomes for API Request logging.
+  - Action: Confirm all logs are generated properly for API Request logging.
+
+---
