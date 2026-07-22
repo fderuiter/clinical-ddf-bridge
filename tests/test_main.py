@@ -13,6 +13,7 @@ def test_designer_health():
 
 
 def test_designer_gateway_auth_missing_headers():
+    """Test that requests missing authentication headers receive a 401 response."""
     with TestClient(designer_app) as client:
         response = client.get("/differences")
         assert response.status_code == 401
@@ -20,6 +21,7 @@ def test_designer_gateway_auth_missing_headers():
 
 
 def test_designer_gateway_auth_invalid_timestamp():
+    """Test that requests with non-float timestamps receive a 401 response."""
     with TestClient(designer_app) as client:
         headers = {
             "X-User-Id": "123",
@@ -33,6 +35,7 @@ def test_designer_gateway_auth_invalid_timestamp():
 
 
 def test_designer_gateway_auth_expired_timestamp():
+    """Test that requests with expired timestamps receive a 401 response."""
     with TestClient(designer_app) as client:
         headers = {
             "X-User-Id": "123",
@@ -46,6 +49,7 @@ def test_designer_gateway_auth_expired_timestamp():
 
 
 def test_designer_gateway_auth_invalid_signature():
+    """Test that requests with an invalid cryptographic signature receive a 401 response."""
     import time
     with TestClient(designer_app) as client:
         headers = {
