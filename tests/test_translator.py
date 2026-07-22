@@ -1,10 +1,8 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.testclient import TestClient
 from apps.execution.main import app, AsyncSessionLocal
 from apps.execution.database.models import TranslationJob, AuditLog
 import xml.etree.ElementTree as ET
-import asyncio
 
 @pytest.mark.asyncio
 async def test_study_published_event_triggers_translation():

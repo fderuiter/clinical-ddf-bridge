@@ -6,9 +6,16 @@ from typing import Any
 from apps.execution.database.models import TranslationJob
 from apps.execution.database.context import current_session
 
-async def process_translation(study_id: str, payload: dict, session_factory: Any):
-    """
-    Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
+async def process_translation(study_id: str, payload: dict[str, Any], session_factory: Any) -> None:
+    """Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
+
+    Args:
+        study_id (str): The unique identifier of the source study.
+        payload (dict[str, Any]): The raw USDM protocol payload.
+        session_factory (Any): The SQLAlchemy asynchronous session factory.
+
+    Returns:
+        None
     """
     async with session_factory() as session:
         async with session.begin():
@@ -42,7 +49,7 @@ async def process_translation(study_id: str, payload: dict, session_factory: Any
                     "xmlns:xf": "http://www.w3.org/2002/xforms",
                     "xmlns:ev": "http://www.w3.org/2001/xml-events"
                 }
-                openrosa_root = ET.Element("html", **ns_attribs)
+                openrosa_root = ET.Element("html", attrib=ns_attribs)
                 head = ET.SubElement(openrosa_root, "head")
                 title = ET.SubElement(head, "title")
                 title.text = payload.get("name", f"Study {study_id}")

@@ -33,6 +33,17 @@ class AuditedModel(Base):
         super().__init__(**kwargs)
 
 class TranslationJob(AuditedModel):
+    """Represents an asynchronous study translation job.
+
+    Inherits from AuditedModel to maintain an immutable audit log of status changes and generated payloads.
+
+    Attributes:
+        study_id (str): The unique identifier of the source study.
+        status (str): The execution status (e.g., 'PENDING', 'COMPLETED', 'FAILED').
+        odm_payload (str): The generated CDISC ODM XML payload.
+        openrosa_payload (str): The generated OpenRosa XML layout payload.
+        error_message (str): An error message if the translation failed.
+    """
     __tablename__ = 'translation_jobs'
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
