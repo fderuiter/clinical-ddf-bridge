@@ -5,6 +5,23 @@ from apps.execution.main import app
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import TranslationJob, AuditLog, Base
 import xml.etree.ElementTree as ET
+import time
+import hmac
+import hashlib
+import os
+
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+
+def get_auth_headers(user_id="test_user", roles="admin"):
+    timestamp = str(time.time())
+    message = f"{user_id}:{roles}:{timestamp}"
+    signature = hmac.new(GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature
+    }
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db():
@@ -33,7 +50,7 @@ async def test_study_published_event_triggers_translation():
     
     # Do not use `with TestClient(app)` to avoid triggering the lifespan which overwrites the test db
     client = TestClient(app)
-    response = client.post("/events/study-published", json=study_payload)
+    response = client.post("/events/study-published", json=study_payload, headers=get_auth_headers())
     assert response.status_code == 200
     assert response.json()["status"] == "accepted"
         
@@ -95,7 +112,7 @@ async def test_translation_validation_failure():
     }
     
     client = TestClient(app)
-    response = client.post("/events/study-published", json=study_payload)
+    response = client.post("/events/study-published", json=study_payload, headers=get_auth_headers())
     assert response.status_code == 200
         
     async with db_manager.get_session_maker()() as session:
