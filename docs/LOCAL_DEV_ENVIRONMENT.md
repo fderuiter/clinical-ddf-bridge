@@ -4,9 +4,9 @@ Welcome to the fully containerized local development sandbox for the Cadence Cli
 
 ## Architecture & Decisions
 
-Before making significant changes or starting a new feature, please review the historical design choices and the context behind them. 
+Before making significant changes or starting a new feature, please review the historical design choices and the context behind them.
 
-All past architectural decisions are documented in our **[Architectural Decisions Index](adr/index.md)**. 
+All past architectural decisions are documented in our **[Architectural Decisions Index](adr/index.md)**.
 
 When introducing new architectural changes (e.g., adding a new dependency, modifying data models, or adding a new service), you are required to submit an Architecture Decision Record (ADR) following the mandatory format. A template is provided in the `docs/adr/` directory.
 
@@ -44,7 +44,7 @@ We have provided a verification helper script:
 ```
 
 ### What does `run-checks.sh` do?
-1. **Formatting Checks**: Runs `black --check` on the codebase.
+1. **Formatting Checks**: Runs `ruff format --check` on the codebase.
 2. **Linting Checks**: Runs `ruff check` on the codebase.
 3. **Unit & Integration Tests**: Runs `pytest`. The test suite is configured to target the live containerized PostgreSQL database (`postgres:5432`), guaranteeing that tests assert correctness under a production-like network environment rather than relying on an in-memory SQLite database.
 
@@ -52,8 +52,8 @@ We have provided a verification helper script:
 If you wish to run a specific command (e.g., auto-formatting code), you can execute it inside the `execution` container environment (where all `uv` dependencies are resolved):
 
 ```bash
-# Auto-format your code using Black and Ruff
-docker compose -f docker/docker-compose.yml exec execution black .
+# Auto-format your code using Ruff
+docker compose -f docker/docker-compose.yml exec execution ruff format .
 docker compose -f docker/docker-compose.yml exec execution ruff check --fix .
 
 # Run a specific test file
@@ -62,7 +62,7 @@ docker compose -f docker/docker-compose.yml exec execution pytest tests/test_aud
 
 ## 3. Dependency Management
 
-The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.** 
+The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.**
 
 If you prefer to install locally outside the container, you can use `poetry install`.
 

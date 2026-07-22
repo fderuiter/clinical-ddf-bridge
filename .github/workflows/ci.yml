@@ -57,7 +57,7 @@ jobs:
       - name: Run linting
         run: |
           poetry run ruff check .
-          poetry run black --check .
+          poetry run ruff format --check .
 
       - name: Run tests and coverage
         env:
