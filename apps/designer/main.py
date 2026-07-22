@@ -1,6 +1,8 @@
+import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
+import httpx
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
@@ -157,6 +159,13 @@ async def study_differences(
     """
     Get human-readable field-level differences between two version actions of a study.
 
+    This endpoint uses a decoupled, API-first in-memory diffing architecture. Instead of 
+    relying on a direct database connection (which led to 503 errors and tight coupling), 
+    it fetches full study payloads from an external registry. The comparison logic runs 
+    entirely in-memory by flattening nested dictionary structures to dynamically identify 
+    added, modified, and deleted fields. This ensures high availability and fast execution 
+    without maintaining direct database connections.
+
     Args:
         study_id (str): The unique identifier of the study.
         action_id1 (str): The ID of the first action version.
@@ -165,9 +174,6 @@ async def study_differences(
     Returns:
         List[DifferenceResult]: A list of field-level differences.
     """
-    import os
-    import httpx
-
     base_url = os.getenv("STUDY_REGISTRY_URL", "http://localhost:8000")
     
     try:
@@ -202,7 +208,21 @@ async def study_differences(
         raise HTTPException(status_code=400, detail=f"Target version {action_id2} is missing from the registry")
         
     def flatten_dict(d: Any, parent_key: str = '', sep: str = '.') -> Dict[str, Any]:
-        items = []
+        """
+        Recursively flatten a nested dictionary or list into a flat dictionary.
+        
+        This enables efficient 1D in-memory comparison of complex nested JSON 
+        payloads (like USDM) by generating unique dot-notated paths for every node.
+        
+        Args:
+            d (Any): The dictionary, list, or primitive to flatten.
+            parent_key (str): The accumulated path key.
+            sep (str): The separator used for nested keys.
+            
+        Returns:
+            Dict[str, Any]: A flattened dictionary mapping paths to values.
+        """
+        items: List[Tuple[str, Any]] = []
         if isinstance(d, dict):
             for k, v in d.items():
                 new_key = f"{parent_key}{sep}{k}" if parent_key else k
