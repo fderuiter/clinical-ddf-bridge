@@ -1,0 +1,123 @@
+# ==========================================
+# Cadence Clinical - Comprehensive .gitignore
+# ==========================================
+
+# ------------------------------------------
+# Environment Variables & Secret Files
+# ------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+secrets/
+secrets.yaml
+
+# ------------------------------------------
+# Python & Bytecode
+# ------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.python-version
+
+# ------------------------------------------
+# Virtual Environments & Packaging
+# ------------------------------------------
+.venv/
+venv/
+ENV/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ------------------------------------------
+# Testing, Linting & Coverage Tools
+# ------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.pyo
+htmlcov/
+.tox/
+.nox/
+
+# ------------------------------------------
+# Database & Container Persistence (Local Dev)
+# ------------------------------------------
+docker/postgres-data/
+docker/neo4j-data/
+docker/keycloak-data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# ------------------------------------------
+# Jules & AI Workspace Artifacts
+# ------------------------------------------
+.jules/cache/
+.jules/wiki/
+.jules.local.json
+
+# ------------------------------------------
+# Node.js / Frontend Packages (if applicable)
+# ------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.next/
+out/
+.dist/
+
+# ------------------------------------------
+# Operating System & Editor Artifacts
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ------------------------------------------
+# IDE Settings (VS Code, JetBrains, Cursor)
+# ------------------------------------------
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.cursor/
