@@ -111,11 +111,14 @@ async def test_database_triggers_prevent_modifications():
 @pytest.mark.asyncio
 async def test_safety_freeze_prevents_writes():
     enable_safety_freeze()
+    try:
+        async with db_manager.get_session_maker()() as session:
+            # Creating a record should fail
+            job = TranslationJob(study_id="s1", status="PENDING")
+            session.add(job)
 
-    async with db_manager.get_session_maker()() as session:
-        # Creating a record should fail
-        job = TranslationJob(study_id="s1", status="PENDING")
-        session.add(job)
-
-        with pytest.raises(RuntimeError, match="SAFETY FREEZE ACTIVE"):
-            await session.commit()
+            with pytest.raises(RuntimeError, match="SAFETY FREEZE ACTIVE"):
+                await session.commit()
+    finally:
+        import apps.execution.ledger as ledger
+        ledger._SAFETY_FREEZE_ACTIVE = False
