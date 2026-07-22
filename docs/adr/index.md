@@ -15,3 +15,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Unified USDM Dynamic Mapper and Terminology Cache](2026-07-22-usdm-dynamic-mapper-and-cache.md)
 - [2026-07-22: Unified Database Management and Pre-Boot Migrations](2026-07-22-unified-database-management-and-pre-boot-migrations.md)
 - [2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md)
+- [2026-07-22: API-First Validation and USDM Integration](2026-07-22-api-first-validation-and-usdm-integration.md)
