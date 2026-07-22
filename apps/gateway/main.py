@@ -1,8 +1,8 @@
+from typing import Any, Dict, Optional
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import JSONResponse
 import httpx
 import os
-import json
 import time
 import hmac
 import hashlib
@@ -19,11 +19,17 @@ SERVICES = {
     "execution": os.getenv("EXECUTION_URL", "http://localhost:8002"),
 }
 
-jwks_cache = None
-http_client = None
+jwks_cache: Optional[Dict[str, Any]] = None
+http_client: Optional[httpx.AsyncClient] = None
 
 @app.on_event("startup")
-async def startup():
+async def startup() -> None:
+    """
+    Initialize resources on gateway startup.
+
+    Creates an HTTP client instance and attempts to fetch Keycloak JWKS 
+    public keys for local caching, unless SKIP_JWKS_FETCH is enabled.
+    """
     global jwks_cache, http_client
     http_client = httpx.AsyncClient()
     if not os.getenv("SKIP_JWKS_FETCH"):
@@ -35,12 +41,33 @@ async def startup():
             pass
 
 @app.on_event("shutdown")
-async def shutdown():
+async def shutdown() -> None:
+    """
+    Clean up resources on gateway shutdown.
+
+    Closes the global asynchronous HTTP client to prevent resource leaks.
+    """
     global http_client
     if http_client:
         await http_client.aclose()
 
-def verify_token(token: str):
+def verify_token(token: str) -> Dict[str, Any]:
+    """
+    Verify and decode a JSON Web Token (JWT).
+
+    Validates the token using either a configured test secret or the 
+    cached JWKS public keys. Returns the decoded payload if valid.
+
+    Args:
+        token (str): The JWT string to verify.
+
+    Returns:
+        Dict[str, Any]: The decoded JWT payload.
+
+    Raises:
+        HTTPException: If the token is invalid, signature verification fails, 
+                       or JWKS is unavailable.
+    """
     test_secret = os.getenv("JWT_TEST_SECRET")
     if test_secret:
         try:
@@ -83,11 +110,40 @@ def verify_token(token: str):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def generate_signature(user_id: str, roles: str, timestamp: str) -> str:
+    """
+    Generate an HMAC-SHA256 signature for identity headers.
+
+    Uses a shared secret to cryptographically sign the user identity 
+    and timestamp, allowing downstream services to trust the injected headers.
+
+    Args:
+        user_id (str): The unique user identifier.
+        roles (str): Comma-separated roles assigned to the user.
+        timestamp (str): The exact timestamp when the signature was created.
+
+    Returns:
+        str: A hexadecimal representation of the HMAC signature.
+    """
     message = f"{user_id}:{roles}:{timestamp}"
     return hmac.new(GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def proxy_requests(request: Request, path: str):
+async def proxy_requests(request: Request, path: str) -> Response:
+    """
+    Proxy HTTP requests to downstream microservices.
+
+    Intercepts all incoming traffic, enforces valid authentication, 
+    injects authenticated identity headers along with cryptographic 
+    signatures, and forwards the request to the appropriate downstream URL.
+
+    Args:
+        request (Request): The incoming FastAPI HTTP request.
+        path (str): The routed URL path.
+
+    Returns:
+        Response: The HTTP response from the downstream service or a 
+                  Gateway error JSON payload.
+    """
     if path == "health" or path == "":
         return {"status": "ok", "service": "gateway"}
 
@@ -131,7 +187,10 @@ async def proxy_requests(request: Request, path: str):
     headers["X-Gateway-Signature"] = signature
     
     try:
-        body = await request.body()
+        body: bytes = await request.body()
+        if http_client is None:
+            return JSONResponse(status_code=500, content={"detail": "Gateway HTTP client not initialized"})
+            
         req = http_client.build_request(
             method=request.method,
             url=target_url,
