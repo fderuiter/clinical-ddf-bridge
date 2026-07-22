@@ -51,6 +51,7 @@ def test_designer_gateway_auth_expired_timestamp():
 def test_designer_gateway_auth_invalid_signature():
     """Test that requests with an invalid cryptographic signature receive a 401 response."""
     import time
+
     with TestClient(designer_app) as client:
         headers = {
             "X-User-Id": "123",
