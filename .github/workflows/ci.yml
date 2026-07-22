@@ -8,7 +8,6 @@ jobs:
   test:
     name: Test and Coverage
     runs-on: ubuntu-latest
-    
     services:
       postgres:
         image: postgres:15-alpine
@@ -46,5 +45,5 @@ jobs:
 
       - name: Run tests and coverage
         env:
-          TEST_DATABASE_URL: postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc
+          TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: poetry run pytest
