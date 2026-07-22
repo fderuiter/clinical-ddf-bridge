@@ -1,3 +1,10 @@
+"""
+Pre-boot database schema migration runner.
+
+Executes asynchronous database schema migrations and trigger installations
+before the main web application starts.
+"""
+
 import argparse
 import asyncio
 import os
@@ -5,6 +12,7 @@ import sys
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from apps.execution.database.core import setup_database_triggers
 from apps.execution.database.models import Base
 
 
@@ -24,6 +32,7 @@ async def run_migrations(database_url: str) -> None:
         async with engine.begin() as conn:
             # We would normally use alembic or similar here, but for this setup we just create_all
             await conn.run_sync(Base.metadata.create_all)
+            await setup_database_triggers(conn)
         print("Schema migration completed successfully.")
     except Exception as e:
         print(f"Schema migration failed: {e}")

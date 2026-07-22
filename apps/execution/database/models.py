@@ -10,6 +10,12 @@ class Base(DeclarativeBase):
 
 
 class AuditLog(Base):
+    """
+    Represents an atomic, immutable change record for a database row.
+    
+    Captures old and new values, action type, user, and timestamps.
+    Part of the cryptographic audit ledger.
+    """
     __tablename__ = "audit_logs"
 
     id: Mapped[str] = mapped_column(
@@ -26,6 +32,27 @@ class AuditLog(Base):
     new_values: Mapped[dict] = mapped_column(JSON, nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1)
     change_reason: Mapped[str] = mapped_column(String(255), nullable=True)
+    block_id: Mapped[str] = mapped_column(String(36), nullable=True)
+
+
+class AuditLedgerBlock(Base):
+    """
+    Represents a sealed block in the cryptographic audit ledger.
+    
+    Groups multiple `AuditLog` entries, computes a Merkle root, and chains to the previous
+    block using a cryptographic hash to ensure chronological non-repudiation.
+    """
+    __tablename__ = "audit_ledger_blocks"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    block_number: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    merkle_root: Mapped[str] = mapped_column(String(64), nullable=False)
+    previous_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    sealed_log_ids: Mapped[list] = mapped_column(JSON, nullable=True)
 
 
 class AuditedModel(Base):

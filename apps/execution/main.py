@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -9,6 +10,7 @@ from apps.execution.database.core import db_manager
 from apps.execution.database.decorators import transactional
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import Cohort, Subject
+from apps.execution.ledger import run_sealing_loop
 from apps.execution.translator import process_translation
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -31,8 +33,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Initialize shared database library
     db_manager.init_db(DATABASE_URL)
+
+    # Start the ledger sealing background loop
+    sealing_task = asyncio.create_task(run_sealing_loop(db_manager.get_session_maker()))
+
     yield
     # Cleanup database connection
+    sealing_task.cancel()
     await db_manager.close()
 
 

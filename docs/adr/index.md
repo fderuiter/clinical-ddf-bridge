@@ -26,3 +26,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Signature Re-Authentication](2026-07-22-signature-re-authentication.md)
 - [2026-07-22: Schema Mapping Design](2026-07-22-schema-mapping-design.md)
 - [2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
+- [2026-07-22: Cryptographic Audit Ledger and GxP-Lock Safety Freeze](2026-07-22-cryptographic-audit-ledger-and-gxp-lock.md)

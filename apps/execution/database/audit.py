@@ -1,12 +1,31 @@
+"""
+Database audit event listeners.
+
+Intersects SQLAlchemy session flush events to automatically generate `AuditLog`
+entries for all modifications to audited models. Also enforces the global read-only
+safety freeze state when tampering is detected.
+"""
+
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
+
+from apps.execution.ledger import is_safety_freeze_active
 
 from .context import current_change_reason, current_user_id
 from .models import AuditedModel, AuditLog
 
 
 def get_primary_key(obj):
+    """
+    Retrieve the primary key value of a SQLAlchemy model instance.
+
+    Args:
+        obj: The SQLAlchemy model instance.
+
+    Returns:
+        str: The primary key value as a string, or "unknown" if not found.
+    """
     mapper = inspect(obj).mapper
     pk_cols = mapper.primary_key
     if not pk_cols:
@@ -16,8 +35,31 @@ def get_primary_key(obj):
 
 @event.listens_for(Session, "before_flush")
 def receive_before_flush(session: Session, flush_context, instances):
+    """
+    SQLAlchemy event listener invoked before a session flush.
+
+    Automatically tracks all inserted, updated, and deleted objects in the current
+    session and generates corresponding `AuditLog` records. If the global safety freeze
+    is active, this will raise an exception to prevent any database modifications.
+    
+    Args:
+        session (Session): The active database session.
+        flush_context: The flush context.
+        instances: Optional sequence of instances.
+    """
     if not session.is_modified:
         return
+
+    if is_safety_freeze_active():
+        # Check if there are any non-ledger modifications
+        for obj in session.new.union(session.dirty).union(session.deleted):
+            if hasattr(obj, "__tablename__") and obj.__tablename__ not in (
+                "audit_ledger_blocks",
+                "audit_logs",
+            ):
+                raise RuntimeError(
+                    "SAFETY FREEZE ACTIVE: Database is in read-only mode due to integrity breach."
+                )
 
     audit_logs = []
     user_id = current_user_id.get()
