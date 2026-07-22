@@ -1,36 +1,50 @@
+import os
+from typing import AsyncGenerator, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
 from pydantic import BaseModel
-from typing import Any
 
-from apps.execution.database.models import Base
+from apps.execution.database.core import db_manager
+from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.translator import process_translation
 
-app = FastAPI(title="Cadence Clinical - EDC Execution Engine", version="0.1.0")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
-# Setup an in-memory SQLite DB for testing
-engine = create_async_engine(
-    "sqlite+aiosqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-    echo=False
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Handle the lifespan events for the FastAPI application.
+
+    Initializes the database session manager on startup and securely
+    cleans up connections on shutdown.
+
+    Args:
+        app (FastAPI): The FastAPI application instance.
+
+    Yields:
+        None
+    """
+    # Initialize shared database library
+    db_manager.init_db(DATABASE_URL)
+    yield
+    # Cleanup database connection
+    await db_manager.close()
+
+app = FastAPI(
+    title="Cadence Clinical - EDC Execution Engine",
+    version="0.1.0",
+    lifespan=lifespan
 )
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize database schemas on application startup."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+app.add_middleware(ContextResetMiddleware)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Provide a basic health check endpoint for the execution engine.
+    """
+    Health check endpoint for the execution service.
 
     Returns:
-        dict[str, str]: A dictionary containing the service status.
+        dict[str, str]: The health status and service name.
     """
     return {"status": "ok", "service": "execution"}
 
@@ -56,5 +70,5 @@ async def study_published(event: StudyEvent, background_tasks: BackgroundTasks) 
         dict[str, str]: A status message confirming job acceptance.
     """
     # Requirement 1: Listen for study publication events and trigger translation processes in the background.
-    background_tasks.add_task(process_translation, event.study_id, event.payload, AsyncSessionLocal)
+    background_tasks.add_task(process_translation, event.study_id, event.payload, db_manager.get_session_maker())
     return {"status": "accepted", "message": "Translation job queued in background."}

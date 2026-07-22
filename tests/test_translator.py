@@ -1,8 +1,20 @@
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
-from apps.execution.main import app, AsyncSessionLocal
-from apps.execution.database.models import TranslationJob, AuditLog
+from apps.execution.main import app
+from apps.execution.database.core import db_manager
+from apps.execution.database.models import TranslationJob, AuditLog, Base
 import xml.etree.ElementTree as ET
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_test_db():
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
 
 @pytest.mark.asyncio
 async def test_study_published_event_triggers_translation():
@@ -19,16 +31,13 @@ async def test_study_published_event_triggers_translation():
         }
     }
     
-    # Using context manager to trigger FastAPI's startup event which creates the DB tables
-    with TestClient(app) as client:
-        response = client.post("/events/study-published", json=study_payload)
-        assert response.status_code == 200
-        assert response.json()["status"] == "accepted"
+    # Do not use `with TestClient(app)` to avoid triggering the lifespan which overwrites the test db
+    client = TestClient(app)
+    response = client.post("/events/study-published", json=study_payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "accepted"
         
-        # TestClient blocks until background tasks are done when running synchronously.
-        # But since we use background_tasks.add_task in an async endpoint, the task finishes quickly.
-        
-    async with AsyncSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(
             TranslationJob.__table__.select().where(TranslationJob.study_id == "test_study_123")
         )
@@ -85,11 +94,11 @@ async def test_translation_validation_failure():
         }
     }
     
-    with TestClient(app) as client:
-        response = client.post("/events/study-published", json=study_payload)
-        assert response.status_code == 200
+    client = TestClient(app)
+    response = client.post("/events/study-published", json=study_payload)
+    assert response.status_code == 200
         
-    async with AsyncSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(
             TranslationJob.__table__.select().where(TranslationJob.study_id == "test_study_invalid")
         )
@@ -97,4 +106,3 @@ async def test_translation_validation_failure():
         assert job is not None
         assert job["status"] == "FAILED"
         assert "protocol" in job["error_message"]
-
