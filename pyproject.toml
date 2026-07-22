@@ -2,24 +2,24 @@
 name = "cadence-clinical"
 version = "0.1.0"
 description = "The Metadata-Driven Clinical Execution Platform"
-authors = ["Frederick de Ruiter <fpderutier@gmail.com>"]
+authors = [
+    "Frederick de Ruiter <fpderutier@gmail.com>",
+]
 readme = "README.md"
 packages = [
     { include = "apps" },
-    { include = "packages" }
+    { include = "packages" },
 ]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.110.0"
-uvicorn = {extras = ["standard"], version = "^0.28.0"}
 pydantic = "^2.6.0"
 httpx = "^0.27.0"
-# Designer / MDR Dependencies
 neo4j = "^5.18.0"
-# Execution / EDC Dependencies
 sqlalchemy = "^2.0.28"
 asyncpg = "^0.29.0"
+uvicorn = {extras = ["standard"], version = "^0.28.0"}
 # Gateway & Auth
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 usdm = "0.65.0"
@@ -33,20 +33,25 @@ aiosqlite = "^0.22.1"
 pytest-cov = "^7.1.0"
 pre-commit = "^4.6.1"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = [
+    "py311",
+]
 
 [tool.ruff]
 line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = ["E501"]
+select = [
+    "E",
+    "F",
+    "I",
+]
+ignore = [
+    "E501",
+]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -57,7 +62,48 @@ testpaths = [
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["apps", "packages"]
+source = [
+    "apps",
+    "packages",
+]
 
 [tool.coverage.report]
 fail_under = 80
+
+[build-system]
+requires = [
+    "poetry-core",
+]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "cadence-clinical"
+version = "0.1.0"
+description = "The Metadata-Driven Clinical Execution Platform"
+authors = [
+    { name = "Frederick de Ruiter", email = "fpderutier@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "httpx>=0.27.0",
+    "neo4j>=5.18.0",
+    "sqlalchemy>=2.0.28",
+    "asyncpg>=0.29.0",
+    "python-jose[cryptography]>=3.3.0",
+    "usdm>=0.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.3.0",
+    "black>=24.2.0",
+    "aiosqlite>=0.22.1",
+    "pytest-cov>=7.1.0",
+    "pre-commit>=4.6.1",
+]
