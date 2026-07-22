@@ -3,7 +3,14 @@ from packages.core_models.usdm import StudyDefinition, Arm, Visit, Activity, Con
 from apps.designer.db import terminology_cache
 
 def map_study_to_usdm(study_data: Dict[str, Any]) -> StudyDefinition:
-    """Maps the internal study projection dictionary into a fully compliant USDM StudyDefinition."""
+    """Maps the internal study projection dictionary into a fully compliant USDM StudyDefinition.
+
+    Args:
+        study_data (Dict[str, Any]): The internal study projection dictionary.
+
+    Returns:
+        StudyDefinition: The mapped USDM StudyDefinition.
+    """
     arms = []
     for arm_data in study_data.get("arms", []):
         visits = []

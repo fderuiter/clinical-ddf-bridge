@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 import time
 from apps.designer.main import app
@@ -81,7 +80,6 @@ def test_admin_cache_clear_forces_fresh_read():
 def test_usdm_validation_error_on_invalid_data():
     # Insert invalid mock data temporarily
     MOCK_TERMINOLOGY["INVALID_CONCEPT"] = {"code": "INV", "decode": "Invalid"} # missing system
-    original_data = db_query_counts["terminology_lookups"]
     
     # We will temporarily modify the mock study to use this invalid concept
     from apps.designer.db import MOCK_STUDIES

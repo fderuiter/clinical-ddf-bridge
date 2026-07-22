@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, status
 import time
 import os
 from neo4j import AsyncGraphDatabase
+from typing import Dict, Any
+from packages.core_models.usdm import StudyDefinition
 
 from apps.designer.db import get_study_projection, terminology_cache
 from apps.designer.mapper import map_study_to_usdm
@@ -33,16 +35,36 @@ async def health_check():
     return {"status": "ok", "service": "designer"}
 
 @app.get("/api/v1/studies/{study_id}")
-async def get_legacy_study(study_id: str):
-    """Returns the legacy internal projection with no USDM formatting."""
+async def get_legacy_study(study_id: str) -> Dict[str, Any]:
+    """Returns the legacy internal projection with no USDM formatting.
+
+    Args:
+        study_id (str): The unique identifier of the study.
+
+    Returns:
+        Dict[str, Any]: The legacy study projection data.
+
+    Raises:
+        HTTPException: If the study is not found.
+    """
     study_data = get_study_projection(study_id)
     if not study_data:
         raise HTTPException(status_code=404, detail="Study not found")
     return study_data
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str):
-    """Dynamically processes the internal projection and returns a compliant USDM structure."""
+async def get_usdm_study(study_id: str) -> StudyDefinition:
+    """Dynamically processes the internal projection and returns a compliant USDM structure.
+
+    Args:
+        study_id (str): The unique identifier of the study.
+
+    Returns:
+        StudyDefinition: The dynamically mapped USDM study data.
+
+    Raises:
+        HTTPException: If the study is not found or validation fails.
+    """
     start_time = time.perf_counter()
     study_data = get_study_projection(study_id)
     if not study_data:
@@ -61,14 +83,22 @@ async def get_usdm_study(study_id: str):
     return usdm_study
 
 @app.post("/api/admin/cache/clear", status_code=status.HTTP_200_OK)
-async def clear_cache():
-    """Flushes the controlled terminology cache."""
+async def clear_cache() -> Dict[str, str]:
+    """Flushes the controlled terminology cache.
+
+    Returns:
+        Dict[str, str]: A success message indicating the cache was cleared.
+    """
     terminology_cache.clear()
     return {"status": "success", "message": "Cache cleared successfully"}
 
 @app.get("/api/admin/cache/status")
-async def cache_status():
-    """Returns the current size and status of the terminology cache."""
+async def cache_status() -> Dict[str, int]:
+    """Returns the current size and status of the terminology cache.
+
+    Returns:
+        Dict[str, int]: The status dictionary containing size and max_size.
+    """
     return terminology_cache.get_status()
 
 @app.get("/api/v1/studies/{study_id}/alignment-validation", response_model=StudyAlignmentReport)

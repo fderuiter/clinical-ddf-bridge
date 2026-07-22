@@ -42,22 +42,53 @@ db_query_counts = {
 }
 
 def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a study projection from the database.
+
+    Args:
+        study_id (str): The unique identifier of the study.
+
+    Returns:
+        Optional[Dict[str, Any]]: The study data dictionary, or None if not found.
+    """
     # Simulates an optimized database projection query returning multi-level relationships
     return MOCK_STUDIES.get(study_id)
 
 def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves controlled terminology data from the database.
+
+    Args:
+        concept_id (str): The unique identifier of the terminology concept.
+
+    Returns:
+        Optional[Dict[str, Any]]: The terminology data dictionary, or None if not found.
+    """
     # Increments counter to prove zero additional queries from cache hits
     db_query_counts["terminology_lookups"] += 1
     return MOCK_TERMINOLOGY.get(concept_id)
 
 # --- Controlled Terminology Cache ---
 class TerminologyCache:
-    def __init__(self, max_size=1000):
-        self.max_size = max_size
-        self._cache = {}
-        self._lock = threading.Lock()
+    """Thread-safe in-memory cache for controlled terminology lookups."""
+
+    def __init__(self, max_size: int = 1000) -> None:
+        """Initializes the terminology cache.
+
+        Args:
+            max_size (int, optional): The maximum number of items to cache. Defaults to 1000.
+        """
+        self.max_size: int = max_size
+        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._lock: threading.Lock = threading.Lock()
     
     def get(self, concept_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a terminology concept from the cache or database.
+
+        Args:
+            concept_id (str): The unique identifier of the concept.
+
+        Returns:
+            Optional[Dict[str, Any]]: The terminology data, or None if not found.
+        """
         with self._lock:
             if concept_id in self._cache:
                 return self._cache[concept_id]
@@ -72,11 +103,17 @@ class TerminologyCache:
                 self._cache[concept_id] = data
         return data
 
-    def clear(self):
+    def clear(self) -> None:
+        """Clears all items from the cache."""
         with self._lock:
             self._cache.clear()
             
-    def get_status(self):
+    def get_status(self) -> Dict[str, int]:
+        """Retrieves the current status of the cache.
+
+        Returns:
+            Dict[str, int]: A dictionary containing 'size' and 'max_size'.
+        """
         with self._lock:
             return {
                 "size": len(self._cache),
