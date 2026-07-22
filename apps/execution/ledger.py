@@ -1,3 +1,11 @@
+"""
+Cryptographic audit ledger and verification engine.
+
+Provides functionalities to sequentially seal unsealed audit logs into cryptographic blocks
+using Merkle roots and to continuously verify the integrity of the chain. Detects database tampering
+and triggers a global safety freeze (read-only mode) if compromised.
+"""
+
 import asyncio
 import hashlib
 import json
@@ -16,15 +24,35 @@ _SAFETY_FREEZE_ACTIVE = False
 
 
 def is_safety_freeze_active() -> bool:
+    """
+    Check if the global safety freeze is active.
+
+    Returns:
+        bool: True if the system is in read-only safety freeze mode, False otherwise.
+    """
     return _SAFETY_FREEZE_ACTIVE
 
 
 def enable_safety_freeze():
+    """
+    Activate the global safety freeze.
+    
+    This locks the system into read-only mode by rejecting flush events.
+    """
     global _SAFETY_FREEZE_ACTIVE
     _SAFETY_FREEZE_ACTIVE = True
 
 
 def generate_log_hash(log: AuditLog) -> str:
+    """
+    Generate a SHA-256 hash of an AuditLog instance.
+
+    Args:
+        log (AuditLog): The audit log record to hash.
+
+    Returns:
+        str: The SHA-256 hexadecimal hash string.
+    """
     # Serialize the log to generate a consistent hash
     log_dict = {
         "id": log.id,
@@ -43,6 +71,15 @@ def generate_log_hash(log: AuditLog) -> str:
 
 
 def compute_merkle_root(hashes: List[str]) -> str:
+    """
+    Compute the Merkle root from a list of hashes.
+
+    Args:
+        hashes (List[str]): A list of SHA-256 hashes.
+
+    Returns:
+        str: The computed Merkle root hash.
+    """
     if not hashes:
         return hashlib.sha256(b"empty").hexdigest()
 

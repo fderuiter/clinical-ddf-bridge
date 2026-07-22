@@ -1,3 +1,10 @@
+"""
+Pre-boot database schema migration runner.
+
+Executes asynchronous database schema migrations and trigger installations
+before the main web application starts.
+"""
+
 import argparse
 import asyncio
 import os

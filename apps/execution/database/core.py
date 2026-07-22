@@ -1,3 +1,10 @@
+"""
+Database core configuration and lifecycle management.
+
+Handles database session initialization, configuration, and setup of
+write-protection database triggers for audit tables.
+"""
+
 from typing import Any, Optional
 
 from sqlalchemy import text
