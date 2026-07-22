@@ -2,7 +2,6 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import String, select
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.pool import StaticPool
 
 import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 from apps.execution.database.context import (
@@ -23,7 +22,15 @@ class ClinicalRecord(AuditedModel):
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    db_manager.init_db("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
+    import os
+
+    db_manager.init_db(
+        os.getenv(
+            "TEST_DATABASE_URL",
+            "postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc",
+        ),
+        echo=False,
+    )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

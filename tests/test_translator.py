@@ -4,9 +4,9 @@ import os
 import time
 import xml.etree.ElementTree as ET
 
+import httpx
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog, Base, TranslationJob
@@ -31,7 +31,14 @@ def get_auth_headers(user_id="test_user", roles="admin"):
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db():
-    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    import os
+
+    db_manager.init_db(
+        os.getenv(
+            "TEST_DATABASE_URL",
+            "postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc",
+        )
+    )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -56,10 +63,12 @@ async def test_study_published_event_triggers_translation():
     }
 
     # Do not use `with TestClient(app)` to avoid triggering the lifespan which overwrites the test db
-    client = TestClient(app)
-    response = client.post(
-        "/events/study-published", json=study_payload, headers=get_auth_headers()
-    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
     assert response.status_code == 200
     assert response.json()["status"] == "accepted"
 
@@ -121,10 +130,12 @@ async def test_translation_validation_failure():
         "payload": {"name": "Invalid Trial"},
     }
 
-    client = TestClient(app)
-    response = client.post(
-        "/events/study-published", json=study_payload, headers=get_auth_headers()
-    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
     assert response.status_code == 200
 
     async with db_manager.get_session_maker()() as session:
