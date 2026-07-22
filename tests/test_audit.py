@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 from apps.execution.database.models import Base, AuditLog, AuditedModel
 from apps.execution.database.context import current_session, current_user_id, current_change_reason
 from apps.execution.database.decorators import transactional
-from apps.execution.database.audit import receive_before_flush  # noqa: F401
+import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 
 # Create a test model that extends AuditedModel
 class ClinicalRecord(AuditedModel):

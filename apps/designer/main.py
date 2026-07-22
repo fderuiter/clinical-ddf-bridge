@@ -2,12 +2,19 @@ from fastapi import FastAPI, HTTPException, status
 import time
 import os
 from neo4j import AsyncGraphDatabase
-from typing import Dict, Any
-from packages.core_models.usdm import StudyDefinition
+from typing import Dict, Any, List
+from pydantic import BaseModel
 
+from packages.core_models.usdm import StudyDefinition
 from apps.designer.db import get_study_projection, terminology_cache
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.validator import generate_alignment_report, StudyAlignmentReport
+from apps.designer.delta import get_study_differences
+
+class DifferenceResult(BaseModel):
+    field: str
+    old_value: Any
+    new_value: Any
 
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
 
@@ -106,3 +113,11 @@ async def validate_study_alignment(study_id: str):
     if not driver:
         raise HTTPException(status_code=503, detail="Database connection not initialized")
     return await generate_alignment_report(driver, study_id)
+
+@app.get("/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult])
+async def study_differences(study_id: str, action_id1: str, action_id2: str):
+    if not driver:
+        raise HTTPException(status_code=503, detail="Database connection not initialized")
+    
+    diffs = await get_study_differences(driver, study_id, action_id1, action_id2)
+    return diffs
