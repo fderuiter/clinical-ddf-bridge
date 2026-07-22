@@ -1,26 +1,30 @@
 import os
+from typing import Any, Dict, List, Optional
+
 import httpx
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
 import usdm_model
+from pydantic import BaseModel
+
 
 class ItemMappingStatus(BaseModel):
     """
     Represents the mapping status of an individual activity item.
-    
+
     Attributes:
         item_id: The public string identifier of the activity item.
         internal_id: The internal graph database ID of the activity item.
         is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it.
     """
+
     item_id: Optional[str]
     internal_id: Optional[int]
     is_mapped: bool
 
+
 class ActivityReport(BaseModel):
     """
     Detailed report of an activity definition mapped within an epoch schedule.
-    
+
     Attributes:
         epoch_id: The public identifier for the study epoch.
         epoch_internal_id: The internal database ID for the epoch.
@@ -32,6 +36,7 @@ class ActivityReport(BaseModel):
         unmapped_items: List of `ItemMappingStatus` for items lacking an operational mapping.
         mapped_items: List of `ItemMappingStatus` for items successfully mapped to operational nodes.
     """
+
     epoch_id: Optional[str]
     epoch_internal_id: int
     scheduled_event_id: Optional[str]
@@ -42,10 +47,11 @@ class ActivityReport(BaseModel):
     unmapped_items: List[ItemMappingStatus]
     mapped_items: List[ItemMappingStatus]
 
+
 class StudyAlignmentReport(BaseModel):
     """
     Comprehensive alignment report analyzing the mapping between study epochs and CRFs.
-    
+
     Attributes:
         study_id: The unique identifier of the study being evaluated.
         complete_activities: Activities where all required items are mapped successfully.
@@ -54,12 +60,14 @@ class StudyAlignmentReport(BaseModel):
         unmapped_odm_items: ODM nodes present but not associated with any active activity item.
         unmapped_crf_item_values: CRF items/values present but not associated with any activity definition.
     """
+
     study_id: str
     complete_activities: List[ActivityReport]
     incomplete_activities: List[ActivityReport]
     unmapped_activities: List[ActivityReport]
     unmapped_odm_items: List[Dict[str, Any]]
     unmapped_crf_item_values: List[Dict[str, Any]]
+
 
 async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
     """
@@ -70,7 +78,7 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
     
     Args:
         study_id (str): The string identifier of the study to evaluate.
-        
+
     Returns:
         StudyAlignmentReport: A comprehensive report model containing structural discrepancies.
     """

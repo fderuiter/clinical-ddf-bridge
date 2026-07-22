@@ -1,7 +1,10 @@
-import pytest
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from apps.designer.validator import generate_alignment_report
+
 
 @pytest.mark.asyncio
 async def test_generate_alignment_report() -> None:
@@ -24,7 +27,6 @@ async def test_generate_alignment_report() -> None:
     }
 
     mock_response = AsyncMock()
-    from unittest.mock import MagicMock
     mock_response.json = MagicMock(return_value=mock_payload)
     mock_response.raise_for_status = MagicMock()
     
