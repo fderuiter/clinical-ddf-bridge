@@ -59,6 +59,9 @@ jobs:
           poetry run ruff check .
           poetry run black --check .
 
+      - name: Run ADR validation
+        run: python3 scripts/validate_adrs.py
+
       - name: Run tests and coverage
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
