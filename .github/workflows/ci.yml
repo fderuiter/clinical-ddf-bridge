@@ -32,17 +32,17 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@f98633be6e60b2c650e26b1772c57805cb22d059 # v3.1.2
+        uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9fae4979ced4efde35617be65c2b62d4 # v5.3.0
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -50,12 +50,12 @@ jobs:
         run: uv sync --all-extras
 
       - name: Set up Node.js
-        uses: actions/setup-node@396506212c90e0cdd9853c1304ec693ce8516d8e # v4.2.0
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe704eeaa42574e9da40d96c4a4ecd99f02931fc # v3
+        uses: pnpm/action-setup@v3
         with:
           version: 9
 
