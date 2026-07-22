@@ -1,4 +1,5 @@
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
@@ -78,6 +79,7 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
     Mocks the downstream service responses and validates that the gateway
     correctly merges the schemas, rewrites paths, and rewrites components.
     """
+
     class MockResponse:
         status_code = 200
 
@@ -110,6 +112,7 @@ def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
     Ensures the gateway returns an empty schema without crashing if downstream
     services throw connection errors.
     """
+
     async def mock_get(*args: Any, **kwargs: Any) -> None:
         raise Exception("Connection error")
 
@@ -133,3 +136,53 @@ def test_get_swagger_ui() -> None:
         response = client.get("/docs")
         assert response.status_code == 200
         assert "Cadence Clinical - Unified API Docs" in response.text
+
+
+def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test routing proxies for designer and execution prefixes.
+
+    Ensures the gateway routes prefix-specific requests to the right microservice urls.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # Test designer prefix
+        res = client.get("/designer/test", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8001/test"
+
+        # Test execution prefix
+        res = client.get(
+            "/execution/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8002/test"
+
+        # Test api/v1/execution
+        res = client.get(
+            "/api/v1/execution/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8002/api/v1/execution/test"
+        )
+
+        # Test default route
+        res = client.get("/unknown/path", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url) == "http://localhost:8001/unknown/path"
+        )
