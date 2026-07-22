@@ -14,11 +14,12 @@ from tests.test_translator import get_auth_headers
 
 def check_overlap(box1, box2):
     return not (
-        box1["x"] >= box2["x"] + box2["width"] or
-        box1["x"] + box1["width"] <= box2["x"] or
-        box1["y"] >= box2["y"] + box2["height"] or
-        box1["y"] + box1["height"] <= box2["y"]
+        box1["x"] >= box2["x"] + box2["width"]
+        or box1["x"] + box1["width"] <= box2["x"]
+        or box1["y"] >= box2["y"] + box2["height"]
+        or box1["y"] + box1["height"] <= box2["y"]
     )
+
 
 async def validate_layout_html(html_content: str):
     style_injection = """
@@ -33,19 +34,21 @@ async def validate_layout_html(html_content: str):
     if "<head>" in html_content:
         html_content = html_content.replace("<head>", f"<head>{style_injection}")
     else:
-        html_content = f"<html><head>{style_injection}</head><body>{html_content}</body></html>"
+        html_content = (
+            f"<html><head>{style_injection}</head><body>{html_content}</body></html>"
+        )
 
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w", delete=False) as f:
         f.write(html_content)
         temp_path = f.name
-        
+
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             await page.goto(f"file://{os.path.abspath(temp_path)}")
             await page.wait_for_timeout(100)
-            
+
             elements_data = await page.evaluate("""() => {
                 const results = [];
                 const nodes = document.querySelectorAll('xf\\\\:input, div.clinical-input, xf\\\\:label, label, input');
@@ -78,24 +81,32 @@ async def validate_layout_html(html_content: str):
                 });
                 return results;
             }""")
-            
+
             await browser.close()
-            
+
             visible_elements = [e for e in elements_data if e["isVisible"]]
             if len(elements_data) > 0 and len(visible_elements) == 0:
                 raise ValueError("No visible elements found.")
-            
+
             invisible_elements = [e for e in elements_data if not e["isVisible"]]
             if invisible_elements:
-                raise ValueError(f"Found {len(invisible_elements)} invisible elements which should be visible.")
-                
-            wrappers = [e for e in visible_elements if e["tag"] == "xf:input" or "clinical-input" in e["className"]]
+                raise ValueError(
+                    f"Found {len(invisible_elements)} invisible elements which should be visible."
+                )
+
+            wrappers = [
+                e
+                for e in visible_elements
+                if e["tag"] == "xf:input" or "clinical-input" in e["className"]
+            ]
             for i in range(1, len(wrappers)):
-                prev = wrappers[i-1]
+                prev = wrappers[i - 1]
                 curr = wrappers[i]
                 if curr["y"] < prev["y"]:
-                    raise ValueError(f"Element sequence scrambled: {curr['tag']} is above {prev['tag']}")
-            
+                    raise ValueError(
+                        f"Element sequence scrambled: {curr['tag']} is above {prev['tag']}"
+                    )
+
             for i in range(len(visible_elements)):
                 for j in range(i + 1, len(visible_elements)):
                     e1 = visible_elements[i]
@@ -103,11 +114,14 @@ async def validate_layout_html(html_content: str):
                     if e1["id"] in e2["ancestors"] or e2["id"] in e1["ancestors"]:
                         continue
                     if check_overlap(e1, e2):
-                        raise ValueError(f"Elements overlapping: element {e1['id']} and element {e2['id']}")
+                        raise ValueError(
+                            f"Elements overlapping: element {e1['id']} and element {e2['id']}"
+                        )
             return True
-            
+
     finally:
         os.unlink(temp_path)
+
 
 @pytest.mark.asyncio
 async def test_layout_validation_valid():
@@ -125,6 +139,7 @@ async def test_layout_validation_valid():
     </html>
     """
     assert await validate_layout_html(html)
+
 
 @pytest.mark.asyncio
 async def test_layout_validation_overlap():
@@ -147,6 +162,7 @@ async def test_layout_validation_overlap():
     """
     with pytest.raises(ValueError, match="Elements overlapping"):
         await validate_layout_html(html)
+
 
 @pytest.mark.asyncio
 async def test_layout_validation_scrambled_sequence():
@@ -172,6 +188,7 @@ async def test_layout_validation_scrambled_sequence():
     with pytest.raises(ValueError, match="Element sequence scrambled"):
         await validate_layout_html(html)
 
+
 @pytest.mark.asyncio
 async def test_layout_validation_invisible():
     html = """
@@ -189,9 +206,11 @@ async def test_layout_validation_invisible():
     with pytest.raises(ValueError, match="invisible elements"):
         await validate_layout_html(html)
 
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db():
     import os
+
     db_manager.init_db(
         os.getenv(
             "TEST_DATABASE_URL",
@@ -204,6 +223,7 @@ async def setup_test_db():
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await db_manager.close()
+
 
 @pytest.mark.asyncio
 async def test_layout_validation_integration():
@@ -236,11 +256,11 @@ async def test_layout_validation_integration():
             )
         )
         job = result.mappings().first()
-        
+
         assert job is not None
         assert job["status"] == "COMPLETED"
         assert job["openrosa_payload"] is not None
-        
+
         openrosa_xml = job["openrosa_payload"]
-        
+
     assert await validate_layout_html(openrosa_xml)
