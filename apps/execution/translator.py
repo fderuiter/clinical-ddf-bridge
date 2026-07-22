@@ -3,14 +3,17 @@ import uuid
 from typing import Any
 
 import defusedxml.minidom as minidom
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from apps.execution.database.context import current_session
 from apps.execution.database.models import TranslationJob
 
 # Setup Jinja2 environment
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
-env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+env = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR),
+    autoescape=select_autoescape(default_for_string=True, default=True),
+)
 
 
 def extract_appearance(item: dict[str, Any]) -> str | None:
