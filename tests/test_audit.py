@@ -21,8 +21,6 @@ class ClinicalRecord(AuditedModel):
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
@@ -213,6 +211,7 @@ async def test_read_only_queries_do_not_generate_audit_logs():
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         initial_count = len(result.scalars().all())
+
     @transactional(lambda: db_manager.get_session_maker()())
     async def read_record():
         session = current_session.get()
