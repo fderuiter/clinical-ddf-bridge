@@ -1,3 +1,4 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
@@ -39,3 +40,51 @@ def test_proxy_requests_valid_auth(monkeypatch):
             "/api/v1/studies/study_1", headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code in [200, 502, 500]
+
+
+@pytest.mark.asyncio
+async def test_get_openapi_json(monkeypatch):
+    class MockResponse:
+        status_code = 200
+
+        def json(self):
+            return {
+                "openapi": "3.1.0",
+                "paths": {"/test": {}},
+                "components": {"schemas": {"TestModel": {"type": "string"}}},
+            }
+
+    async def mock_get(*args, **kwargs):
+        return MockResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    with TestClient(app) as client:
+        response = client.get("/openapi.json")
+        assert response.status_code == 200
+        data = response.json()
+        assert "/designer/test" in data["paths"]
+        assert "/execution/test" in data["paths"]
+        assert "Designer_TestModel" in data["components"]["schemas"]
+        assert "Execution_TestModel" in data["components"]["schemas"]
+
+
+def test_get_openapi_json_error(monkeypatch):
+    async def mock_get(*args, **kwargs):
+        raise Exception("Connection error")
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    with TestClient(app) as client:
+        response = client.get("/openapi.json")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["paths"] == {}
+        assert data["components"]["schemas"] == {}
+
+
+def test_get_swagger_ui():
+    with TestClient(app) as client:
+        response = client.get("/docs")
+        assert response.status_code == 200
+        assert "Cadence Clinical - Unified API Docs" in response.text

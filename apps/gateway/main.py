@@ -155,8 +155,20 @@ def generate_signature(user_id: str, roles: str, timestamp: str) -> str:
 
 
 @app.get("/openapi.json", include_in_schema=False)
-async def get_openapi_json():
-    async def fetch_service_openapi(service_url: str):
+async def get_openapi_json() -> Response:
+    """
+    Dynamically aggregate OpenAPI schemas from downstream services.
+
+    Fetches the `/openapi.json` endpoints from the designer and execution
+    services concurrently. Rewrites component references to prevent
+    collisions and aggregates them into a single unified OpenAPI schema.
+
+    Returns:
+        Response: A JSONResponse containing the merged OpenAPI 3.1.0 schema.
+    """
+
+    async def fetch_service_openapi(service_url: str) -> Optional[Dict[str, Any]]:
+
         timestamp = str(time.time())
         user_id = "system_docs_aggregator"
         roles = "admin,system"
@@ -230,7 +242,16 @@ async def get_openapi_json():
 
 
 @app.get("/docs", include_in_schema=False)
-async def get_swagger_ui():
+async def get_swagger_ui() -> Response:
+    """
+    Serve the Swagger UI documentation portal.
+
+    Uses FastAPI's built-in Swagger UI HTML generation to render
+    the dynamically aggregated OpenAPI schema.
+
+    Returns:
+        Response: An HTMLResponse containing the Swagger UI.
+    """
     return get_swagger_ui_html(
         openapi_url="/openapi.json", title="Cadence Clinical - Unified API Docs"
     )
