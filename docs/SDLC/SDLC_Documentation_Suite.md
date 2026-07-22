@@ -2,115 +2,122 @@
 
 ## SECTION 1: System-Wide Baseline & Universal Inheritance Model
 
-### Universal Data Entity Capabilities
-All entities in the Cadence Clinical platform implicitly support standard CRUD workflows, soft-delete lifecycle management, role-based access control (RBAC), real-time event triggers, and 21 CFR Part 11 / EU Annex 11 compliant audit logging.
+### 1. Universal Data Entity Capabilities
+All entities within the Cadence Clinical platform implicitly support standard CRUD workflows, soft-delete lifecycle management, role-based access control (RBAC), real-time event triggers, and strict 21 CFR Part 11 / EU Annex 11 compliant audit logging. These capabilities are inherited natively and do not need to be specified per module.
 
-### Universal Verification Pattern
-All manual QA verifications follow the standard protocol: Initial State Validation -> Mutation Persistence & Audit Check -> Authorization Rejection Testing -> Soft-Delete Constraint Check -> Downstream Dependency Handling.
+### 2. Universal Verification Pattern
+All manual QA verifications and automated test suites strictly follow this standard protocol: 
+`Initial State Validation` $\rightarrow$ `Mutation Persistence & Audit Check` $\rightarrow$ `Authorization Rejection Testing` $\rightarrow$ `Soft-Delete Constraint Check` $\rightarrow$ `Downstream Dependency Handling`.
 
 ---
 
-## SECTION 2: Modular Document Suite
+## SECTION 2: Modular Document Suite Generation
 
 ### Document 1: Product Requirements Document (PRD)
 
-#### Study Design & Metadata Repository (MDR)
-- **Biomedical Concepts (BCs) & Value-Level Metadata (VLM):** Define semantic standards and strict data boundaries for study attributes.
-- **Trial Configurations:** Native support for complex trial designs (Adaptive, Basket, Umbrella, Platform).
-- **Execution Parameters:** Configuration of crossover parameters, blinding mechanisms, and inclusion/exclusion governance.
+#### 1.1 Study Design & Metadata Repository (MDR)
+- **Biomedical Concepts (BCs) & Value-Level Metadata (VLM):** BCs define reusable, semantically linked clinical data variables. Business rules dictate that VLM constraints (e.g., age must be 18-65) dynamically update eCRF validation rules. Edge case: Modifying a BC linked to an active study triggers a frozen-state block unless an explicit amendment is initiated.
+- **Complex Trial Designs (Adaptive, Basket, Umbrella, Platform):** State transitions for trial arms allow dynamic opening/closing of cohorts based on interim analysis results. Edge case: Subjects randomized to a closed arm must be gracefully transferred or withdrawn without breaking SDTM mapping. 
+- **Crossover Parameters & Blinding Mechanisms:** Crossover definitions require strict chronological tracking of sequence interventions. Blinding enforces a strict barrier preventing site users from viewing randomized treatment allocations. Edge case: Emergency unblinding automatically logs an immutable event and immediately transitions the subject's state to 'Unblinded', restricting further blinded data entry.
+- **Inclusion/Exclusion (I/E) Governance:** I/E criteria must be mapped directly to eCRF questions. State transition: A single 'No' on an Inclusion criteria, or 'Yes' on an Exclusion criteria, immediately locks the subject state to 'Screen Failed'. 
 
-#### Electronic Data Capture (EDC) & eCRF Engine
-- **Form Generation:** Automated spreadsheet parsing and sheet-to-form mapping capabilities.
-- **Form UI/UX:** Support for repeating groups/grids, conditional rendering, dynamic field hiding, cascading dropdowns, Visual Analog Scales (VAS), and interactive body maps.
-- **Data Validation & Entry:** Enforcement of required fields, calculated fields, draft saving, form paging, and offline entry.
+#### 1.2 Electronic Data Capture (EDC) & eCRF Engine
+- **Spreadsheet Parsing & Sheet-to-Form Mapping:** System parses Excel files mapping rows to specific OpenRosa XForm standard nodes. Data structures: Groups translate to nested nodes, items to variables. Edge case: Circular skip logic dependencies must be detected and rejected at parse time.
+- **Dynamic Field Behaviors (Conditional Rendering, Hiding, Cascading):** Fields conditionally render based on prior answers evaluated via complex XPath expressions. Edge case: If a parent field is changed causing a child field to become hidden, the child field's data must be nullified (or flagged as inactive) in the payload to prevent orphaned data.
+- **Advanced Inputs (VAS, Interactive Body Maps, Calculated Fields):** VAS output is stored as precise floating-point integers. Calculated fields compute in real-time. Edge case: Calculation loops involving missing data default to null rather than zero to maintain clinical accuracy.
+- **Draft Saving, Paging & Offline Entry:** Submissions can be saved as 'Draft' (bypassing strict validation) or 'Complete' (enforcing all rules). Offline entry utilizes IndexedDB for local storage, synchronizing with conflict detection upon network restoration.
 
-#### Subject Management & Randomization Workflows
-- **Subject Operations:** Implementation of the subject state machine, enrollment workflows, and screening logs.
-- **Randomization:** Rules for block, stratified, and dynamic randomization, including robust emergency unblinding protocols.
-- **Lifecycle Events:** Management of subject transfers, withdrawal rules, re-consent triggers, and caregiver/device linking.
+#### 1.3 Subject Management & Randomization Workflows
+- **Subject State Machine:** States include `Screening`, `Screen Failed`, `Enrolled`, `Randomized`, `Active`, `Completed`, and `Withdrawn`. Transitions are strictly unidirectional except for re-consent triggers. Edge cases: Withdrawing a subject locks all future visits but permits answering open queries on past visits.
+- **Randomization Rules (Block/Stratified/Dynamic):** Randomization algorithms require pre-seeded lists or dynamic minimization parameters. Data structure: Allocation tables are encrypted. Edge case: Missing a stratification factor explicitly triggers a re-randomization validation error.
+- **Subject Transfers & Device Linking:** Transferring subjects between sites requires re-evaluating site-specific RBAC and migrating access tokens. Device/Caregiver linking allows mapping external telemetry IDs to the subject record.
 
-#### Query Management & Data Review Workflows
-- **Query Lifecycle:** Distinction between system vs. manual query lifecycles, escalation, reassignment, closing, and reopening.
-- **Data Review:** Handling of discrepancy notes, cross-form and longitudinal edit checks, SDV / targeted SDV (tSDV) rules, and medical review workflows.
+#### 1.4 Query Management & Data Review Workflows
+- **Query Lifecycles:** Queries follow `Open` $\rightarrow$ `Answered` $\rightarrow$ `Closed` (or `Reopened`). System queries are auto-generated by edit checks; manual queries are raised by monitors. Edge case: Answering a query by modifying the underlying data auto-triggers re-evaluation of the edit check. 
+- **Discrepancy Notes & Edit Checks:** Cross-form edit checks evaluate data longitudinally (e.g., AE start date must be $\ge$ Informed Consent date).
+- **SDV / tSDV & Medical Review:** Source Document Verification marks data as 'Verified'. Edge case: Modifying verified data automatically drops the SDV flag and triggers an alert.
 
 ---
 
 ### Document 2: Technical Design Document (TDD) & Architecture Spec
 
-#### System Architecture
-- **Boundaries:** Microservice and modular monolith boundaries isolating MDR, Gateway, and Execution logic.
-- **Infrastructure:** ISO 27001 compliant cloud infrastructure.
-- **Data Storage & Caching:** PostgreSQL for transactional eCRF data, Neo4j for graph-based MDR relations, and a unified caching strategy.
+#### 2.1 System Architecture
+- **Microservices Boundaries:** MDR Service (metadata orchestration), Execution Service (transactional EDC), and Auth Gateway. 
+- **Infrastructure & Data Storage:** Multi-AZ Kubernetes deployment (ISO 27001 compliant). PostgreSQL manages high-throughput transactional eCRF data (JSONB payloads) and Neo4j acts as the Graph Database for complex metadata relationships and USDM tracking. Redis handles distributed caching and rate-limiting.
 
-#### Graph Immutability & Versioning Engine
-- **Versioning Mechanics:** Internal mechanics for node revisions, graph immutability enforcement, and branching protocols.
-- **Study Lifecycle:** Semantic versioning for studies, structural diff tracking between versions, and cross-version dependency mapping.
-- **Migration & Compatibility:** Automated migration scripts alongside forward/backward compatibility validation checks.
+#### 2.2 Graph Immutability & Versioning Engine
+- **Node Revisions & Graph Immutability:** Once a study version is locked, Neo4j nodes become immutable. Mutations spawn new versioned nodes linked via `PREVIOUS_VERSION` edges.
+- **Semantic Versioning & Branching:** Follows major.minor.patch versioning. Branching allows concurrent development of protocol amendments. Diff tracking identifies structural changes. 
+- **Migrations & Compatibility:** Automated scripts evaluate forward/backward compatibility. Edge case: Dropping a variable in a new version triggers cross-version mapping rules to ensure existing clinical data is not orphaned during longitudinal extraction.
 
-#### XForm Engine Execution Rules
-- **Logic Evaluation:** Form logic evaluation engine parsing complex path expressions and bind node properties.
-- **Form State:** Execution rules for relevant/readonly attribute toggling, indexed repeat access, and state preservation.
-- **Performance:** Memory management optimizations for large forms.
+#### 2.3 XForm Engine Execution Rules
+- **Form Logic & Path Expressions:** Employs an Abstract Syntax Tree (AST) evaluator to parse standard XPath bindings. Bind nodes handle `relevant`, `readonly`, and `required` states dynamically. 
+- **Indexed Repeat Access:** Supports functions like `indexed-repeat()` for longitudinal referencing within repeating grids. 
+- **Memory Management:** For highly complex forms (e.g., 500+ fields), the engine utilizes virtualized DOM rendering and state batching to prevent browser out-of-memory errors.
 
-#### Data Synchronization & Offline Engine
-- **Sync Mechanisms:** Background sync processing and resumable payload uploads.
-- **Conflict Handling:** Algorithms for concurrent update resolution and partial submission handling.
-- **Network Optimization:** Payload compression pipelines.
+#### 2.4 Data Synchronization & Offline Engine
+- **Background Sync & Conflict Resolution:** Service workers queue offline transactions. Conflict resolution uses deterministic timestamp-based "last-write-wins" for independent fields, but flags structural conflicts for manual review if multiple users edit the same repeating group.
+- **Payload Compression:** Utilizes Brotli compression over the wire for large eCRF payloads (especially those containing base64 image data) to optimize bandwidth.
 
 ---
 
 ### Document 3: API & Integration Specification
 
-#### Metadata & MDR Endpoints
-- **REST/GraphQL Contracts:** Standardized endpoints for Biomedical Concepts, Data Standards Governance, and Concept Search engines.
+#### 3.1 Metadata & MDR Endpoints
+- **APIs:** RESTful and GraphQL endpoints expose BCs, VLM configurations, and Concept Searches. 
+- **Pagination & Caching:** Uses cursor-based pagination and ETag headers to minimize payload sizes on heavily requested dictionary datasets.
 
-#### Medical Dictionary & Registry Integrations
-- **Clinical Registries:** Webhooks and endpoints for Clinical Trial Registry synchronization.
-- **Dictionary Support:** Connectors for MedDRA versioning, WHODrug alignment, LOINC code mapping, and SNOMED CT.
-- **Standardization:** UCUM unit standardization, custom dictionary loading/parsing, and multi-lingual translation support.
+#### 3.2 Medical Dictionary & Registry Integrations
+- **Clinical Trial Registry Sync:** Webhooks trigger outgoing payloads to update external registries (e.g., ClinicalTrials.gov) upon study state changes.
+- **MedDRA, WHODrug, LOINC, SNOMED CT:** Dedicated microservice for dictionary parsing. Supports up-versioning impact analysis (e.g., identifying subjects coded to a term deprecated in MedDRA v26.0).
+- **UCUM Standardization:** Middleware normalizes clinical unit inputs (e.g., converting lbs to kg) prior to persistence.
 
 ---
 
 ### Document 4: Data Standards & Interoperability Blueprint
 
-#### CDISC Implementations
-- **Mapping Governance:** Structural rules and validation constraints for SDTM, ADaM, and CDASH compliance.
+#### 4.1 CDISC Implementations
+- **SDTM, ADaM, CDASH:** Enforces strict CDASH naming conventions on form design. Generates automated SDTM mappings via Neo4j relationship traversal, ensuring export-ready datasets. 
+- **Edge Case:** Non-standard variables map to `SUPPQUAL` domains automatically.
 
-#### Dictionary Coding Engine
-- **Coding Automation:** Automated coding suggestions utilizing fuzzy matching algorithms.
-- **Manual Workflows:** Interfaces for manual coding overrides and uncodable term query generation.
-- **Lifecycle Management:** Up-versioning impact analysis and deprecated code handling.
+#### 4.2 Dictionary Coding Engine
+- **Fuzzy Matching & Auto-Coding:** Implements Levenshtein distance and NLP algorithms to suggest medical codes for verbatim terms. 
+- **Manual Overrides & Uncodable Terms:** If auto-coding confidence is below 85%, the engine queues the term for manual medical review. An uncodable term query is automatically routed to the investigator.
 
-#### Biomedical Concepts Data Modeling
-- **Concept Structures:** Attributes, relationships, value sets, and explicit null flavor handling.
-- **Data Quality:** Rules for unit conversion matrices, calculation dependencies, missing data imputation, outlier detection, and data anonymization policies.
+#### 4.3 Biomedical Concepts Data Modeling
+- **Data Structures:** Enforces strict null flavor handling (e.g., `UNK` for Unknown, `NASK` for Not Asked).
+- **Data Quality Rules:** Missing data imputation algorithms, calculation dependencies, and statistical outlier detection parameters are explicitly modeled at the concept level to ensure clean data pipelines.
+- **Anonymization Policies:** Direct identifiers (e.g., PHI) are subjected to hashing or obfuscation upon CDISC dataset generation.
 
 ---
 
 ### Document 5: Security, Compliance & Audit Trail Spec
 
-#### Regulatory Controls
-- **21 CFR Part 11 & EU Annex 11:** Technical mechanisms enforcing electronic signatures, re-authentication gates, and explicit signing reason declarations.
+#### 5.1 Regulatory Controls (21 CFR Part 11 / Annex 11)
+- **Electronic Signatures:** Finalizing an eCRF requires re-authentication (password or biometric) and explicit selection of a signing reason (e.g., "I author this data", "I approve this data").
+- **Audit Ledger:** Utilizing PostgreSQL triggers, every INSERT/UPDATE/DELETE writes an immutable record to a shadow schema containing `created_at`, `created_by`, `reason_for_change`, pre-mutation state, and post-mutation state. 
 
-#### RBAC & Data Privacy
-- **Access Matrices:** Granular permission configurations managing Sponsor vs. Site visibility and blinded vs. unblinded roles.
-- **Privacy Controls:** Data obfuscation masks and runtime anonymization rules.
+#### 5.2 RBAC & Data Privacy
+- **Permission Matrices:** Strict separation of duties. Sponsor roles are completely blinded to Subject PII. Site Investigators cannot view data from other sites.
+- **Obfuscation:** APIs dynamically strip PII and return deterministic hashes for subjects when queried by blinded statistical roles.
 
 ---
 
 ### Document 6: Quality Assurance (QA) & Validation Plan
 
-#### Traceability Matrix
-- **Requirement Mapping:** Traceability mapping directly from PRD functional requirements to technical design components and automated test case IDs.
+#### 6.1 Traceability Matrix
+- **Mapping:** Every business rule in the PRD is bidirectionally traced to a Neo4j or PostgreSQL schema attribute in the TDD, and further mapped to an automated integration test ID.
 
-#### Feature-Specific Verification Scenarios
-- **Complex Logic Tests:** Scenario: Verifying that changing a stratification factor explicitly triggers a re-randomization validation error.
-- **Immutability Checks:** Scenario: Verifying that a locked study version rejects any underlying node mutation attempts.
+#### 6.2 Feature-Specific Verification Scenarios
+- **Scenario 1 (Randomization):** Verify that attempting to change a stratification factor for an already `Randomized` subject throws a strict validation error and logs an authorization rejection.
+- **Scenario 2 (Immutability):** Verify that injecting a direct mutation query into Neo4j against a `Locked` study version fails, enforcing the branching protocol constraint.
+- **Scenario 3 (Offline Sync):** Verify that a user submitting an eCRF offline, followed by a competing edit online, results in a queued conflict resolution task rather than silent data overwriting.
 
 ---
 
 ### Document 7: Operations & Deployment Guide
 
-#### Environment & Change Management
-- **Promotion Pipeline:** Defined environment promotion tiers (Dev -> Staging -> Validation -> Prod).
-- **Automation:** Specifications for CI/CD automation, transactional database migration execution, and automated version rollback procedures.
+#### 7.1 Environment & Change Management
+- **Promotion Pipeline:** Code and configuration progress strictly through `Dev` $\rightarrow$ `Staging` $\rightarrow$ `Validation` $\rightarrow$ `Production`. Automated GxP validation suites must pass before staging promotion.
+- **Database Migrations:** Executed via strictly ordered, atomic migration scripts. Down-migrations (rollbacks) are maintained for every schema change.
+- **Disaster Recovery:** Continuous Write-Ahead Log (WAL) archiving ensures point-in-time recovery (PITR) up to the last 5 minutes, preventing catastrophic data loss during clinical trial operations.
