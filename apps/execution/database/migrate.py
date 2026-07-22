@@ -6,7 +6,16 @@ import sys
 from sqlalchemy.ext.asyncio import create_async_engine
 from apps.execution.database.models import Base
 
-async def run_migrations(database_url: str):
+async def run_migrations(database_url: str) -> None:
+    """
+    Execute asynchronous pre-boot schema migrations.
+
+    This function sets up the database schema safely before the main web application
+    starts, preventing race conditions or downtime associated with runtime migrations.
+
+    Args:
+        database_url (str): The connection string for the database to migrate.
+    """
     print(f"Starting pre-boot schema migration for {database_url}...")
     engine = create_async_engine(database_url, echo=False)
     try:
@@ -20,7 +29,12 @@ async def run_migrations(database_url: str):
     finally:
         await engine.dispose()
 
-def main():
+def main() -> None:
+    """
+    Entry point for the pre-boot migration runner script.
+
+    Parses CLI arguments for the database URL and executes the migration routine.
+    """
     parser = argparse.ArgumentParser(description="Pre-boot Database Schema Migration Runner")
     parser.add_argument(
         "--db-url",
