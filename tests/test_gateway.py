@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -6,23 +8,43 @@ from jose import jwt
 from apps.gateway.main import app, generate_signature, verify_token
 
 
-def test_verify_token_invalid():
+def test_verify_token_invalid() -> None:
+    """
+    Test verifying an invalid token.
+
+    Ensures that passing an invalid token to verify_token raises an exception.
+    """
     with pytest.raises(Exception):
         verify_token("invalid_token")
 
 
-def test_generate_signature():
+def test_generate_signature() -> None:
+    """
+    Test the generation of HMAC signatures.
+
+    Ensures that generate_signature returns a non-null string value given valid inputs.
+    """
     sig = generate_signature("user1", "admin", "12345")
     assert sig is not None
 
 
-def test_proxy_requests_no_auth():
+def test_proxy_requests_no_auth() -> None:
+    """
+    Test proxy endpoint without an authorization header.
+
+    Ensures that requests without a Bearer token receive a 401 Unauthorized response.
+    """
     with TestClient(app) as client:
         response = client.get("/api/v1/studies/study_1")
         assert response.status_code == 401
 
 
-def test_proxy_requests_invalid_auth():
+def test_proxy_requests_invalid_auth() -> None:
+    """
+    Test proxy endpoint with an invalid authorization header.
+
+    Ensures that requests with an invalid Bearer token receive a 401 Unauthorized response.
+    """
     with TestClient(app) as client:
         response = client.get(
             "/api/v1/studies/study_1", headers={"Authorization": "Bearer invalid"}
@@ -30,7 +52,13 @@ def test_proxy_requests_invalid_auth():
         assert response.status_code == 401
 
 
-def test_proxy_requests_valid_auth(monkeypatch):
+def test_proxy_requests_valid_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test proxy endpoint with a valid authorization header.
+
+    Mocks the test secret, encodes a valid JWT, and asserts that the proxy
+    passes the request to downstream services without a 401 error.
+    """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
     token = jwt.encode(
         {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
@@ -43,7 +71,13 @@ def test_proxy_requests_valid_auth(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_openapi_json(monkeypatch):
+async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test the dynamic OpenAPI JSON aggregation endpoint.
+
+    Mocks the downstream service responses and validates that the gateway
+    correctly merges the schemas, rewrites paths, and rewrites components.
+    """
     class MockResponse:
         status_code = 200
 
@@ -54,7 +88,7 @@ async def test_get_openapi_json(monkeypatch):
                 "components": {"schemas": {"TestModel": {"type": "string"}}},
             }
 
-    async def mock_get(*args, **kwargs):
+    async def mock_get(*args: Any, **kwargs: Any) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
@@ -69,8 +103,14 @@ async def test_get_openapi_json(monkeypatch):
         assert "Execution_TestModel" in data["components"]["schemas"]
 
 
-def test_get_openapi_json_error(monkeypatch):
-    async def mock_get(*args, **kwargs):
+def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test the OpenAPI aggregation fallback when downstream services fail.
+
+    Ensures the gateway returns an empty schema without crashing if downstream
+    services throw connection errors.
+    """
+    async def mock_get(*args: Any, **kwargs: Any) -> None:
         raise Exception("Connection error")
 
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
@@ -83,7 +123,12 @@ def test_get_openapi_json_error(monkeypatch):
         assert data["components"]["schemas"] == {}
 
 
-def test_get_swagger_ui():
+def test_get_swagger_ui() -> None:
+    """
+    Test the Swagger UI HTML endpoint.
+
+    Ensures the /docs route returns a 200 OK status and contains the correct HTML title.
+    """
     with TestClient(app) as client:
         response = client.get("/docs")
         assert response.status_code == 200

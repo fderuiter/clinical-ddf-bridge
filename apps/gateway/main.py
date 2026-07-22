@@ -168,7 +168,15 @@ async def get_openapi_json() -> Response:
     """
 
     async def fetch_service_openapi(service_url: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch the OpenAPI schema from a downstream service.
 
+        Args:
+            service_url (str): The base URL of the downstream service.
+
+        Returns:
+            Optional[Dict[str, Any]]: The parsed OpenAPI schema, or None if the fetch fails.
+        """
         timestamp = str(time.time())
         user_id = "system_docs_aggregator"
         roles = "admin,system"
@@ -191,6 +199,19 @@ async def get_openapi_json() -> Response:
         return None
 
     def rewrite_references(data: Any, prefix: str) -> Any:
+        """
+        Recursively rewrite component references in an OpenAPI schema payload.
+
+        Appends the given prefix to all `$ref` pointer targets to avoid naming collisions
+        between different service schemas.
+
+        Args:
+            data (Any): A segment of the OpenAPI schema data structure.
+            prefix (str): The string prefix to append to component references.
+
+        Returns:
+            Any: The transformed data structure with rewritten references.
+        """
         if isinstance(data, dict):
             new_data = {}
             for k, v in data.items():
