@@ -67,6 +67,11 @@ jobs:
         if: always()
         run: pnpm check
 
+      - name: Run markdown link verification
+        id: run_link_check
+        if: always()
+        run: node scripts/check-links.js
+
       - name: Run linting
         id: run_linting
         if: always()
