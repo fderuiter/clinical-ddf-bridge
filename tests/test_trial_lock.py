@@ -15,6 +15,8 @@ from apps.execution.trial_lock import TrialLockManager
 class LockClinicalRecord(AuditedModel):
     __tablename__ = "lock_clinical_records"
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
+    site_id: Mapped[str] = mapped_column(String(50), nullable=True)
+    visit_id: Mapped[str] = mapped_column(String(50), nullable=True)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -90,3 +92,54 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
 
     val = await read_while_locked()
     assert val == "patient_1"
+
+
+@pytest.mark.asyncio
+async def test_site_and_visit_locks():
+    # 1. Test normal write
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def create_record(site=None, visit=None):
+        session = current_session.get()
+        record = LockClinicalRecord(data_value="patient_x", site_id=site, visit_id=visit)
+        session.add(record)
+        await session.flush()
+        return record.id
+
+    rec_id = await create_record(site="site_001", visit="visit_001")
+    assert rec_id is not None
+
+    # 2. Lock a specific site
+    TrialLockManager.lock_site("site_999")
+    assert TrialLockManager.is_site_locked("site_999")
+    assert not TrialLockManager.is_site_locked("site_001")
+
+    # A write to another site should succeed
+    other_rec_id = await create_record(site="site_001", visit="visit_001")
+    assert other_rec_id is not None
+
+    # A write to the locked site should fail
+    with pytest.raises(PermissionError, match="Site site_999 is currently locked"):
+        await create_record(site="site_999", visit="visit_001")
+
+    # 3. Unlock site and write should succeed
+    TrialLockManager.unlock_site("site_999")
+    unlocked_rec_id = await create_record(site="site_999", visit="visit_001")
+    assert unlocked_rec_id is not None
+
+    # 4. Lock a specific visit
+    TrialLockManager.lock_visit("visit_999")
+    assert TrialLockManager.is_visit_locked("visit_999")
+    assert not TrialLockManager.is_visit_locked("visit_001")
+
+    # A write to another visit should succeed
+    other_visit_rec_id = await create_record(site="site_001", visit="visit_001")
+    assert other_visit_rec_id is not None
+
+    # A write to the locked visit should fail
+    with pytest.raises(PermissionError, match="Visit visit_999 is currently locked"):
+        await create_record(site="site_001", visit="visit_999")
+
+    # 5. Unlock visit and write should succeed
+    TrialLockManager.unlock_visit("visit_999")
+    unlocked_visit_rec_id = await create_record(site="site_001", visit="visit_999")
+    assert unlocked_visit_rec_id is not None
