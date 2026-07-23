@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator
 from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel
 
+from apps.execution.database.context import current_change_reason, current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.translator import process_translation
@@ -82,10 +83,14 @@ async def study_published(
         dict[str, str]: A status message confirming job acceptance.
     """
     # Requirement 1: Listen for study publication events and trigger translation processes in the background.
+    user_id = current_user_id.get()
+    change_reason = current_change_reason.get()
     background_tasks.add_task(
         process_translation,
         event.study_id,
         event.payload,
         db_manager.get_session_maker(),
+        user_id=user_id,
+        change_reason=change_reason,
     )
     return {"status": "accepted", "message": "Translation job queued in background."}
