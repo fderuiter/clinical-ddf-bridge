@@ -30,6 +30,11 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 - **Gateway API**: [http://localhost:8000](http://localhost:8000)
 - **Designer API**: [http://localhost:8001](http://localhost:8001)
 - **Execution API**: [http://localhost:8002](http://localhost:8002)
+- **eTMF API**: [http://localhost:8003](http://localhost:8003)
+- **Interop Sync API**: [http://localhost:8004](http://localhost:8004)
+- **Keycloak OIDC Auth**: [http://localhost:8080](http://localhost:8080) (Admin: `admin` / Password: `admin_password`)
+  - **Pre-Configured Realm**: `cadence`
+  - **Default Roles**: `Sponsor Admin`, `CRA`, `Data Manager`, `Site Investigator`, `Auditor`
 - **PostgreSQL**: `localhost:5432` (User: `cadence` / Password: `cadence_password`)
 - **Neo4j**: `localhost:7474` (UI) and `localhost:7687` (Bolt) (User: `neo4j` / Password: `cadence_password`)
 

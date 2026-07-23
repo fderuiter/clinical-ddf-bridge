@@ -1,0 +1,44 @@
+{
+  "id": "cadence",
+  "realm": "cadence",
+  "enabled": true,
+  "sslRequired": "external",
+  "roles": {
+    "realm": [
+      {
+        "name": "Sponsor Admin",
+        "description": "Sponsor Admin Role"
+      },
+      {
+        "name": "CRA",
+        "description": "CRA Role"
+      },
+      {
+        "name": "Data Manager",
+        "description": "Data Manager/Sponsor Data Manager Role"
+      },
+      {
+        "name": "Site Investigator",
+        "description": "Site Investigator Role"
+      },
+      {
+        "name": "Auditor",
+        "description": "Auditor / GxP Compliance Auditor Role"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "cadence-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ]
+    }
+  ]
+}
