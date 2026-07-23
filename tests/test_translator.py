@@ -136,15 +136,7 @@ async def test_translation_validation_failure():
         response = await client.post(
             "/events/study-published", json=study_payload, headers=get_auth_headers()
         )
-    assert response.status_code == 200
-
-    async with db_manager.get_session_maker()() as session:
-        result = await session.execute(
-            TranslationJob.__table__.select().where(
-                TranslationJob.study_id == "test_study_invalid"
-            )
-        )
-        job = result.mappings().first()
-        assert job is not None
-        assert job["status"] == "FAILED"
-        assert "protocol" in job["error_message"]
+    assert response.status_code == 422
+    # Ensure detailed structural failure is returned on the boundary response
+    detail = response.json()["detail"]
+    assert any("protocol" in str(err["loc"]) for err in detail)

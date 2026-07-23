@@ -28,3 +28,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Schema Mapping Design](2026-07-22-schema-mapping-design.md)
 - [2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
 - [2026-07-22: Decoupled API-First In-Memory Diffing](2026-07-22-api-first-in-memory-diffing.md)
+- [2026-07-22: CDISC USDM Schema and API Boundary Fast-Fail](2026-07-22-api-boundary-fast-fail.md)

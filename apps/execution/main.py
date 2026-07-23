@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 
 from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel
@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.translator import process_translation
+from packages.core_models import USDMStudy
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -61,11 +62,11 @@ class StudyEvent(BaseModel):
 
     Attributes:
         study_id (str): The unique identifier of the study.
-        payload (dict[str, Any]): The raw USDM protocol payload.
+        payload (USDMStudy): The validated USDM protocol payload.
     """
 
     study_id: str
-    payload: dict[str, Any]
+    payload: USDMStudy
 
 
 @app.post("/events/study-published")
@@ -85,7 +86,7 @@ async def study_published(
     background_tasks.add_task(
         process_translation,
         event.study_id,
-        event.payload,
+        event.payload.model_dump(),
         db_manager.get_session_maker(),
     )
     return {"status": "accepted", "message": "Translation job queued in background."}
