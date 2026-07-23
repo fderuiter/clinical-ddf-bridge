@@ -507,7 +507,7 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
         templates_dir = os.path.join(os.path.dirname(__file__), "templates")
         env = Environment(
             loader=FileSystemLoader(templates_dir),
-            autoescape=select_autoescape(["html", "xml"])
+            autoescape=select_autoescape(["html", "xml"]),
         )
         template = env.get_template("cdisc_export_template.xml.j2")
 
