@@ -59,7 +59,6 @@ async def test_prevent_audit_log_mutation():
                 change_reason="test",
             )
             session.add(log)
-            await session.commit()
 
     # Try to modify it directly via raw SQL
     async with db_manager.get_session_maker()() as session:
@@ -103,7 +102,6 @@ async def test_prevent_audit_ledger_seals_mutation():
                 merkle_root_hash="merkle",
             )
             session.add(seal)
-            await session.commit()
 
     # Try to modify it directly via raw SQL
     async with db_manager.get_session_maker()() as session:
@@ -142,7 +140,6 @@ async def test_prevent_hard_delete_on_audited_model():
         async with session.begin():
             rec = AuditedClinicalRecord(id="rec_100", data_value="important")
             session.add(rec)
-            await session.commit()
 
     # Try to hard-delete it via raw SQL
     async with db_manager.get_session_maker()() as session:
@@ -162,7 +159,6 @@ async def test_out_of_band_update_triggers_audit_entry():
         async with session.begin():
             rec = AuditedClinicalRecord(id="rec_200", data_value="original")
             session.add(rec)
-            await session.commit()
 
     # Direct out-of-band SQL update (simulating direct DB admin change, app_writing is default 'false')
     async with db_manager.get_session_maker()() as session:
@@ -172,7 +168,6 @@ async def test_out_of_band_update_triggers_audit_entry():
                     "UPDATE audited_clinical_records SET data_value = 'tampered' WHERE id = 'rec_200';"
                 )
             )
-            await session.commit()
 
     # Verify that the DB trigger captured the out-of-band change and inserted an AuditLog record
     async with db_manager.get_session_maker()() as session:
@@ -219,7 +214,6 @@ async def test_ledger_sealing_and_validation():
                 change_reason="r",
             )
             session.add_all([log1, log2])
-            await session.commit()
 
     # Execute sealing cycle
     async with db_manager.get_session_maker()() as session:
@@ -270,7 +264,6 @@ async def test_ledger_sealing_and_validation():
                     )
                 )
             )
-            await session.commit()
 
     # Validate ledger (should detect tampering, raise Value/Integrity breach alert, and safety freeze/lock trial)
     async with db_manager.get_session_maker()() as session:
