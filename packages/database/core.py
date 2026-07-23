@@ -75,7 +75,9 @@ class DatabaseSessionManager:
                         "cadence.app_writing": "false",
                     }
 
-                def sqlite_set_config(name: str, value: Any, is_local: bool = True) -> Any:
+                def sqlite_set_config(
+                    name: str, value: Any, is_local: bool = True
+                ) -> Any:
                     if conn_id not in _sqlite_connection_settings:
                         _sqlite_connection_settings[conn_id] = {}
                     _sqlite_connection_settings[conn_id][name] = (
@@ -104,8 +106,14 @@ class DatabaseSessionManager:
 
         # Listen to before_cursor_execute on the main thread to sync ContextVars to connection-specific settings
         @event.listens_for(self.engine.sync_engine, "before_cursor_execute")
-        def sync_context_variables(conn, cursor, statement, parameters, context, executemany):
-            dbapi_conn = conn.connection.dbapi_connection if hasattr(conn.connection, "dbapi_connection") else conn.connection
+        def sync_context_variables(
+            conn, cursor, statement, parameters, context, executemany
+        ):
+            dbapi_conn = (
+                conn.connection.dbapi_connection
+                if hasattr(conn.connection, "dbapi_connection")
+                else conn.connection
+            )
             for _ in range(5):
                 if hasattr(dbapi_conn, "connection"):
                     dbapi_conn = dbapi_conn.connection
@@ -127,17 +135,23 @@ class DatabaseSessionManager:
             # Safely sync active security ContextVars to connection-level dictionary on the main thread
             try:
                 from packages.security.context import current_user_id
+
                 val = current_user_id.get()
                 if val is not None:
-                    _sqlite_connection_settings[conn_id]["cadence.current_user_id"] = str(val)
+                    _sqlite_connection_settings[conn_id]["cadence.current_user_id"] = (
+                        str(val)
+                    )
             except Exception:
                 pass
 
             try:
                 from packages.security.context import current_change_reason
+
                 val = current_change_reason.get()
                 if val is not None:
-                    _sqlite_connection_settings[conn_id]["cadence.current_change_reason"] = str(val)
+                    _sqlite_connection_settings[conn_id][
+                        "cadence.current_change_reason"
+                    ] = str(val)
             except Exception:
                 pass
 

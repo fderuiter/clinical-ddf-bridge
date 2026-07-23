@@ -1,8 +1,9 @@
 import asyncio
 import os
 import uuid
+
 import pytest
-from sqlalchemy import ForeignKey, Integer, String, select, text
+from sqlalchemy import ForeignKey, Integer, String, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -24,7 +25,9 @@ class Child(TestBase):
     __tablename__ = "consolidation_children"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     parent_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("consolidation_parents.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("consolidation_parents.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
 
@@ -118,7 +121,9 @@ async def test_concurrent_request_context_isolation():
                         {"uid": user_name},
                     )
                     await session.execute(
-                        text("SELECT set_config('cadence.current_change_reason', :reason, 1);"),
+                        text(
+                            "SELECT set_config('cadence.current_change_reason', :reason, 1);"
+                        ),
                         {"reason": reason},
                     )
 

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, TMFAuditLog, TMFDocument
+from apps.etmf.models import TMFAuditLog, TMFDocument
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")

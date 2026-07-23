@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter
-from apps.interop.models import Base, EPROSubmission, InteropAuditLog
+from apps.interop.models import EPROSubmission, InteropAuditLog
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
