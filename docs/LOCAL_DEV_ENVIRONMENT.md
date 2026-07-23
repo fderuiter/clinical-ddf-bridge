@@ -30,8 +30,8 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 - **Gateway API**: [http://localhost:8000](http://localhost:8000)
 - **Designer API**: [http://localhost:8001](http://localhost:8001)
 - **Execution API**: [http://localhost:8002](http://localhost:8002)
-- **PostgreSQL**: `localhost:5432` (User: `cadence` / Password: `cadence_password`)
-- **Neo4j**: `localhost:7474` (UI) and `localhost:7687` (Bolt) (User: `neo4j` / Password: `cadence_password`)
+- **PostgreSQL**: `localhost:5432` (User: `cadence` / Password: `cadence_password`) <!-- pragma: allowlist secret -->
+- **Neo4j**: `localhost:7474` (UI) and `localhost:7687` (Bolt) (User: `neo4j` / Password: `cadence_password`) <!-- pragma: allowlist secret -->
 
 ## 2. Validation & Verification
 
