@@ -29,13 +29,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Initialize shared database library
     db_manager.init_db(DATABASE_URL)
-    
+
     # Start the background ledger sealer
-    from apps.execution.database.sealer import start_background_sealer, stop_background_sealer
+    from apps.execution.database.sealer import (
+        start_background_sealer,
+        stop_background_sealer,
+    )
+
     await start_background_sealer(db_manager.get_session_maker())
-    
+
     yield
-    
+
     # Stop background ledger sealer
     await stop_background_sealer()
     # Cleanup database connection

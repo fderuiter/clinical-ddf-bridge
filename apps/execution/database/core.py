@@ -1,5 +1,5 @@
-from typing import Any, Optional
 import uuid
+from typing import Any, Optional
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -29,7 +29,9 @@ class DatabaseSessionManager:
         """
         engine_options = {}
         if database_url.startswith("sqlite"):
-            engine_options["execution_options"] = {"schema_translate_map": {"audit_schema": None}}
+            engine_options["execution_options"] = {
+                "schema_translate_map": {"audit_schema": None}
+            }
 
         self.engine = create_async_engine(database_url, **{**engine_options, **kwargs})
 
@@ -56,13 +58,15 @@ class DatabaseSessionManager:
                     _sqlite_settings[conn_id] = {
                         "cadence.current_user_id": "system",
                         "cadence.current_change_reason": "system_operation",
-                        "cadence.app_writing": "false"
+                        "cadence.app_writing": "false",
                     }
-                
+
                 def sqlite_set_config(name, value, is_local=True):
                     if conn_id not in _sqlite_settings:
                         _sqlite_settings[conn_id] = {}
-                    _sqlite_settings[conn_id][name] = str(value) if value is not None else None
+                    _sqlite_settings[conn_id][name] = (
+                        str(value) if value is not None else None
+                    )
                     return value
 
                 def sqlite_current_setting(name, missing_ok=True):
@@ -75,7 +79,7 @@ class DatabaseSessionManager:
                         else:
                             raise Exception(f"Setting {name} not found")
                     return val
-                
+
                 conn.create_function("set_config", 3, sqlite_set_config)
                 conn.create_function("current_setting", 2, sqlite_current_setting)
                 conn.create_function("gen_random_uuid", 0, lambda: str(uuid.uuid4()))
