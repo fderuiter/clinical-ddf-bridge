@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional" FileOID="ODM.{{ file_oid }}" CreationDateTime="{{ creation_datetime }}" ODMVersion="{{ odm_version }}">
+  <ClinicalData StudyOID="{{ study_id }}" MetaDataVersionOID="{{ metadata_version_oid }}">
+    {% for subject in subjects %}
+    <SubjectData SubjectKey="{{ subject.subject_key }}">
+      {% for visit in subject.visits %}
+      <StudyEventData StudyEventOID="{{ visit.visit_oid }}">
+        {% for form in visit.forms %}
+        <FormData FormOID="{{ form.form_oid }}" FormVersion="{{ form.form_version }}">
+          {% for ig in form.item_groups %}
+          <ItemGroupData ItemGroupOID="{{ ig.item_group_oid }}">
+            {% for item in ig.items_list %}
+            <ItemData ItemOID="{{ item.item_oid }}" Value="{{ item.value }}"/>
+            {% endfor %}
+          </ItemGroupData>
+          {% endfor %}
+        </FormData>
+        {% endfor %}
+      </StudyEventData>
+      {% endfor %}
+    </SubjectData>
+    {% endfor %}
+  </ClinicalData>
+</ODM>
