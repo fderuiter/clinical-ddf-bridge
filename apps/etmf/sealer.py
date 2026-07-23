@@ -86,7 +86,9 @@ async def execute_etmf_audit_sealing_cycle(
             "user_id": str(rec.user_id),
             "user_role": str(rec.user_role),
             "action": str(rec.action),
-            "document_id": str(rec.document_id) if rec.document_id is not None else None,
+            "document_id": str(rec.document_id)
+            if rec.document_id is not None
+            else None,
             "details": str(rec.details),
         }
         serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
@@ -195,7 +197,9 @@ async def validate_etmf_ledger_integrity(db: AsyncSession) -> bool:
                     "user_id": str(rec.user_id),
                     "user_role": str(rec.user_role),
                     "action": str(rec.action),
-                    "document_id": str(rec.document_id) if rec.document_id is not None else None,
+                    "document_id": str(rec.document_id)
+                    if rec.document_id is not None
+                    else None,
                     "details": str(rec.details),
                 }
                 serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
@@ -269,7 +273,11 @@ async def start_background_etmf_sealer(
                     # Periodic chain verification check to detect database modifications
                     await validate_etmf_ledger_integrity(db)
             except Exception as e:
-                logger.error("Error in eTMF audit sealing/verification cycle: %s", e, exc_info=True)
+                logger.error(
+                    "Error in eTMF audit sealing/verification cycle: %s",
+                    e,
+                    exc_info=True,
+                )
 
             for _ in range(int(interval * 10)):
                 if not _should_run:

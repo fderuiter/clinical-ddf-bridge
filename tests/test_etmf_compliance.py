@@ -1,32 +1,32 @@
 import asyncio
 import base64
 import datetime
+
 import pytest
 import pytest_asyncio
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.x509.oid import NameOID
 from fastapi.testclient import TestClient
-from sqlalchemy import select, update, text
+from sqlalchemy import select
 
-from apps.etmf.database import db_manager
-from apps.etmf.main import app
-from apps.etmf.models import Base, TMFAuditLog, TMFAuditLedgerSeal, TMFDocument
-from apps.etmf.sealer import (
-    execute_etmf_audit_sealing_cycle,
-    validate_etmf_ledger_integrity,
-    start_background_etmf_sealer,
-    stop_background_etmf_sealer,
-)
 from apps.etmf.cryptography import (
+    extract_signature_from_content,
     requires_signature,
     validate_document_signature,
-    extract_signature_from_content,
+)
+from apps.etmf.database import db_manager
+from apps.etmf.main import app
+from apps.etmf.models import Base, TMFAuditLedgerSeal, TMFAuditLog
+from apps.etmf.sealer import (
+    execute_etmf_audit_sealing_cycle,
+    start_background_etmf_sealer,
+    stop_background_etmf_sealer,
+    validate_etmf_ledger_integrity,
 )
 from apps.execution.trial_lock import TrialLockManager
 from tests.test_etmf import get_auth_headers
-
-from cryptography import x509
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
 
 def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
@@ -35,27 +35,30 @@ def generate_self_signed_cert() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
         public_exponent=65537,
         key_size=2048,
     )
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
-        x509.NameAttribute(NameOID.COMMON_NAME, "cadence.clinical"),
-    ])
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        private_key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
-    ).not_valid_after(
-        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=10)
-    ).sign(private_key, hashes.SHA256())
-    
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "cadence.clinical"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+        )
+        .not_valid_after(
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=10)
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+
     return private_key, cert
 
 
@@ -96,7 +99,9 @@ async def test_signature_extraction_formats():
         "-----BEGIN SIGNATURE-----\nTU9DS19TSUdfREFUQQ==\n-----END SIGNATURE-----"
     )
     cert, sig, signed = extract_signature_from_content(pem_content)
-    assert cert == "-----BEGIN CERTIFICATE-----\nMOCK_CERT_DATA\n-----END CERTIFICATE-----"
+    assert (
+        cert == "-----BEGIN CERTIFICATE-----\nMOCK_CERT_DATA\n-----END CERTIFICATE-----"
+    )
     assert sig == b"MOCK_SIG_DATA"
     assert signed == "Document Text Content here."
 
@@ -125,7 +130,7 @@ async def test_mock_signature_bypass():
     # Valid mock
     is_valid, msg = validate_document_signature(
         "Approved Protocol",
-        "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----"
+        "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----",
     )
     assert is_valid
     assert "mock" in msg.lower()
@@ -133,7 +138,7 @@ async def test_mock_signature_bypass():
     # Invalid mock
     is_valid, msg = validate_document_signature(
         "Approved Protocol",
-        "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----"
+        "Hello\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nT09DSw==\n-----END SIGNATURE-----",
     )
     assert not is_valid
     assert "invalid" in msg.lower()
@@ -143,15 +148,13 @@ async def test_mock_signature_bypass():
 async def test_actual_cryptographic_verification():
     """Generate keys, sign data, embed into a document, and verify actual cryptographic verification path."""
     private_key, cert = generate_self_signed_cert()
-    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
 
     content_data = "This is the clinical trial protocol for study 001. Enforces double blind randomized controls."
     sig_bytes = private_key.sign(
-        content_data.encode('utf-8'),
-        padding.PKCS1v15(),
-        hashes.SHA256()
+        content_data.encode("utf-8"), padding.PKCS1v15(), hashes.SHA256()
     )
-    sig_b64 = base64.b64encode(sig_bytes).decode('utf-8')
+    sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
 
     # Construct signed document
     document_content = (
@@ -162,9 +165,7 @@ async def test_actual_cryptographic_verification():
 
     # Validate signature - requires signature since we set it in metadata
     is_valid, msg = validate_document_signature(
-        "Approved Protocol",
-        document_content,
-        {"requires_signature": True}
+        "Approved Protocol", document_content, {"requires_signature": True}
     )
     assert is_valid, f"Signature failed to verify: {msg}"
     assert "successfully verified" in msg.lower()
@@ -172,9 +173,7 @@ async def test_actual_cryptographic_verification():
     # Mismatched/corrupted content validation failure
     mismatched_content = document_content.replace("double blind", "open label")
     is_valid, msg = validate_document_signature(
-        "Approved Protocol",
-        mismatched_content,
-        {"requires_signature": True}
+        "Approved Protocol", mismatched_content, {"requires_signature": True}
     )
     assert not is_valid
     assert "failed" in msg.lower()
@@ -238,7 +237,9 @@ async def test_audit_logs_group_sealing_and_chaining():
 
     async with db_manager.get_session_maker()() as session:
         # Check that cryptographic seal is initially null
-        stmt_unsealed = select(TMFAuditLog).where(TMFAuditLog.cryptographic_seal.is_(None))
+        stmt_unsealed = select(TMFAuditLog).where(
+            TMFAuditLog.cryptographic_seal.is_(None)
+        )
         unsealed_count = len((await session.execute(stmt_unsealed)).scalars().all())
         assert unsealed_count > 0
 
@@ -248,7 +249,9 @@ async def test_audit_logs_group_sealing_and_chaining():
         assert len(new_block_hash) == 64
 
         # Verify a ledger seal record was inserted
-        stmt_seals = select(TMFAuditLedgerSeal).order_by(TMFAuditLedgerSeal.block_index.desc())
+        stmt_seals = select(TMFAuditLedgerSeal).order_by(
+            TMFAuditLedgerSeal.block_index.desc()
+        )
         seal = (await session.execute(stmt_seals)).scalars().first()
         assert seal is not None
         assert seal.current_block_hash == new_block_hash
@@ -256,7 +259,9 @@ async def test_audit_logs_group_sealing_and_chaining():
         assert seal.sealed_record_count == unsealed_count
 
         # Check that logs have the cryptographic_seal applied
-        stmt_after_sealed = select(TMFAuditLog).where(TMFAuditLog.cryptographic_seal == new_block_hash)
+        stmt_after_sealed = select(TMFAuditLog).where(
+            TMFAuditLog.cryptographic_seal == new_block_hash
+        )
         sealed_logs = (await session.execute(stmt_after_sealed)).scalars().all()
         assert len(sealed_logs) == unsealed_count
 
@@ -280,7 +285,7 @@ async def test_tampering_detection_and_lockout_propagation():
             "content": "Define content",
             "mime_type": "application/xml",
         },
-        headers=headers
+        headers=headers,
     )
     assert resp.status_code == 201
 
@@ -302,7 +307,9 @@ async def test_tampering_detection_and_lockout_propagation():
         assert log_to_tamper is not None
 
         # Modify details
-        log_to_tamper.details = "TAMPERED: Changing the immutable log action description."
+        log_to_tamper.details = (
+            "TAMPERED: Changing the immutable log action description."
+        )
         await session.commit()
 
     # Verify that ledger integrity validation now fails, raises ValueError, and locks the trial!
@@ -325,7 +332,7 @@ async def test_tampering_detection_and_lockout_propagation():
             "content": "More content",
             "mime_type": "application/xml",
         },
-        headers=headers
+        headers=headers,
     )
     assert resp_ingest_fail.status_code == 403
     assert "locked" in resp_ingest_fail.json()["detail"].lower()
