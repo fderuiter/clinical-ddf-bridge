@@ -25,6 +25,13 @@ class ClinicalRecord(AuditedModel):
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
+# Create a test model that extends Base but NOT AuditedModel (representing external models)
+class MockTMFDocument(Base):
+    __tablename__ = "tmf_documents"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    filename: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     import os
@@ -289,3 +296,105 @@ async def test_audit_records_ip_and_custom_timestamp():
         assert log.change_reason == "GCP protocol validation"
         assert log.ip_address == "192.168.42.105"
         assert log.timestamp == custom_time
+
+
+@pytest.mark.asyncio
+async def test_mixed_domain_session_clinical_logged_external_skipped():
+    """
+    Verify that in a shared database session containing both a clinical modification
+    and an external domain model modification, only the clinical change is logged,
+    while the external change is skipped.
+    """
+    current_user_id.set("user_mixed")
+    current_change_reason.set("mixed transaction test")
+
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def run_mixed_transaction():
+        session = current_session.get()
+        # Add clinical record
+        clinical_rec = ClinicalRecord(data_value="clinical_data_1")
+        session.add(clinical_rec)
+        # Add external model record
+        import uuid
+
+        external_doc = MockTMFDocument(id=str(uuid.uuid4()), filename="doc_1.pdf")
+        session.add(external_doc)
+        await session.flush()
+        return clinical_rec.id, external_doc.id
+
+    clinical_id, external_id = await run_mixed_transaction()
+
+    # Query the generated audit logs
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(select(AuditLog))
+        logs = result.scalars().all()
+
+        # We should only have 1 audit log entry corresponding to the clinical record
+        assert len(logs) == 1
+        assert logs[0].action == "INSERT"
+        assert logs[0].table_name == "clinical_records"
+        assert logs[0].record_id == clinical_id
+        assert logs[0].new_values["data_value"] == "clinical_data_1"
+
+
+@pytest.mark.asyncio
+async def test_mixed_domain_session_hard_delete_clinical_fails_external_succeeds():
+    """
+    Verify that attempts to hard-delete clinical models in mixed-domain sessions
+    raise a validation error and abort the transaction, while deleting external models
+    succeeds without raising a validation error and without generating audit logs.
+    """
+    import uuid
+
+    # 1. Insert initial records
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def create_records():
+        session = current_session.get()
+        clinical_rec = ClinicalRecord(data_value="to_be_deleted")
+        external_doc = MockTMFDocument(
+            id=str(uuid.uuid4()), filename="to_be_deleted.pdf"
+        )
+        session.add_all([clinical_rec, external_doc])
+        await session.flush()
+        return clinical_rec.id, external_doc.id
+
+    clinical_id, external_id = await create_records()
+
+    # 2. Verify that deleting the clinical record fails
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def delete_clinical():
+        session = current_session.get()
+        res = await session.execute(
+            select(ClinicalRecord).where(ClinicalRecord.id == clinical_id)
+        )
+        clinical_rec = res.scalars().first()
+        await session.delete(clinical_rec)
+        await session.flush()
+
+    with pytest.raises(
+        ValueError, match="Hard deletion of ClinicalRecord is forbidden"
+    ):
+        await delete_clinical()
+
+    # 3. Verify that deleting the external record succeeds and does not generate audit logs
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def delete_external():
+        session = current_session.get()
+        res = await session.execute(
+            select(MockTMFDocument).where(MockTMFDocument.id == external_id)
+        )
+        external_doc = res.scalars().first()
+        await session.delete(external_doc)
+        await session.flush()
+
+    await delete_external()
+
+    # Verify no new audit logs are generated for the delete action
+    async with db_manager.get_session_maker()() as session:
+        # We initially had 1 audit log for inserting the ClinicalRecord
+        result = await session.execute(select(AuditLog))
+        logs = result.scalars().all()
+        assert len(logs) == 1
+        assert logs[0].action == "INSERT"
+        assert logs[0].table_name == "clinical_records"
+        assert logs[0].record_id == clinical_id

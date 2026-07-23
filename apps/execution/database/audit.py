@@ -28,27 +28,19 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
-    # If the session contains eTMF or Interop objects, skip execution auditing
-    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if hasattr(obj, "__tablename__") and obj.__tablename__ in (
-            "tmf_documents",
-            "tmf_audit_logs",
-            "epro_submissions",
-            "interop_audit_logs",
-        ):
-            return
-
-    # Check for read-only freeze
-    if TrialLockManager.is_locked() and (
-        session.new or session.dirty or session.deleted
-    ):
+    # Check for read-only freeze on clinical/audited models
+    has_clinical_modifications = any(
+        isinstance(obj, AuditedModel)
+        for obj in list(session.new) + list(session.dirty) + list(session.deleted)
+    )
+    if TrialLockManager.is_locked() and has_clinical_modifications:
         raise PermissionError(
             "Trial is currently locked in a read-only state due to a security violation."
         )
 
-    # Check for site-level and visit-level locks
+    # Check for site-level and visit-level locks on clinical/audited models
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if not isinstance(obj, AuditedModel):
             continue
 
         site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
@@ -71,7 +63,7 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Inserts
     for obj in session.new:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if not isinstance(obj, AuditedModel):
             continue
 
         new_values = {}
@@ -100,7 +92,7 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Updates
     for obj in session.dirty:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if not isinstance(obj, AuditedModel):
             continue
         if not session.is_modified(obj, include_collections=False):
             continue
@@ -157,7 +149,7 @@ def receive_before_flush(session: Session, flush_context, instances):
 
             audit_logs.append(AuditLog(**kwargs))
 
-    # Prevent hard deletions
+    # Prevent hard deletions of audited models
     for obj in session.deleted:
         if isinstance(obj, AuditLog):
             raise ValueError(
@@ -167,35 +159,6 @@ def receive_before_flush(session: Session, flush_context, instances):
             raise ValueError(
                 f"Hard deletion of {obj.__class__.__name__} is forbidden. Use soft deletes by setting is_deleted=True."
             )
-
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
-            continue
-
-        # If it's another non-audited model, capture its deletion? The requirement says "all clinical records must be versioned..."
-        # We can just record a DELETE action for it.
-        old_values = {}
-        mapper = inspect(obj).mapper
-        for attr in mapper.column_attrs:
-            val = getattr(obj, attr.key)
-            if isinstance(val, datetime):
-                val = val.isoformat()
-            old_values[attr.key] = val
-
-        kwargs = {
-            "table_name": obj.__tablename__,
-            "record_id": get_primary_key(obj),
-            "action": "DELETE",
-            "user_id": user_id,
-            "ip_address": ip_address,
-            "old_values": old_values,
-            "new_values": None,
-            "version_index": getattr(obj, "version", 1),
-            "change_reason": reason,
-        }
-        if timestamp is not None:
-            kwargs["timestamp"] = timestamp
-
-        audit_logs.append(AuditLog(**kwargs))
 
     if audit_logs:
         session.add_all(audit_logs)

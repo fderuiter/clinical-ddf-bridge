@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 21:43:34 UTC
+*Execution Date:* 2026-07-23 21:45:04 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -155,6 +155,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | 0.01s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
+| `test_mixed_domain_session_clinical_logged_external_skipped` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_mixed_domain_session_hard_delete_clinical_fails_external_succeeds` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | 0.01s |
@@ -274,8 +276,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_expired_timestamp_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_invalid_signature_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
