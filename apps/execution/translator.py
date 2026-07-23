@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from typing import Any
 
@@ -14,6 +15,38 @@ env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
     autoescape=select_autoescape(default_for_string=True, default=True),
 )
+
+# Strict NCName definition:
+# Starts with a letter or underscore, followed by letters, digits, '.', '-', or '_'
+# No colons, no spaces, no other special chars.
+NCNAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9._-]*$")
+
+
+def is_valid_ncname(s: Any) -> bool:
+    """Check if the string is a valid NCName according to W3C XML standard."""
+    if not isinstance(s, str) or not s:
+        return False
+    return bool(NCNAME_PATTERN.match(s))
+
+
+def sanitize_item_identifier(item_id: str) -> str:
+    """Clean item identifiers on-the-fly by replacing spaces and invalid characters with underscores."""
+    if not item_id:
+        return ""
+
+    chars = []
+    for i, c in enumerate(item_id):
+        if i == 0:
+            if c.isalpha() or c == "_":
+                chars.append(c)
+            else:
+                chars.append("_")
+        else:
+            if c.isalnum() or c in ("_", ".", "-"):
+                chars.append(c)
+            else:
+                chars.append("_")
+    return "".join(chars)
 
 
 def extract_appearance(item: dict[str, Any]) -> str | None:
@@ -70,6 +103,12 @@ async def process_translation(
             await session.flush()
 
             try:
+                # Validate study identifier against strict NCName compliance parameters
+                if not is_valid_ncname(study_id):
+                    raise ValueError(
+                        f"Validation Failed: Study identifier '{study_id}' is not NCName compliant."
+                    )
+
                 # Requirement 6: Validate input structures against schema translation rules
                 if not payload or not isinstance(payload, dict):
                     raise ValueError("Payload must be a dictionary.")
@@ -83,8 +122,16 @@ async def process_translation(
                 processed_items = []
                 for item in raw_items:
                     item_id = item.get("id")
-                    if not item_id:
+                    if item_id is None or (
+                        isinstance(item_id, str) and not item_id.strip()
+                    ):
                         item_id = f"item_{uuid.uuid4().hex[:8]}"
+                    elif not isinstance(item_id, str):
+                        item_id = f"item_{uuid.uuid4().hex[:8]}"
+                    else:
+                        item_id = sanitize_item_identifier(item_id)
+                        if not item_id:
+                            item_id = f"item_{uuid.uuid4().hex[:8]}"
 
                     item_name = item.get("name", "Unknown Field")
                     item_type = item.get("type", "string")

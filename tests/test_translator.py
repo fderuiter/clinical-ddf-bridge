@@ -148,3 +148,150 @@ async def test_translation_validation_failure():
         assert job is not None
         assert job["status"] == "FAILED"
         assert "protocol" in job["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_study_id_fails_job():
+    study_payload = {
+        "study_id": "test study invalid",  # contains spaces
+        "payload": {
+            "name": "Invalid Study Trial",
+            "protocol": {
+                "items": [{"id": "valid_id", "name": "Valid Field", "type": "string"}]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    assert response.status_code == 200
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            TranslationJob.__table__.select().where(
+                TranslationJob.study_id == "test study invalid"
+            )
+        )
+        job = result.mappings().first()
+        assert job is not None
+        assert job["status"] == "FAILED"
+        assert "is not NCName compliant" in job["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_item_id_sanitization():
+    study_payload = {
+        "study_id": "valid_study_id",
+        "payload": {
+            "name": "Sanitization Trial",
+            "protocol": {
+                "items": [
+                    {"id": "sys bp", "name": "Systolic Blood Pressure", "type": "int"},
+                    {
+                        "id": "sys$bp",
+                        "name": "Systolic Blood Pressure Custom",
+                        "type": "int",
+                    },
+                    {"id": "1bp", "name": "One Blood Pressure", "type": "int"},
+                ]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    assert response.status_code == 200
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            TranslationJob.__table__.select().where(
+                TranslationJob.study_id == "valid_study_id"
+            )
+        )
+        job = result.mappings().first()
+        assert job is not None
+        assert job["status"] == "COMPLETED"
+        assert job["odm_payload"] is not None
+        assert job["openrosa_payload"] is not None
+
+        # Check ODM XML parser
+        odm_root = ET.fromstring(job["odm_payload"])
+        odm_ns = ""
+        if "}" in odm_root.tag:
+            odm_ns = odm_root.tag.split("}")[0] + "}"
+        study = odm_root.find(f"{odm_ns}Study")
+        mdv = study.find(f"{odm_ns}MetaDataVersion")
+        item_defs = mdv.findall(f"{odm_ns}ItemDef")
+        odm_ids = [item.get("OID") for item in item_defs]
+
+        # Check OpenRosa XML parser
+        openrosa_root = ET.fromstring(job["openrosa_payload"])
+        ns = {"xf": "http://www.w3.org/2002/xforms"}
+        head = openrosa_root.find("{http://www.w3.org/1999/xhtml}head")
+        model = head.find("xf:model", ns)
+        binds = model.findall("xf:bind", ns)
+        openrosa_ids = [bind.get("nodeset").replace("/", "") for bind in binds]
+
+        # Verify exact sanitizations
+        assert odm_ids == ["sys_bp", "sys_bp", "_bp"]
+        assert set(odm_ids) == set(openrosa_ids)
+
+
+@pytest.mark.asyncio
+async def test_empty_or_non_string_item_id_fallback():
+    study_payload = {
+        "study_id": "fallback_study_id",
+        "payload": {
+            "name": "Fallback Trial",
+            "protocol": {
+                "items": [
+                    {"id": "", "name": "Empty ID Field", "type": "string"},
+                    {"id": "   ", "name": "Spaces ID Field", "type": "string"},
+                    {"id": 12345, "name": "Integer ID Field", "type": "string"},
+                ]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    assert response.status_code == 200
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            TranslationJob.__table__.select().where(
+                TranslationJob.study_id == "fallback_study_id"
+            )
+        )
+        job = result.mappings().first()
+        assert job is not None
+        assert job["status"] == "COMPLETED"
+        assert job["odm_payload"] is not None
+        assert job["openrosa_payload"] is not None
+
+        # Check ODM XML parser
+        odm_root = ET.fromstring(job["odm_payload"])
+        odm_ns = ""
+        if "}" in odm_root.tag:
+            odm_ns = odm_root.tag.split("}")[0] + "}"
+        study = odm_root.find(f"{odm_ns}Study")
+        mdv = study.find(f"{odm_ns}MetaDataVersion")
+        item_defs = mdv.findall(f"{odm_ns}ItemDef")
+        odm_ids = [item.get("OID") for item in item_defs]
+
+        assert len(odm_ids) == 3
+        for oid in odm_ids:
+            assert oid.startswith("item_")
+            assert len(oid) == 13  # "item_" + 8 hex chars
