@@ -17,7 +17,8 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
     # 1. Prevent updates or deletes on audit logs and seals
     if dialect_name == "postgresql":
         # Create schema functions and triggers
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE OR REPLACE FUNCTION audit_schema.prevent_audit_mutation()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -49,24 +50,38 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """))
-        
-        await conn.execute(text("DROP TRIGGER IF EXISTS trg_lock_audit_trail_logs ON audit_schema.audit_logs;"))
-        await conn.execute(text("""
+        """)
+        )
+
+        await conn.execute(
+            text(
+                "DROP TRIGGER IF EXISTS trg_lock_audit_trail_logs ON audit_schema.audit_logs;"
+            )
+        )
+        await conn.execute(
+            text("""
             CREATE TRIGGER trg_lock_audit_trail_logs
             BEFORE UPDATE OR DELETE ON audit_schema.audit_logs
             FOR EACH ROW EXECUTE FUNCTION audit_schema.prevent_audit_mutation();
-        """))
-        
-        await conn.execute(text("DROP TRIGGER IF EXISTS trg_lock_audit_trail_seals ON audit_schema.audit_ledger_seals;"))
-        await conn.execute(text("""
+        """)
+        )
+
+        await conn.execute(
+            text(
+                "DROP TRIGGER IF EXISTS trg_lock_audit_trail_seals ON audit_schema.audit_ledger_seals;"
+            )
+        )
+        await conn.execute(
+            text("""
             CREATE TRIGGER trg_lock_audit_trail_seals
             BEFORE UPDATE OR DELETE ON audit_schema.audit_ledger_seals
             FOR EACH ROW EXECUTE FUNCTION audit_schema.prevent_audit_mutation();
-        """))
-        
+        """)
+        )
+
         # Deploy model mutation function
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE OR REPLACE FUNCTION public.capture_model_mutation()
             RETURNS TRIGGER AS $$
             DECLARE
@@ -133,12 +148,14 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """))
-        
+        """)
+        )
+
     elif dialect_name == "sqlite":
         # Create write protection triggers on SQLite tables
         # Use IS NOT NULL/IS NOT to detect if any fields other than cryptographic_seal are modified.
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TRIGGER IF NOT EXISTS trg_lock_audit_trail_logs_update
             BEFORE UPDATE ON audit_logs
             WHEN (
@@ -157,39 +174,52 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
             BEGIN
                 SELECT RAISE(FAIL, 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.');
             END;
-        """))
-        await conn.execute(text("""
+        """)
+        )
+        await conn.execute(
+            text("""
             CREATE TRIGGER IF NOT EXISTS trg_lock_audit_trail_logs_delete
             BEFORE DELETE ON audit_logs
             BEGIN
                 SELECT RAISE(FAIL, 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.');
             END;
-        """))
-        await conn.execute(text("""
+        """)
+        )
+        await conn.execute(
+            text("""
             CREATE TRIGGER IF NOT EXISTS trg_lock_audit_trail_seals_update
             BEFORE UPDATE ON audit_ledger_seals
             BEGIN
                 SELECT RAISE(FAIL, 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.');
             END;
-        """))
-        await conn.execute(text("""
+        """)
+        )
+        await conn.execute(
+            text("""
             CREATE TRIGGER IF NOT EXISTS trg_lock_audit_trail_seals_delete
             BEFORE DELETE ON audit_ledger_seals
             BEGIN
                 SELECT RAISE(FAIL, 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.');
             END;
-        """))
+        """)
+        )
 
     # 2. Iterate through all tables in metadata and deploy audited model triggers if columns are present
     for table_name, table in Base.metadata.tables.items():
         if "version" in table.columns and "is_deleted" in table.columns:
             if dialect_name == "postgresql":
-                await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name} ON {table_name};"))
-                await conn.execute(text(f"""
+                await conn.execute(
+                    text(
+                        f"DROP TRIGGER IF EXISTS trg_audit_{table_name} ON {table_name};"
+                    )
+                )
+                await conn.execute(
+                    text(f"""
                     CREATE TRIGGER trg_audit_{table_name}
                     AFTER INSERT OR UPDATE OR DELETE ON {table_name}
                     FOR EACH ROW EXECUTE FUNCTION public.capture_model_mutation();
-                """))
+                """)
+                )
             elif dialect_name == "sqlite":
                 # For SQLite, we define dynamic triggers using JSON object serialization.
                 new_cols = []
@@ -202,13 +232,20 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         old_cols.append(f"OLD.{col.name}")
                 new_fields_sql = ", ".join(new_cols)
                 old_fields_sql = ", ".join(old_cols)
-                
+
                 # Drop triggers to recreate them
-                await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_insert;"))
-                await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_update;"))
-                await conn.execute(text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_delete;"))
-                
-                await conn.execute(text(f"""
+                await conn.execute(
+                    text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_insert;")
+                )
+                await conn.execute(
+                    text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_update;")
+                )
+                await conn.execute(
+                    text(f"DROP TRIGGER IF EXISTS trg_audit_{table_name}_delete;")
+                )
+
+                await conn.execute(
+                    text(f"""
                     CREATE TRIGGER trg_audit_{table_name}_insert
                     AFTER INSERT ON {table_name}
                     WHEN (current_setting('cadence.app_writing', 1) <> 'true')
@@ -228,9 +265,11 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                             current_setting('cadence.current_change_reason', 1)
                         );
                     END;
-                """))
-                
-                await conn.execute(text(f"""
+                """)
+                )
+
+                await conn.execute(
+                    text(f"""
                     CREATE TRIGGER trg_audit_{table_name}_update
                     AFTER UPDATE ON {table_name}
                     WHEN (current_setting('cadence.app_writing', 1) <> 'true')
@@ -250,15 +289,18 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                             current_setting('cadence.current_change_reason', 1)
                         );
                     END;
-                """))
-                
-                await conn.execute(text(f"""
+                """)
+                )
+
+                await conn.execute(
+                    text(f"""
                     CREATE TRIGGER trg_audit_{table_name}_delete
                     BEFORE DELETE ON {table_name}
                     BEGIN
                         SELECT RAISE(FAIL, 'GxP Compliance Violation: Hard deletions are strictly forbidden for clinical entities. Use soft deletes by updating is_deleted=True.');
                     END;
-                """))
+                """)
+                )
 
 
 async def run_migrations(database_url: str) -> None:
@@ -274,20 +316,22 @@ async def run_migrations(database_url: str) -> None:
     print(f"Starting pre-boot schema migration for {database_url}...")
     engine_options = {}
     if database_url.startswith("sqlite"):
-        engine_options["execution_options"] = {"schema_translate_map": {"audit_schema": None}}
+        engine_options["execution_options"] = {
+            "schema_translate_map": {"audit_schema": None}
+        }
 
     engine = create_async_engine(database_url, echo=False, **engine_options)
     try:
         async with engine.begin() as conn:
             if engine.dialect.name == "postgresql":
                 await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
-            
+
             # Setup metadata tables
             await conn.run_sync(Base.metadata.create_all)
-            
+
             # Deploy database triggers
             await deploy_database_triggers(conn, engine.dialect.name)
-            
+
         print("Schema migration completed successfully.")
     except Exception as e:
         print(f"Schema migration failed: {e}")

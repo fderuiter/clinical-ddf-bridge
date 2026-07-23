@@ -27,15 +27,21 @@ def transactional(session_factory: async_sessionmaker[AsyncSession]):
                         user_id = current_user_id.get()
                         reason = current_change_reason.get()
                         await session.execute(
-                            text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-                            {"user_id": user_id}
+                            text(
+                                "SELECT set_config('cadence.current_user_id', :user_id, true);"
+                            ),
+                            {"user_id": user_id},
                         )
                         await session.execute(
-                            text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
-                            {"reason": reason}
+                            text(
+                                "SELECT set_config('cadence.current_change_reason', :reason, true);"
+                            ),
+                            {"reason": reason},
                         )
                         await session.execute(
-                            text("SELECT set_config('cadence.app_writing', 'true', true);")
+                            text(
+                                "SELECT set_config('cadence.app_writing', 'true', true);"
+                            )
                         )
 
                         result = await func(*args, **kwargs)
