@@ -73,7 +73,7 @@ def audit_context_decorator(
         ip_address_getter (Callable): A function that extracts the IP address from the decorated function's arguments.
     """
 
-    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             user_id = user_id_getter(*args, **kwargs) if user_id_getter else None
