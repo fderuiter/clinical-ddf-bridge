@@ -23,6 +23,7 @@ class ClinicalRecord(AuditedModel):
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     import os
+    from apps.execution.database.migrate import deploy_database_triggers
 
     db_manager.init_db(
         os.getenv(
@@ -33,6 +34,7 @@ async def setup_db():
     )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await deploy_database_triggers(conn, db_manager.engine.dialect.name)
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
