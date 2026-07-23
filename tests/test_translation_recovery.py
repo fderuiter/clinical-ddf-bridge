@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import hmac
+import json
 import os
 import time
 
@@ -24,8 +25,6 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 def get_auth_headers(
     user_id="test_user", roles="admin", change_reason="system_operation"
 ):
-    import json
-
     timestamp = str(time.time())
     payload = {
         "change_reason": change_reason,
