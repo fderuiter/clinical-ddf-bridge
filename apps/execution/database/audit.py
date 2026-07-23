@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
@@ -29,7 +31,10 @@ def receive_before_flush(session: Session, flush_context, instances):
     # If the session contains eTMF or Interop objects, skip execution auditing
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
-            "tmf_documents", "tmf_audit_logs", "epro_submissions", "interop_audit_logs"
+            "tmf_documents",
+            "tmf_audit_logs",
+            "epro_submissions",
+            "interop_audit_logs",
         ):
             return
 
@@ -56,6 +61,8 @@ def receive_before_flush(session: Session, flush_context, instances):
         mapper = inspect(obj).mapper
         for attr in mapper.column_attrs:
             val = getattr(obj, attr.key)
+            if isinstance(val, datetime):
+                val = val.isoformat()
             new_values[attr.key] = val
 
         kwargs = {
@@ -96,6 +103,10 @@ def receive_before_flush(session: Session, flush_context, instances):
 
                 # Verify that it actually changed
                 if old_val != new_val:
+                    if isinstance(old_val, datetime):
+                        old_val = old_val.isoformat()
+                    if isinstance(new_val, datetime):
+                        new_val = new_val.isoformat()
                     old_values[attr.key] = old_val
                     new_values[attr.key] = new_val
 
@@ -148,7 +159,10 @@ def receive_before_flush(session: Session, flush_context, instances):
         old_values = {}
         mapper = inspect(obj).mapper
         for attr in mapper.column_attrs:
-            old_values[attr.key] = getattr(obj, attr.key)
+            val = getattr(obj, attr.key)
+            if isinstance(val, datetime):
+                val = val.isoformat()
+            old_values[attr.key] = val
 
         kwargs = {
             "table_name": obj.__tablename__,
