@@ -502,10 +502,13 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
             subjects[subj_key]["visits"][vname].append(obs)
 
         # Render using Jinja2 templates
-        from jinja2 import Environment, FileSystemLoader
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
 
         templates_dir = os.path.join(os.path.dirname(__file__), "templates")
-        env = Environment(loader=FileSystemLoader(templates_dir))
+        env = Environment(
+            loader=FileSystemLoader(templates_dir),
+            autoescape=select_autoescape(["html", "xml"])
+        )
         template = env.get_template("cdisc_export_template.xml.j2")
 
         xml_content = template.render(

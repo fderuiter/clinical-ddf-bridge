@@ -228,7 +228,7 @@ def main() -> None:
     elif (
         audit_outcome == "success"
         and static_outcome == "success"
-        and secrets_outcome == "success"
+        and secrets_outcome == "success"  # pragma: allowlist secret
     ):
         combined_audit = "success"
     else:
