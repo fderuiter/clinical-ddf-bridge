@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 547
+- **Passed:** 547 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -244,6 +244,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ssn_national_id_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_urls_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_zip_geographic_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_allowed_non_pi_when_not_enforced` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_denied_site_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_denied_sponsor_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_denied_when_not_pi` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_malformed_role` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_missing_delegator_context` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_missing_target_context` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_successful_pi_matching_scope` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_target_from_body` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_and_validate_staff_role_invalid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_and_validate_staff_role_valid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_request_staff_roles_empty` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
