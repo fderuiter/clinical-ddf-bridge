@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 192
-- **Passed:** 192 🟢
+- **Total Automated Test Cases Run:** 197
+- **Passed:** 197 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -262,6 +262,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_cli_command_python_and_pytest` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_docker_compose_scenarios` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_trail_and_hard_delete_prevention` | `tests.test_medical_coding_persistence` | PRD-SYS-001, PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_clinical_coding_assignments_and_ledger` | `tests.test_medical_coding_persistence` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_import_job_lifecycle` | `tests.test_medical_coding_persistence` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_meddra_terminology_persistence_and_lookup` | `tests.test_medical_coding_persistence` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_whodrug_terminology_persistence_and_lookup` | `tests.test_medical_coding_persistence` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholders` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |

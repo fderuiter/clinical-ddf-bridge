@@ -1,7 +1,18 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -281,3 +292,292 @@ class TSDVConfig(AuditedModel):
     safety_endpoints: Mapped[list] = mapped_column(JSON, nullable=True)
     zero_sdv_domains: Mapped[list] = mapped_column(JSON, nullable=True)
     trial_random_seed: Mapped[int] = mapped_column(Integer, nullable=True)
+
+
+class DictionaryType(str, Enum):
+    MEDDRA = "MEDDRA"
+    WHODRUG = "WHODRUG"
+
+
+class ImportState(str, Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class CodingState(str, Enum):
+    PENDING = "PENDING"
+    CODED = "CODED"
+    REJECTED = "REJECTED"
+    REQUIRES_REVIEW = "REQUIRES_REVIEW"
+
+
+class RecodingState(str, Enum):
+    PENDING = "PENDING"
+    RECODED = "RECODED"
+    NO_CHANGE = "NO_CHANGE"
+
+
+class MedDRATerm(AuditedModel):
+    """Represents a MedDRA terminology term (LLT, PT, HLT, HLGT, or SOC).
+
+    Inherits from AuditedModel for full Part 11 compliant audit trail coverage.
+    """
+
+    __tablename__ = "meddra_terms"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "level",
+            "code",
+            name="uq_meddra_term_version_level_code",
+        ),
+        Index(
+            "idx_meddra_term_lookup",
+            "dictionary_version",
+            "term_normalized",
+            "code",
+        ),
+        Index(
+            "idx_meddra_term_display",
+            "dictionary_version",
+            "term",
+            "code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    level: Mapped[str] = mapped_column(
+        String(10), nullable=False
+    )  # LLT, PT, HLT, HLGT, SOC
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    term: Mapped[str] = mapped_column(String(500), nullable=False)
+    term_normalized: Mapped[str] = mapped_column(String(500), nullable=False)
+
+
+class MedDRAHierarchy(AuditedModel):
+    """Represents the hierarchical relationship (mdhier) between MedDRA terms,
+
+    including primary System Organ Class (SOC) indication.
+    """
+
+    __tablename__ = "meddra_hierarchies"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "llt_code",
+            "pt_code",
+            "hlt_code",
+            "hlgt_code",
+            "soc_code",
+            name="uq_meddra_hier_version_codes",
+        ),
+        Index(
+            "idx_meddra_hier_lookup",
+            "dictionary_version",
+            "llt_code",
+            "pt_code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    llt_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    pt_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    hlt_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    hlgt_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    soc_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    primary_soc_flag: Mapped[str] = mapped_column(
+        String(1), nullable=True
+    )  # 'Y' or 'N'
+
+
+class WHODrugRecord(AuditedModel):
+    """Represents a WHODrug drug record (Drug Dictionary/DD/Drug record)."""
+
+    __tablename__ = "whodrug_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "drug_code",
+            name="uq_whodrug_record_version_code",
+        ),
+        Index(
+            "idx_whodrug_record_lookup",
+            "dictionary_version",
+            "drug_name_normalized",
+            "drug_code",
+        ),
+        Index(
+            "idx_whodrug_record_display",
+            "dictionary_version",
+            "drug_name",
+            "drug_code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    drug_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    drug_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    drug_name_normalized: Mapped[str] = mapped_column(String(500), nullable=False)
+    atc_code: Mapped[str] = mapped_column(String(50), nullable=True)
+
+
+class WHODrugIngredient(AuditedModel):
+    """Represents a WHODrug active substance/ingredient."""
+
+    __tablename__ = "whodrug_ingredients"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "substance_code",
+            name="uq_whodrug_ingredient_version_code",
+        ),
+        Index(
+            "idx_whodrug_ingredient_lookup",
+            "dictionary_version",
+            "substance_name_normalized",
+            "substance_code",
+        ),
+        Index(
+            "idx_whodrug_ingredient_display",
+            "dictionary_version",
+            "substance_name",
+            "substance_code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    substance_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    substance_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    substance_name_normalized: Mapped[str] = mapped_column(String(500), nullable=False)
+
+
+class WHODrugATC(AuditedModel):
+    """Represents WHODrug ATC classification and hierarchy records."""
+
+    __tablename__ = "whodrug_atc"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "atc_code",
+            name="uq_whodrug_atc_version_code",
+        ),
+        Index(
+            "idx_whodrug_atc_lookup",
+            "dictionary_version",
+            "atc_text_normalized",
+            "atc_code",
+        ),
+        Index(
+            "idx_whodrug_atc_display",
+            "dictionary_version",
+            "atc_text",
+            "atc_code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    atc_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    atc_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    atc_text_normalized: Mapped[str] = mapped_column(String(500), nullable=False)
+
+
+class WHODrugDrugIngredientMap(AuditedModel):
+    """Maps WHODrug drug records to their active ingredients/substances."""
+
+    __tablename__ = "whodrug_drug_ingredient_maps"
+    __table_args__ = (
+        UniqueConstraint(
+            "dictionary_version",
+            "drug_code",
+            "substance_code",
+            name="uq_whodrug_drug_substance_map",
+        ),
+        Index(
+            "idx_whodrug_drug_substance_lookup",
+            "dictionary_version",
+            "drug_code",
+            "substance_code",
+        ),
+    )
+
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    drug_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    substance_code: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class DictionaryImportJob(AuditedModel):
+    """Represents dictionary import tracking and jobs."""
+
+    __tablename__ = "dictionary_import_jobs"
+
+    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    progress_percentage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    records_imported: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors_encountered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error_details: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class ClinicalCodingAssignment(AuditedModel):
+    """Represents current coded assignments mapping verbatims to dictionary terms."""
+
+    __tablename__ = "clinical_coding_assignments"
+    __table_args__ = (
+        Index(
+            "idx_coding_assignment_verbatim",
+            "verbatim_term",
+            "dictionary_type",
+            "dictionary_version",
+        ),
+    )
+
+    observation_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    verbatim_term: Mapped[str] = mapped_column(String(1000), nullable=False)
+    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    assigned_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    assigned_term: Mapped[str] = mapped_column(String(1000), nullable=False)
+    coding_state: Mapped[str] = mapped_column(String(50), nullable=False)
+    assigned_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class ClinicalCodingLedgerEntry(AuditedModel):
+    """Represents the historical clinical coding ledger of recoding decisions
+
+    and version updates.
+    """
+
+    __tablename__ = "clinical_coding_ledger"
+    __table_args__ = (
+        Index(
+            "idx_coding_ledger_assignment",
+            "assignment_id",
+        ),
+    )
+
+    assignment_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    observation_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    verbatim_term: Mapped[str] = mapped_column(String(1000), nullable=False)
+    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    dictionary_version_old: Mapped[str] = mapped_column(String(50), nullable=True)
+    dictionary_version_new: Mapped[str] = mapped_column(String(50), nullable=False)
+    assigned_code_old: Mapped[str] = mapped_column(String(50), nullable=True)
+    assigned_code_new: Mapped[str] = mapped_column(String(50), nullable=False)
+    assigned_term_old: Mapped[str] = mapped_column(String(1000), nullable=True)
+    assigned_term_new: Mapped[str] = mapped_column(String(1000), nullable=False)
+    recoding_state: Mapped[str] = mapped_column(String(50), nullable=False)
+    change_reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    performed_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    performed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
