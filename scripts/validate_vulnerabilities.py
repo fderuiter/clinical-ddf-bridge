@@ -14,6 +14,10 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Tuple
 
+# Resolve the repository root directory dynamically to support both local container and CI runner environments.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+
 
 def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
     """Scan CI workflow files and scripts for undocumented inline bypass flags.
@@ -26,7 +30,10 @@ def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
     violations: List[Tuple[str, int, str]] = []
 
     # Scan workflows and scripts for inline bypass flags
-    scan_paths = ["/app/.github/workflows", "/app/scripts"]
+    scan_paths = [
+        os.path.join(REPO_ROOT, ".github/workflows"),
+        os.path.join(REPO_ROOT, "scripts"),
+    ]
     for path in scan_paths:
         if not os.path.exists(path):
             continue
@@ -206,7 +213,9 @@ def main() -> None:
     """Core verification orchestrator."""
     print("--- Starting GxP FMEA-Aligned Vulnerability Exemption Ledger Validation ---")
 
-    ledger_path = "/app/docs/SDLC/vulnerability_exclusions_ledger.json"
+    ledger_path = os.path.join(
+        REPO_ROOT, "docs/SDLC/vulnerability_exclusions_ledger.json"
+    )
     summary_path = "/tmp/vulnerability_summary.json"
 
     # Step 1: Scan for inline bypass configurations
