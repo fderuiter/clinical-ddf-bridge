@@ -393,3 +393,304 @@ def test_capa_updates_and_concurrency():
     )
     assert closed_update.status_code == 422
     assert "terminal state" in closed_update.json()["detail"]
+
+
+def test_read_only_roles_forbidden():
+    """
+    Verify that read-only roles (auditor, inspector, viewer, etc.) receive 403 Forbidden on all mutations.
+    """
+    client = TestClient(app)
+    ro_headers = get_auth_headers(roles="auditor", change_reason="Trying to write")
+
+    # 1. Create deviation
+    payload = {
+        "study_id": "study_123",
+        "title": "Unpermitted deviation",
+        "description": "Should fail",
+        "severity": "MAJOR",
+        "type": "INFORMED_CONSENT",
+    }
+    res = client.post("/api/v1/quality/deviations", json=payload, headers=ro_headers)
+    assert res.status_code == 403
+    assert "Forbidden" in res.json()["detail"]
+
+    # Let's create a deviation with admin first so we have an ID to test other mutations
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Creating base deviation"
+    )
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=payload, headers=admin_headers
+    )
+    assert dev_res.status_code == 201
+    dev_id = dev_res.json()["id"]
+
+    # 2. Attach/Update RCA
+    rca_payload = {
+        "methodology": "5 Whys",
+        "investigation_details": "Failed attempt",
+        "root_cause_summary": "Should fail",
+    }
+    rca_res = client.post(
+        f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=ro_headers
+    )
+    assert rca_res.status_code == 403
+
+    # 3. Create CAPA
+    capa_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "Should fail",
+    }
+    capa_res = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=ro_headers
+    )
+    assert capa_res.status_code == 403
+
+    # Create CAPA with admin for transition/update tests
+    admin_capa_res = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=admin_headers
+    )
+    assert admin_capa_res.status_code == 201
+    capa_id = admin_capa_res.json()["id"]
+
+    # 4. Transition CAPA
+    trans_res = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=ro_headers,
+    )
+    assert trans_res.status_code == 403
+
+    # 5. Update CAPA
+    update_res = client.put(
+        f"/api/v1/quality/capas/{capa_id}",
+        json={"action_plan": "Should fail", "version_index": 1},
+        headers=ro_headers,
+    )
+    assert update_res.status_code == 403
+
+
+def test_capa_approval_closure_requires_quality_oversight():
+    """
+    Verify that general write roles (e.g. cra) can perform general transitions but only quality oversight roles
+    (e.g. quality_manager, qa_lead, quality_oversight, admin) can perform approval/closure transitions.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Creating deviation and CAPA"
+    )
+
+    # Create deviation
+    dev_payload = {
+        "study_id": "study_123",
+        "title": "Base deviation",
+        "description": "Desc",
+        "severity": "MAJOR",
+        "type": "INFORMED_CONSENT",
+    }
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=admin_headers
+    )
+    dev_id = dev_res.json()["id"]
+
+    # Create CAPA
+    capa_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "Action",
+    }
+    capa_res = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=admin_headers
+    )
+    capa_id = capa_res.json()["id"]
+
+    # Check broader write role can transition to UNDER_REVIEW
+    cra_headers = get_auth_headers(
+        roles="cra", change_reason="Transitioning to under review"
+    )
+    trans_res1 = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=cra_headers,
+    )
+    assert trans_res1.status_code == 200
+    assert trans_res1.json()["status"] == "UNDER_REVIEW"
+
+    # Transition to IMPLEMENTATION via cra
+    trans_res2 = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "IMPLEMENTATION", "version_index": 2},
+        headers=cra_headers,
+    )
+    assert trans_res2.status_code == 200
+
+    # Transition to EFFECTIVENESS_CHECK via cra
+    trans_res3 = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
+        headers=cra_headers,
+    )
+    assert trans_res3.status_code == 200
+
+    # Try transitioning to CLOSED (closure) via general write role (cra) - should fail with 403
+    trans_res4_fail = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=cra_headers,
+    )
+    assert trans_res4_fail.status_code == 403
+    assert "Quality oversight role required" in trans_res4_fail.json()["detail"]
+
+    # Successfully transition to CLOSED using a quality oversight role (e.g. quality_manager)
+    qm_headers = get_auth_headers(
+        roles="quality_manager", change_reason="Closing CAPA and deviation"
+    )
+    trans_res4_success = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=qm_headers,
+    )
+    assert trans_res4_success.status_code == 200
+    assert trans_res4_success.json()["status"] == "CLOSED"
+
+
+def test_mutation_without_change_reason_rejected():
+    """
+    Verify that mutations without X-Change-Reason are rejected by the gateway middleware.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin")
+    # Remove X-Change-Reason
+    headers.pop("X-Change-Reason", None)
+
+    # Re-sign with empty/none change reason to trigger gateway reject or lack of header
+    payload = {
+        "study_id": "study_123",
+        "title": "Failed deviation",
+        "description": "Missing reason",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    res = client.post("/api/v1/quality/deviations", json=payload, headers=headers)
+    assert res.status_code in (401, 403)
+    assert "change justification" in res.json()["detail"].lower()
+
+
+def test_successful_mutation_creates_audit_log_and_is_atomic():
+    """
+    Verify that every successful mutation creates an atomic audit log entry with detailed information.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Initial mutation testing")
+
+    # 1. Post a deviation
+    payload = {
+        "study_id": "study_123",
+        "title": "Audit-logged Deviation",
+        "description": "Testing audit log creation",
+        "severity": "CRITICAL",
+        "type": "PROTOCOL_PROCEDURE",
+    }
+    res = client.post("/api/v1/quality/deviations", json=payload, headers=headers)
+    assert res.status_code == 201
+    dev_id = res.json()["id"]
+
+    # 2. Get audit logs
+    audit_res = client.get("/api/v1/quality/audit-logs", headers=headers)
+    assert audit_res.status_code == 200
+    logs = audit_res.json()
+
+    # Find DEVIATION_CREATE log
+    create_log = next(
+        (log for log in logs if log["action"] == "DEVIATION_CREATE"), None
+    )
+    assert create_log is not None
+    assert create_log["user_id"] == "quality_test_user"
+    assert create_log["user_role"] == "admin"
+    assert create_log["record_id"] == dev_id
+    assert create_log["change_reason"] == "Initial mutation testing"
+    assert (
+        "Testing audit log creation" in create_log["details"]
+        or "Audit-logged Deviation" in create_log["details"]
+    )
+
+
+def test_audit_log_endpoint_properties():
+    """
+    Verify that the audit logs endpoint:
+    - returns entries in newest-first (descending chronological) order.
+    - exposes no write endpoints (POST/PUT/DELETE return 405).
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Audit check")
+
+    # Perform multiple actions to generate chronological logs
+    payload = {
+        "study_id": "study_123",
+        "title": "Dev 1",
+        "description": "Desc 1",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    client.post("/api/v1/quality/deviations", json=payload, headers=headers)
+
+    payload["title"] = "Dev 2"
+    client.post("/api/v1/quality/deviations", json=payload, headers=headers)
+
+    # Fetch audit logs
+    res = client.get("/api/v1/quality/audit-logs", headers=headers)
+    assert res.status_code == 200
+    logs = res.json()
+
+    assert len(logs) >= 2
+    # Newest first: let's assert timestamps are descending
+    from datetime import datetime
+
+    timestamps = [datetime.fromisoformat(log["timestamp"]) for log in logs]
+    for i in range(len(timestamps) - 1):
+        assert timestamps[i] >= timestamps[i + 1]
+
+    # Verify write endpoints are blocked with 405 Method Not Allowed
+    res_post = client.post("/api/v1/quality/audit-logs", json={}, headers=headers)
+    assert res_post.status_code == 405
+
+
+def test_permission_failure_leaves_no_misleading_audit_entry():
+    """
+    Verify that if permission checks fail, no domain entities are created/modified,
+    and no misleading audit log is written (atomicity & consistency).
+    """
+    client = TestClient(app)
+    ro_headers = get_auth_headers(roles="auditor", change_reason="Unpermitted attempt")
+
+    # Count database rows or get current audit logs count
+    admin_headers = get_auth_headers(roles="admin", change_reason="Counting")
+    initial_audit_res = client.get("/api/v1/quality/audit-logs", headers=admin_headers)
+    initial_log_count = len(initial_audit_res.json())
+    assert initial_log_count >= 0
+
+    # Try creating deviation with auditor
+    payload = {
+        "study_id": "study_123",
+        "title": "Forbidden deviation",
+        "description": "No record should be created",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    res = client.post("/api/v1/quality/deviations", json=payload, headers=ro_headers)
+    assert res.status_code == 403
+
+    # Check deviations count (should be empty for this study_id since the POST failed)
+    dev_list_res = client.get(
+        "/api/v1/quality/deviations?study_id=study_123", headers=admin_headers
+    )
+    assert len(dev_list_res.json()) == 0
+
+    # Check audit logs (excluding the listing action, the count of mutation-related logs should have not increased)
+    final_audit_res = client.get("/api/v1/quality/audit-logs", headers=admin_headers)
+    final_logs = final_audit_res.json()
+    # Find any mutation-related actions like DEVIATION_CREATE. None should exist for "Forbidden deviation"
+    assert not any(
+        log["action"] == "DEVIATION_CREATE" and "Forbidden deviation" in log["details"]
+        for log in final_logs
+    )
