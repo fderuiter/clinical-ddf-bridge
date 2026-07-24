@@ -42,27 +42,28 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 
 Before submitting code, you must ensure all styling, linting, and tests pass successfully inside the containerized sandbox against the live containerized database. Review the API guidelines and Pydantic models in `apps/designer/` and `apps/execution/`.
 
-We have provided a verification helper script:
+To execute the single unified workspace validation command, run:
 
 ```bash
-./run-checks.sh
+pnpm check
 ```
 
-### What does `run-checks.sh` do?
-1. **Formatting Checks**: Runs `ruff format --check` on the codebase.
-2. **Linting Checks**: Runs `ruff check` on the codebase.
-3. **Unit & Integration Tests**: Runs `pytest`. The test suite is configured to target the live containerized PostgreSQL database (`postgres:5432`), guaranteeing that tests assert correctness under a production-like network environment rather than relying on an in-memory SQLite database.
+### What does `pnpm check` do?
+1. **Formatting Checks**: Runs formatting tools for both frontend and backend (`prettier` and `ruff format`).
+2. **Linting Checks**: Runs linters for both frontend and backend (`eslint` and `ruff check`).
+3. **Unit & Integration Tests**: Runs test suites recursively for both frontend (`vitest`) and backend (`pytest`) natively on the host machine.
+4. **Validation Scripts**: Runs extra repository checks such as link checking, ADR validation, and markdown structure validation.
 
 ### Manual Executions
-If you wish to run a specific command (e.g., auto-formatting code), you can execute it inside the `execution` container environment (where all `uv` dependencies are resolved):
+If you wish to run a specific command (e.g., auto-formatting code), you can execute it locally on the host:
 
 ```bash
 # Auto-format your code using Ruff
-docker compose -f docker/docker-compose.yml exec execution ruff format .
-docker compose -f docker/docker-compose.yml exec execution ruff check --fix .
+uv run ruff format .
+uv run ruff check --fix .
 
 # Run a specific test file
-docker compose -f docker/docker-compose.yml exec execution pytest tests/test_audit.py
+uv run pytest tests/test_audit.py
 ```
 
 ## 3. Dependency Management

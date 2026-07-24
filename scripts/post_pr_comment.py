@@ -137,6 +137,53 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
             "is provided for final compliance verification."
         )
 
+    # Read vulnerability summary if present
+    vulnerability_table = ""
+    v_summary_path = "/tmp/vulnerability_summary.json"
+    if os.path.exists(v_summary_path):
+        try:
+            with open(v_summary_path, "r", encoding="utf-8") as f:
+                v_summary = json.load(f)
+            vulns = v_summary.get("vulnerabilities", [])
+            inline_violations = v_summary.get("inline_violations", [])
+            ledger_errors = v_summary.get("ledger_errors", [])
+
+            vulnerability_table = "\n\n#### 🛡️ GxP Security Exemption Ledger Status\n"
+            if not vulns and not inline_violations and not ledger_errors:
+                vulnerability_table += "✅ No active or proposed security exemptions detected in this build.\n"
+            else:
+                vulnerability_table += "| Vulnerability ID | Package | RPN | Status | Justification / Error |\n"
+                vulnerability_table += "| :--- | :--- | :--- | :--- | :--- |\n"
+
+                for v in vulns:
+                    v_id = v.get("vulnerability_id")
+                    pkg = v.get("package_name")
+                    rpn_val = v.get("rpn", "N/A")
+                    status_raw = v.get("status")
+                    just = v.get("justification", "No justification provided")
+
+                    if status_raw == "Approved":
+                        status_str = "✅ Approved"
+                    elif status_raw == "Blocked":
+                        status_str = "❌ Blocked"
+                    else:
+                        status_str = f"⚠️ {status_raw}"
+                    vulnerability_table += (
+                        f"| **{v_id}** | {pkg} | {rpn_val} | {status_str} | {just} |\n"
+                    )
+
+                for viol in inline_violations:
+                    v_file, v_line, v_text = viol
+                    v_file_short = os.path.basename(v_file)
+                    vulnerability_table += f"| **Inline Bypass** | {v_file_short}:{v_line} | N/A | ❌ Blocked | Inline configuration flag detected: `{v_text}` |\n"
+
+                for err in ledger_errors:
+                    vulnerability_table += (
+                        f"| **Ledger Error** | N/A | N/A | ❌ Blocked | {err} |\n"
+                    )
+        except Exception as e:
+            vulnerability_table = f"\n\n#### 🛡️ GxP Security Exemption Ledger Status\n⚠️ Error reading vulnerability summary: {e}\n"
+
     body = f"""<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 {header_message}
 
@@ -149,7 +196,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
 | **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
 | **Git Merge Conflicts** | {emoji_conflict} |
-
+{vulnerability_table}
 ---
 
 # Universal Task & PR Review Checklist: Intelligent Code Review & Merge Validation

@@ -51,6 +51,12 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      # Playwright browsers must be installed before running pnpm check.
+      # This is because pnpm check executes the full pytest suite (including layout validators),
+      # which requires chromium to be available.
+      - name: Install Playwright Browsers
+        run: uv run playwright install --with-deps chromium
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -67,7 +73,7 @@ jobs:
       - name: Run frontend checks
         id: run_frontend
         if: always()
-        run: pnpm check
+        run: pnpm -r format && pnpm -r lint && pnpm -r test
 
       - name: Run markdown link verification
         id: run_link_check
@@ -94,7 +100,7 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
+        run: python3 scripts/validate_vulnerabilities.py
 
       - name: Run secret detection
         id: run_secrets
@@ -102,10 +108,6 @@ jobs:
         run: |
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
-
-      - name: Install Playwright Browsers
-        if: always()
-        run: uv run playwright install --with-deps chromium
 
       - name: Run tests and coverage
         id: run_tests

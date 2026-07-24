@@ -8,10 +8,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "format": "pnpm -r format",
-    "check": "pnpm format && pnpm lint && pnpm test"
+    "test": "pnpm -r test && uv run pytest",
+    "lint": "pnpm -r lint && uv run ruff check .",
+    "format": "pnpm -r format && uv run ruff format .",
+    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && uv run python scripts/validate_adrs.py && uv run python scripts/validate_markdown.py"
   },
   "repository": {
     "type": "git",
