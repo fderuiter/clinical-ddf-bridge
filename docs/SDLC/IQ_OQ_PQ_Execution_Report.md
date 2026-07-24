@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 425
-- **Passed:** 425 🟢
+- **Total Automated Test Cases Run:** 432
+- **Passed:** 432 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -199,13 +199,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
 | `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
+| `test_cra_allocations_rbac_reassignment_workload` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_and_list_studies_rbac` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_health_check` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_audit_trail_rbac` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_scheduling_respects_cra_allocation` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_recruitment_records_crud_and_audit` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_milestones_crud_and_audit` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_profiles` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_custom_literal_terms` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -397,7 +401,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |

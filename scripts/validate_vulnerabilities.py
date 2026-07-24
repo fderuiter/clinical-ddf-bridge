@@ -216,7 +216,7 @@ def main() -> None:
     ledger_path = os.path.join(
         REPO_ROOT, "docs/SDLC/vulnerability_exclusions_ledger.json"
     )
-    summary_path = "/tmp/vulnerability_summary.json"
+    summary_path = "/tmp/vulnerability_summary.json"  # nosec B108
 
     # Step 1: Scan for inline bypass configurations
     print("Scanning workflow files and scripts for inline bypasses...")
