@@ -73,7 +73,7 @@ jobs:
       - name: Run frontend checks
         id: run_frontend
         if: always()
-        run: pnpm check
+        run: pnpm -r format && pnpm -r lint && pnpm -r test
 
       - name: Run markdown link verification
         id: run_link_check
