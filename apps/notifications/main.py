@@ -1,10 +1,12 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from typing import AsyncGenerator, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.notifications.database import db_manager
@@ -13,6 +15,7 @@ from apps.notifications.models import (
     Notification,
     NotificationAuditLog,
     NotificationCategory,
+    NotificationDelivery,
     NotificationPriority,
     NotificationStatus,
 )
@@ -68,6 +71,149 @@ class NotificationResponse(BaseModel):
 DATABASE_URL = os.getenv("NOTIFICATIONS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
+# Global set to track active deliveries in memory
+active_deliveries = set()
+
+
+async def poll_and_dispatch() -> None:
+    """
+    Polls the database for due notification deliveries and spawns concurrent tasks to process them.
+    """
+    if not db_manager.session_maker:
+        return
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        now = datetime.utcnow()
+        # Query due deliveries:
+        # 1. status is 'PENDING'
+        # 2. OR status is 'FAILED' AND retry_eligible is True AND next_retry_at <= now
+        stmt = select(NotificationDelivery).where(
+            or_(
+                NotificationDelivery.status == "PENDING",
+                and_(
+                    NotificationDelivery.status == "FAILED",
+                    NotificationDelivery.retry_eligible,
+                    NotificationDelivery.next_retry_at <= now,
+                ),
+            )
+        )
+        result = await session.execute(stmt)
+        due = result.scalars().all()
+
+        for d in due:
+            if d.id in active_deliveries:
+                continue
+            active_deliveries.add(d.id)
+            asyncio.create_task(deliver_channel_wrapper(d.id))
+
+
+async def deliver_channel_wrapper(delivery_id: str) -> None:
+    try:
+        await deliver_channel(delivery_id)
+    finally:
+        active_deliveries.discard(delivery_id)
+
+
+async def deliver_channel(delivery_id: str) -> None:
+    """
+    Executes a single delivery channel attempt for a specific notification.
+    """
+    from apps.notifications.delivery import (
+        send_email_notification,
+        send_webhook_notification,
+    )
+
+    if not db_manager.session_maker:
+        return
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        stmt = (
+            select(NotificationDelivery)
+            .where(NotificationDelivery.id == delivery_id)
+            .with_for_update()
+        )
+        result = await session.execute(stmt)
+        delivery = result.scalars().first()
+        if not delivery:
+            return
+
+        # Defensive check for multi-replica race conditions after acquiring the lock
+        if delivery.status not in ("PENDING", "FAILED"):
+            return
+
+        stmt_notif = select(Notification).where(
+            Notification.id == delivery.notification_id
+        )
+        result_notif = await session.execute(stmt_notif)
+        notification = result_notif.scalars().first()
+        if not notification:
+            delivery.status = "FAILED"
+            delivery.retry_eligible = False
+            delivery.last_error = "Parent notification not found"
+            await session.commit()
+            return
+
+        # Increment attempt count
+        delivery.attempts += 1
+        notification.retries = max(notification.retries, delivery.attempts)
+
+        try:
+            if delivery.channel == "IN_APP":
+                # In-app delivery is instant and always succeeds
+                delivery.status = "SUCCESS"
+                delivery.completed_at = datetime.utcnow()
+                notification.delivery_state = "DELIVERED"
+
+            elif delivery.channel == "EMAIL":
+                await send_email_notification(notification)
+                delivery.status = "SUCCESS"
+                delivery.completed_at = datetime.utcnow()
+
+            elif delivery.channel == "WEBHOOK":
+                await send_webhook_notification(notification)
+                delivery.status = "SUCCESS"
+                delivery.completed_at = datetime.utcnow()
+
+            else:
+                raise ValueError(f"Unknown channel: {delivery.channel}")
+
+        except Exception as e:
+            delivery.status = "FAILED"
+            delivery.last_error = str(e)
+
+            # Determine retry eligibility and next retry delay with bounded exponential backoff
+            max_attempts = int(os.getenv("NOTIFICATION_MAX_ATTEMPTS", "5"))
+            if delivery.attempts >= max_attempts:
+                delivery.retry_eligible = False
+            else:
+                base_delay = float(os.getenv("NOTIFICATION_RETRY_BASE_DELAY", "2.0"))
+                max_delay = float(os.getenv("NOTIFICATION_RETRY_MAX_DELAY", "3600.0"))
+                backoff_delay = min(
+                    max_delay, base_delay * (2 ** (delivery.attempts - 1))
+                )
+                delivery.next_retry_at = datetime.utcnow() + timedelta(
+                    seconds=backoff_delay
+                )
+                delivery.retry_eligible = True
+
+        await session.commit()
+
+
+async def dispatcher_lifecycle_worker() -> None:
+    """
+    Background worker loop that periodically ticks the poller.
+    """
+    while True:
+        try:
+            await poll_and_dispatch()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            # Prevent failures from crashing the background loop
+            pass
+        await asyncio.sleep(1.0)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
@@ -75,6 +221,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Initializes the database session manager on startup and securely
     cleans up connections on shutdown. Creates all tables if sqlite is used.
+    Starts and cancels the dispatcher worker.
     """
     db_manager.init_db(DATABASE_URL)
 
@@ -83,7 +230,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
+    # Start the dispatcher background task
+    dispatcher_task = asyncio.create_task(dispatcher_lifecycle_worker())
+
     yield
+
+    # Stop the dispatcher background task cleanly on shutdown
+    dispatcher_task.cancel()
+    try:
+        await dispatcher_task
+    except asyncio.CancelledError:
+        pass
 
     await db_manager.close()
 
@@ -176,6 +333,12 @@ async def create_notification(
     user_role = ",".join(user_roles_list) or "system"
     change_reason = getattr(request.state, "change_reason", "Notification creation")
 
+    requested_channels = [c.strip() for c in payload.channels.split(",") if c.strip()]
+    # Starts as PENDING if in_app is requested so it's not immediately visible on dashboard until processed.
+    initial_delivery_state = (
+        "PENDING" if "IN_APP" in requested_channels else "DELIVERED"
+    )
+
     notif = Notification(
         recipient_user_id=payload.recipient_user_id,
         recipient_role=payload.recipient_role,
@@ -186,13 +349,25 @@ async def create_notification(
         related_entity_id=payload.related_entity_id,
         related_entity_type=payload.related_entity_type,
         status=NotificationStatus.OPEN,
-        delivery_state="DELIVERED",  # Assuming auto-delivered for core in-app scaffold
+        delivery_state=initial_delivery_state,
         retries=0,
         created_by=user_id,
         version_index=1,
         reason_for_change=change_reason,
     )
     session.add(notif)
+    await session.flush()
+
+    # Create associated NotificationDelivery rows for async channel dispatching
+    for channel in requested_channels:
+        delivery = NotificationDelivery(
+            notification_id=notif.id,
+            channel=channel,
+            status="PENDING",
+            attempts=0,
+            retry_eligible=True,
+        )
+        session.add(delivery)
     await session.flush()
 
     await write_audit_log(
@@ -245,6 +420,9 @@ async def list_notifications(
     )
 
     stmt = stmt.where(or_(*visibility_clauses))
+
+    # Ensure in-app notifications are delivered and visible to the dashboard
+    stmt = stmt.where(Notification.delivery_state == "DELIVERED")
 
     if category:
         stmt = stmt.where(Notification.category == category)
