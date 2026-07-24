@@ -8,7 +8,6 @@ EU Annex 11, and ICH E6(R2).
 """
 
 from enum import Enum
-from audit import AuditFields
 
 
 class OrganizationType(str, Enum):

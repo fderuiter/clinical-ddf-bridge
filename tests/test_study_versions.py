@@ -23,7 +23,7 @@ from apps.designer.delta import (
 )
 from apps.designer.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 def get_auth_headers(
