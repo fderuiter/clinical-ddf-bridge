@@ -242,7 +242,9 @@ def test_mutation_creation_requires_non_empty_change_reason():
     missing_reason.pop("change_reason")
     with pytest.raises(ValidationError) as exc_info:
         adapter.validate_python(missing_reason)
-    assert "Field required" in str(exc_info.value) or "change_reason" in str(exc_info.value)
+    assert "Field required" in str(exc_info.value) or "change_reason" in str(
+        exc_info.value
+    )
 
     # Test empty change_reason
     empty_reason = valid_request_data.copy()
@@ -281,14 +283,19 @@ def test_mutation_update_requires_non_empty_reason_for_change():
 
     adapter = TypeAdapter(UpdateLibraryObjectRequest)
     obj = adapter.validate_python(valid_update_data)
-    assert obj.reason_for_change == "Updating vital sign layout to match CDASH 2.0 specifications."
+    assert (
+        obj.reason_for_change
+        == "Updating vital sign layout to match CDASH 2.0 specifications."
+    )
 
     # Test completely missing reason_for_change
     missing_reason = valid_update_data.copy()
     missing_reason.pop("reason_for_change")
     with pytest.raises(ValidationError) as exc_info:
         adapter.validate_python(missing_reason)
-    assert "Field required" in str(exc_info.value) or "reason_for_change" in str(exc_info.value)
+    assert "Field required" in str(exc_info.value) or "reason_for_change" in str(
+        exc_info.value
+    )
 
     # Test empty reason_for_change
     empty_reason = valid_update_data.copy()

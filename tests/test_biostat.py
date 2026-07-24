@@ -20,6 +20,7 @@ from apps.execution.biostat.terminology import (
 
 # --- Tests for Pydantic v2 Models ---
 
+
 def test_variable_metadata_validation():
     """Verify that VariableMetadata correctly validates types and fields."""
     # Valid model
@@ -86,13 +87,13 @@ def test_dataset_json_integration_structure():
         itemData=[
             ["STUDY-01", "STUDY-01-001", 35],
             ["STUDY-01", "STUDY-01-002", 42],
-        ]
+        ],
     )
 
     clinical_data = ClinicalData(
         studyOID="STUDY.01",
         metaDataVersionOID="MDV.01",
-        itemGroupData={"IG.DM": item_group}
+        itemGroupData={"IG.DM": item_group},
     )
 
     dj = DatasetJSON(
@@ -115,6 +116,7 @@ def test_dataset_json_integration_structure():
 
 
 # --- Tests for Declarative Mapping Table ---
+
 
 def test_declarative_mappings_coverage():
     """Verify that the declarative mapping covers DM, AE, VS, LB, and MH domains with expected variables."""
@@ -168,10 +170,17 @@ def test_mapping_helpers():
     assert len(ae_mappings) > 0
     for mapping in ae_mappings:
         assert mapping.domain == "AE"
-        assert mapping.transformation_kind in {"DIRECT", "CONCATENATION", "COMPUTED", "FIXED", "CONTROLLED_TERMINOLOGY"}
+        assert mapping.transformation_kind in {
+            "DIRECT",
+            "CONCATENATION",
+            "COMPUTED",
+            "FIXED",
+            "CONTROLLED_TERMINOLOGY",
+        }
 
 
 # --- Tests for Controlled Terminology Helpers ---
+
 
 def test_normalize_sex():
     """Verify SEX field normalization and validation."""
@@ -197,8 +206,14 @@ def test_normalize_race():
     assert normalize_race("black") == "BLACK OR AFRICAN AMERICAN"
     assert normalize_race("African American") == "BLACK OR AFRICAN AMERICAN"
     assert normalize_race("asian") == "ASIAN"
-    assert normalize_race("AMERICAN INDIAN OR ALASKA NATIVE") == "AMERICAN INDIAN OR ALASKA NATIVE"
-    assert normalize_race("pacific islander") == "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
+    assert (
+        normalize_race("AMERICAN INDIAN OR ALASKA NATIVE")
+        == "AMERICAN INDIAN OR ALASKA NATIVE"
+    )
+    assert (
+        normalize_race("pacific islander")
+        == "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
+    )
     assert normalize_race("declined") == "OTHER"
 
     # Multi-race options (lists or strings with separators)
