@@ -542,6 +542,7 @@ async def ingest_document(
         "version_index": new_version_index,
         "taxonomy_version": taxonomy_version,
         "artifact_code": artifact_code,
+        "document_status": doc.status,
     }
 
 
@@ -1136,6 +1137,60 @@ async def get_document_transition_history(
 ) -> List[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    # Verify document exists
+    stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
+    res_exist = await session.execute(stmt_exist)
+    if not res_exist.scalars().first():
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    stmt = (
+        select(DocumentQCTransition)
+        .where(DocumentQCTransition.document_id == document_id)
+        .order_by(DocumentQCTransition.timestamp.asc())
+    )
+    result = await session.execute(stmt)
+    transitions = result.scalars().all()
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="QC_HISTORY_VIEW",
+        document_id=document_id,
+        details=f"Viewed QC transition history for document ID: {document_id}.",
+    )
+
+    return [
+        TransitionResponse(
+            id=t.id,
+            document_id=t.document_id,
+            from_status=t.from_status,
+            to_status=t.to_status,
+            actor_id=t.actor_id,
+            actor_role=t.actor_role,
+            reason_for_change=t.reason_for_change,
+            timestamp=t.timestamp.isoformat(),
+        )
+        for t in transitions
+    ]
+
+
+@app.get(
+    "/api/v1/etmf/documents/{document_id}/qc-history",
+    response_model=List[TransitionResponse],
+)
+async def get_document_qc_history(
+    request: Request,
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[TransitionResponse]:
+    """
+    Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.
     """
     user_id = getattr(request.state, "user_id", "anonymous")
     user_roles = getattr(request.state, "roles", "anonymous")
