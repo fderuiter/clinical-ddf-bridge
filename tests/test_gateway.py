@@ -355,3 +355,69 @@ def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
         rate_limiter.max_requests = old_max
         rate_limiter.window_seconds = old_window
         rate_limiter.requests.clear()
+
+
+def test_gateway_subject_role_routing_restrictions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that the gateway restricts users with the 'Subject' role to only
+    designated ePRO/eCOA routes, rejecting all others with HTTP 403.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # 1. Subject role token
+    token = jwt.encode(
+        {"sub": "patient_123", "realm_access": {"roles": ["Subject"]}},
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # Allowed routes (should proxy, and because of mock return 200)
+        res = client.post(
+            "/api/v1/interop/epro/submit",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "submit diary",
+            },
+            json={"subject_id": "patient_123"},
+        )
+        assert res.status_code == 200
+
+        res = client.post(
+            "/api/v1/interop/epro/sync",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "sync diaries",
+            },
+            json={"submissions": []},
+        )
+        assert res.status_code == 200
+
+        # Blocked routes for Subject role -> 403
+        res_fhir = client.post(
+            "/api/v1/interop/fhir/prefill",
+            headers={"Authorization": f"Bearer {token}", "X-Change-Reason": "prefill"},
+            json={},
+        )
+        assert res_fhir.status_code == 403
+        assert "Access denied" in res_fhir.json()["detail"]
+
+        res_designer = client.get(
+            "/designer/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res_designer.status_code == 403
+
+        res_execution = client.get(
+            "/execution/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res_execution.status_code == 403

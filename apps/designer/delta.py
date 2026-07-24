@@ -204,3 +204,231 @@ async def get_study_differences(
                 differences.append({"field": key, "old_value": val1, "new_value": val2})
 
         return differences
+
+
+@with_transaction_retry()
+async def create_rule_node(
+    driver, study_id: str, user_id: str, change_reason: str, rule_id: str, rule_data: Dict[str, Any]
+):
+    """
+    Creates a new versioned rule under a study.
+    Connects to an Action node via AFTER.
+    """
+    import json
+    action_id = str(uuid.uuid4())
+    condition_json = json.dumps(rule_data.get("condition", {}))
+
+    query = """
+    MATCH (s:Study {id: $study_id})
+
+    // Create stable rule root
+    CREATE (r:Rule {id: $rule_id, study_id: $study_id})
+    CREATE (s)-[:HAS_RULE]->(r)
+
+    // Create Action
+    CREATE (a:Action {
+        id: $action_id,
+        user_id: $user_id,
+        change_reason: $change_reason,
+        timestamp: datetime()
+    })
+
+    // Create RuleVersion
+    CREATE (rv:RuleVersion {
+        id: $rule_id,
+        type: $type,
+        condition_json: $condition_json,
+        action: $action,
+        target_field: $target_field,
+        target_form: $target_form,
+        target_group: $target_group,
+        query_message: $query_message,
+        version_index: 1,
+        is_deleted: false
+    })
+    CREATE (r)-[:HAS_VERSION]->(rv)
+    CREATE (a)-[:AFTER]->(rv)
+
+    RETURN r.id as rule_id
+    """
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            # Lock study root node
+            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                rule_id=rule_id,
+                type=rule_data["type"],
+                condition_json=condition_json,
+                action=rule_data.get("action"),
+                target_field=rule_data.get("target_field"),
+                target_form=rule_data.get("target_form"),
+                target_group=rule_data.get("target_group"),
+                query_message=rule_data.get("query_message"),
+            )
+            record = await result.single()
+            return record["rule_id"] if record else None
+
+
+@with_transaction_retry()
+async def update_rule_node(
+    driver, study_id: str, rule_id: str, user_id: str, change_reason: str, rule_data: Dict[str, Any]
+):
+    """
+    Updates an existing rule by creating a new version.
+    Connects to Action via BEFORE/AFTER and uses PREVIOUS_VERSION.
+    """
+    import json
+    action_id = str(uuid.uuid4())
+    condition_json = json.dumps(rule_data.get("condition", {}))
+
+    query = """
+    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule {id: $rule_id})
+
+    // Find current latest version
+    OPTIONAL MATCH (r)-[:HAS_VERSION]->(old_rv:RuleVersion)
+    WHERE NOT (old_rv)<-[:PREVIOUS_VERSION]-()
+
+    // Create Action
+    CREATE (a:Action {
+        id: $action_id,
+        user_id: $user_id,
+        change_reason: $change_reason,
+        timestamp: datetime()
+    })
+
+    // Create New RuleVersion
+    CREATE (new_rv:RuleVersion {
+        id: $rule_id,
+        type: $type,
+        condition_json: $condition_json,
+        action: $action,
+        target_field: $target_field,
+        target_form: $target_form,
+        target_group: $target_group,
+        query_message: $query_message,
+        version_index: coalesce(old_rv.version_index, 0) + 1,
+        is_deleted: false
+    })
+    CREATE (r)-[:HAS_VERSION]->(new_rv)
+    CREATE (a)-[:AFTER]->(new_rv)
+
+    // Link old to new
+    WITH a, old_rv, new_rv
+    WHERE old_rv IS NOT NULL
+    CREATE (a)-[:BEFORE]->(old_rv)
+    CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
+
+    RETURN new_rv.version_index as version_index
+    """
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                rule_id=rule_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                type=rule_data["type"],
+                condition_json=condition_json,
+                action=rule_data.get("action"),
+                target_field=rule_data.get("target_field"),
+                target_form=rule_data.get("target_form"),
+                target_group=rule_data.get("target_group"),
+                query_message=rule_data.get("query_message"),
+            )
+            record = await result.single()
+            return record["version_index"] if record else None
+
+
+@with_transaction_retry()
+async def delete_rule_node(
+    driver, study_id: str, rule_id: str, user_id: str, change_reason: str
+):
+    """
+    Soft-deletes a rule by creating a new deleted version.
+    """
+    action_id = str(uuid.uuid4())
+    query = """
+    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule {id: $rule_id})
+
+    // Find current latest version
+    OPTIONAL MATCH (r)-[:HAS_VERSION]->(old_rv:RuleVersion)
+    WHERE NOT (old_rv)<-[:PREVIOUS_VERSION]-()
+
+    // Create Action
+    CREATE (a:Action {
+        id: $action_id,
+        user_id: $user_id,
+        change_reason: $change_reason,
+        timestamp: datetime()
+    })
+
+    // Create New RuleVersion marked as deleted
+    CREATE (new_rv:RuleVersion {
+        id: $rule_id,
+        type: old_rv.type,
+        condition_json: old_rv.condition_json,
+        action: old_rv.action,
+        target_field: old_rv.target_field,
+        target_form: old_rv.target_form,
+        target_group: old_rv.target_group,
+        query_message: old_rv.query_message,
+        version_index: coalesce(old_rv.version_index, 0) + 1,
+        is_deleted: true
+    })
+    CREATE (r)-[:HAS_VERSION]->(new_rv)
+    CREATE (a)-[:AFTER]->(new_rv)
+
+    // Link old to new
+    WITH a, old_rv, new_rv
+    WHERE old_rv IS NOT NULL
+    CREATE (a)-[:BEFORE]->(old_rv)
+    CREATE (new_rv)-[:PREVIOUS_VERSION]->(old_rv)
+
+    RETURN new_rv.version_index as version_index
+    """
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                rule_id=rule_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+            record = await result.single()
+            return record["version_index"] if record else None
+
+
+async def get_rules_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves all active rules (not soft-deleted) for a study.
+    """
+    import json
+    query = """
+    MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule)-[:HAS_VERSION]->(rv:RuleVersion)
+    WHERE NOT (rv)<-[:PREVIOUS_VERSION]-() AND rv.is_deleted = false
+    RETURN rv {.*} as rule_props
+    """
+    async with driver.session() as session:
+        result = await session.run(query, study_id=study_id)
+        records = await result.all()
+        rules = []
+        for record in records:
+            props = dict(record["rule_props"])
+            if props.get("condition_json"):
+                props["condition"] = json.loads(props["condition_json"])
+            rules.append(props)
+        return rules
