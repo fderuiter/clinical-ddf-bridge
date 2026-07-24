@@ -25,7 +25,9 @@ async def setup_quality_db():
     await db_manager.close()
 
 
-def get_auth_headers(roles: str = "admin", change_reason: str = "Compliance change justification") -> dict:
+def get_auth_headers(
+    roles: str = "admin", change_reason: str = "Compliance change justification"
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
@@ -59,7 +61,7 @@ def test_create_and_list_deviations():
         "description": "The subject signed the form but did not date it.",
         "severity": "MAJOR",
         "type": "INFORMED_CONSENT",
-        "is_protocol_violation": True
+        "is_protocol_violation": True,
     }
     response = client.post("/api/v1/quality/deviations", json=payload, headers=headers)
     assert response.status_code == 201
@@ -73,14 +75,18 @@ def test_create_and_list_deviations():
     assert data["reason_for_change"] == "Reporting protocol deviation"
 
     # List deviations with filters
-    response_list = client.get("/api/v1/quality/deviations?study_id=study_123", headers=headers)
+    response_list = client.get(
+        "/api/v1/quality/deviations?study_id=study_123", headers=headers
+    )
     assert response_list.status_code == 200
     list_data = response_list.json()
     assert len(list_data) == 1
     assert list_data[0]["id"] == data["id"]
 
     # View deviation
-    response_view = client.get(f"/api/v1/quality/deviations/{data['id']}", headers=headers)
+    response_view = client.get(
+        f"/api/v1/quality/deviations/{data['id']}", headers=headers
+    )
     assert response_view.status_code == 200
     assert response_view.json()["id"] == data["id"]
 
@@ -100,9 +106,11 @@ def test_create_and_update_rca():
         "description": "IP storage excursion",
         "severity": "CRITICAL",
         "type": "IP_MANAGEMENT",
-        "is_protocol_violation": False
+        "is_protocol_violation": False,
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     # 2. Attach RCA
@@ -110,9 +118,13 @@ def test_create_and_update_rca():
     rca_payload = {
         "methodology": "5 Whys",
         "investigation_details": "Power went down in facility",
-        "root_cause_summary": "Backup generator failed"
+        "root_cause_summary": "Backup generator failed",
     }
-    rca_res = client.post(f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=rca_headers)
+    rca_res = client.post(
+        f"/api/v1/quality/deviations/{dev_id}/rca",
+        json=rca_payload,
+        headers=rca_headers,
+    )
     assert rca_res.status_code == 200
     rca_data = rca_res.json()
     assert rca_data["deviation_id"] == dev_id
@@ -130,9 +142,13 @@ def test_create_and_update_rca():
         "methodology": "Fishbone Diagram",
         "investigation_details": "Updated investigation details",
         "root_cause_summary": "Updated root cause summary",
-        "version_index": 1
+        "version_index": 1,
     }
-    rca_update_res = client.put(f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload_update, headers=update_headers)
+    rca_update_res = client.put(
+        f"/api/v1/quality/deviations/{dev_id}/rca",
+        json=rca_payload_update,
+        headers=update_headers,
+    )
     assert rca_update_res.status_code == 200
     assert rca_update_res.json()["version_index"] == 2
     assert rca_update_res.json()["methodology"] == "Fishbone Diagram"
@@ -142,9 +158,13 @@ def test_create_and_update_rca():
         "methodology": "Fishbone Diagram",
         "investigation_details": "Conflict",
         "root_cause_summary": "Conflict",
-        "version_index": 1  # Stale version index
+        "version_index": 1,  # Stale version index
     }
-    conflict_res = client.put(f"/api/v1/quality/deviations/{dev_id}/rca", json=conflict_payload, headers=update_headers)
+    conflict_res = client.put(
+        f"/api/v1/quality/deviations/{dev_id}/rca",
+        json=conflict_payload,
+        headers=update_headers,
+    )
     assert conflict_res.status_code == 409
     assert "Version conflict" in conflict_res.json()["detail"]
 
@@ -161,7 +181,7 @@ def test_capa_creation_validations():
     capa_payload = {
         "deviation_id": "non-existent-id",
         "capa_type": "CORRECTIVE",
-        "action_plan": "Testing"
+        "action_plan": "Testing",
     }
     res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     assert res.status_code == 422
@@ -173,9 +193,11 @@ def test_capa_creation_validations():
         "title": "Temp excursion",
         "description": "IP storage excursion",
         "severity": "CRITICAL",
-        "type": "IP_MANAGEMENT"
+        "type": "IP_MANAGEMENT",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     # 3. Supply invalid/mismatched RCA ID
@@ -183,9 +205,11 @@ def test_capa_creation_validations():
         "deviation_id": dev_id,
         "rca_id": "non-existent-rca-id",
         "capa_type": "CORRECTIVE",
-        "action_plan": "Testing"
+        "action_plan": "Testing",
     }
-    res_rca = client.post("/api/v1/quality/capas", json=capa_payload_invalid_rca, headers=headers)
+    res_rca = client.post(
+        "/api/v1/quality/capas", json=capa_payload_invalid_rca, headers=headers
+    )
     assert res_rca.status_code == 422
     assert "RCA with ID" in res_rca.json()["detail"]
 
@@ -204,15 +228,17 @@ def test_capa_lifecycle_transitions():
         "title": "Protocol violation",
         "description": "Protocol violation desc",
         "severity": "MAJOR",
-        "type": "ELIGIBILITY"
+        "type": "ELIGIBILITY",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "Do training on eligibility"
+        "action_plan": "Do training on eligibility",
     }
     capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     assert capa_res.status_code == 201
@@ -228,7 +254,7 @@ def test_capa_lifecycle_transitions():
     trans_res1 = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "UNDER_REVIEW", "version_index": 1},
-        headers=headers
+        headers=headers,
     )
     assert trans_res1.status_code == 200
     assert trans_res1.json()["status"] == "UNDER_REVIEW"
@@ -238,7 +264,7 @@ def test_capa_lifecycle_transitions():
     trans_res_illegal = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 2},
-        headers=headers
+        headers=headers,
     )
     assert trans_res_illegal.status_code == 422
     assert "Invalid transition" in trans_res_illegal.json()["detail"]
@@ -247,7 +273,7 @@ def test_capa_lifecycle_transitions():
     trans_res2 = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "IMPLEMENTATION", "version_index": 2},
-        headers=headers
+        headers=headers,
     )
     assert trans_res2.status_code == 200
     assert trans_res2.json()["status"] == "IMPLEMENTATION"
@@ -257,7 +283,7 @@ def test_capa_lifecycle_transitions():
     trans_res3 = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
-        headers=headers
+        headers=headers,
     )
     assert trans_res3.status_code == 200
     assert trans_res3.json()["status"] == "EFFECTIVENESS_CHECK"
@@ -267,7 +293,7 @@ def test_capa_lifecycle_transitions():
     trans_res4 = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 4},
-        headers=headers
+        headers=headers,
     )
     assert trans_res4.status_code == 200
     assert trans_res4.json()["status"] == "CLOSED"
@@ -282,7 +308,7 @@ def test_capa_lifecycle_transitions():
     trans_terminal = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "UNDER_REVIEW", "version_index": 5},
-        headers=headers
+        headers=headers,
     )
     assert trans_terminal.status_code == 422
     assert "terminal state" in trans_terminal.json()["detail"]
@@ -302,15 +328,17 @@ def test_capa_updates_and_concurrency():
         "title": "IP Temp Excursion",
         "description": "IP excursion",
         "severity": "CRITICAL",
-        "type": "IP_MANAGEMENT"
+        "type": "IP_MANAGEMENT",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "Initial Plan"
+        "action_plan": "Initial Plan",
     }
     capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     capa_id = capa_res.json()["id"]
@@ -319,7 +347,7 @@ def test_capa_updates_and_concurrency():
     update_res = client.put(
         f"/api/v1/quality/capas/{capa_id}",
         json={"action_plan": "Updated Action Plan", "version_index": 1},
-        headers=headers
+        headers=headers,
     )
     assert update_res.status_code == 200
     assert update_res.json()["action_plan"] == "Updated Action Plan"
@@ -329,7 +357,7 @@ def test_capa_updates_and_concurrency():
     stale_update_res = client.put(
         f"/api/v1/quality/capas/{capa_id}",
         json={"action_plan": "Stale Update Plan", "version_index": 1},
-        headers=headers
+        headers=headers,
     )
     assert stale_update_res.status_code == 409
     assert "Version conflict" in stale_update_res.json()["detail"]
@@ -339,29 +367,29 @@ def test_capa_updates_and_concurrency():
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "UNDER_REVIEW", "version_index": 2},
-        headers=headers
+        headers=headers,
     )
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "IMPLEMENTATION", "version_index": 3},
-        headers=headers
+        headers=headers,
     )
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 4},
-        headers=headers
+        headers=headers,
     )
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 5},
-        headers=headers
+        headers=headers,
     )
 
     # 5. Try updating details of a closed CAPA (Illegal -> 422)
     closed_update = client.put(
         f"/api/v1/quality/capas/{capa_id}",
         json={"action_plan": "No changes allowed", "version_index": 6},
-        headers=headers
+        headers=headers,
     )
     assert closed_update.status_code == 422
     assert "terminal state" in closed_update.json()["detail"]
