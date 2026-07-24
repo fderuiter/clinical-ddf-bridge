@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,13 @@ from apps.interop.auth import (
 )
 from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter
-from apps.interop.models import Base, EPROSubmission, InteropAuditLog
+from apps.interop.models import (
+    Base,
+    EPROSubmission,
+    Instrument,
+    InteropAuditLog,
+    SubjectAssignment,
+)
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -370,3 +376,202 @@ async def epro_sync(
         "ignored_count": ignored_count,
         "results": results,
     }
+
+
+# Instrument and SubjectAssignment Pydantic Schemas
+class InstrumentCreate(BaseModel):
+    name: str = Field(..., description="The name of the questionnaire/diary")
+    description: Optional[str] = Field(None, description="Optional description")
+    items: Dict[str, Any] = Field(..., description="Items/questions")
+    response_types: Dict[str, Any] = Field(
+        ..., description="Response types and options"
+    )
+    scoring_metadata: Dict[str, Any] = Field(..., description="Scoring metadata")
+    reason_for_change: str = Field(
+        ..., description="21 CFR Part 11 compliant reason for change"
+    )
+
+
+class InstrumentResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+    items: Dict[str, Any]
+    response_types: Dict[str, Any]
+    scoring_metadata: Dict[str, Any]
+    created_at: datetime
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class SubjectAssignmentCreate(BaseModel):
+    subject_id: str = Field(..., description="Unique subject identifier")
+    instrument_id: str = Field(..., description="ID of the Instrument to assign")
+    start_date: datetime = Field(..., description="Start of the due/recurrence window")
+    end_date: datetime = Field(..., description="End of the due/recurrence window")
+    recurrence_pattern: Optional[str] = Field(None, description="E.g., DAILY, WEEKLY")
+    due_at: Optional[datetime] = Field(
+        None, description="Optional specific due date/time"
+    )
+    reason_for_change: str = Field(
+        ..., description="21 CFR Part 11 compliant reason for change"
+    )
+
+
+class SubjectAssignmentResponse(BaseModel):
+    id: str
+    subject_id: str
+    instrument_id: str
+    start_date: datetime
+    end_date: datetime
+    recurrence_pattern: Optional[str]
+    due_at: Optional[datetime]
+    created_at: datetime
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+@app.post(
+    "/api/v1/interop/instruments", response_model=InstrumentResponse, status_code=201
+)
+async def create_instrument(
+    request: Request,
+    payload: InstrumentCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> InstrumentResponse:
+    """
+    Author a new eCOA questionnaire/diary definition.
+    Enforces staff role authentication and Part 11 auditing.
+    """
+    require_staff_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    instrument = Instrument(
+        name=payload.name,
+        description=payload.description,
+        items=payload.items,
+        response_types=payload.response_types,
+        scoring_metadata=payload.scoring_metadata,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(instrument)
+    await session.flush()
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_INSTRUMENT",
+        details=f"Created instrument '{payload.name}' with ID '{instrument.id}'.",
+    )
+
+    return instrument
+
+
+@app.post(
+    "/api/v1/interop/assignments",
+    response_model=SubjectAssignmentResponse,
+    status_code=201,
+)
+async def create_subject_assignment(
+    request: Request,
+    payload: SubjectAssignmentCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectAssignmentResponse:
+    """
+    Assign an eCOA instrument to a subject with due/recurrence window data.
+    Enforces staff role authorization, validates instrument reference, and logs audit fields.
+    """
+    require_staff_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Validate that instrument exists
+    stmt = select(Instrument).where(Instrument.id == payload.instrument_id)
+    result = await session.execute(stmt)
+    instrument = result.scalars().first()
+    if not instrument:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Instrument with ID '{payload.instrument_id}' not found.",
+        )
+
+    # Validate start_date <= end_date
+    if payload.start_date > payload.end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Assignment start_date cannot be after end_date.",
+        )
+
+    assignment = SubjectAssignment(
+        subject_id=payload.subject_id,
+        instrument_id=payload.instrument_id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        recurrence_pattern=payload.recurrence_pattern,
+        due_at=payload.due_at,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(assignment)
+    await session.flush()
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_ASSIGNMENT",
+        details=f"Assigned instrument '{instrument.name}' (ID: '{instrument.id}') to subject '{payload.subject_id}'.",
+    )
+
+    return assignment
+
+
+@app.get("/api/v1/interop/instruments/{id}", response_model=InstrumentResponse)
+async def get_instrument(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> InstrumentResponse:
+    """
+    Retrieve an Instrument definition by ID.
+    """
+    stmt = select(Instrument).where(Instrument.id == id)
+    result = await session.execute(stmt)
+    instrument = result.scalars().first()
+    if not instrument:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Instrument with ID '{id}' not found.",
+        )
+    return instrument
+
+
+@app.get(
+    "/api/v1/interop/assignments/subject/{subject_id}",
+    response_model=List[SubjectAssignmentResponse],
+)
+async def get_subject_assignments(
+    request: Request,
+    subject_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[SubjectAssignmentResponse]:
+    """
+    Retrieve all assignments for a given subject.
+    Enforces subject-scoped identity boundary (Subject can only view their own assignments).
+    """
+    verify_subject_identity(request, subject_id)
+    stmt = select(SubjectAssignment).where(SubjectAssignment.subject_id == subject_id)
+    result = await session.execute(stmt)
+    assignments = result.scalars().all()
+    return list(assignments)

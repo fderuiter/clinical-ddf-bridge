@@ -390,6 +390,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_foreign_key_and_cascade_lifecycle_integrity` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instrument_and_assignment_endpoints_and_auditing` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instrument_and_assignment_orm_persistence` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
@@ -405,6 +408,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -442,10 +446,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
