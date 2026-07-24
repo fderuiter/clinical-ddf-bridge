@@ -219,6 +219,13 @@ class ClinicalObservation(AuditedModel):
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
 
+    # Lab reference range snapshot fields
+    lab_source: Mapped[str] = mapped_column(String(50), nullable=True)
+    lab_site_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
+    lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
+
 
 class ClinicalQuery(AuditedModel):
     """Represents a clinical query state record for GxP data discrepancy tracking.
@@ -581,3 +588,44 @@ class ClinicalCodingLedger(AuditedModel):
     recoding_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     decision_by: Mapped[str] = mapped_column(String(255), nullable=True)
     decision_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class LabReferenceRange(AuditedModel):
+    """Represents lab reference range settings for clinical trials, enabling validation of lab values.
+
+    Attributes:
+        study_id (str): The unique identifier of the study.
+        test_code (str): The laboratory test code (e.g. 'HEMOGLOBIN').
+        test_name (str): The name/description of the test parameter.
+        source (str): Source type, either 'CENTRAL' or 'LOCAL'.
+        site_id (str): Optional site identifier for local range applicability.
+        unit (str): Original unit of measurement.
+        normalized_unit (str): Normalized unit of measurement.
+        sex_applicability (str): Sex applicability (e.g. 'M', 'F', 'ALL').
+        age_low (float): Nullable lower bound for age applicability.
+        age_high (float): Nullable upper bound for age applicability.
+        low_bound (float): Nullable lower limit of normal range.
+        high_bound (float): Nullable upper limit of normal range.
+        critical_low (float): Nullable lower limit for critical alert range.
+        critical_high (float): Nullable upper limit for critical alert range.
+    """
+
+    __tablename__ = "lab_reference_ranges"
+    __table_args__ = (
+        Index("idx_lab_range_lookup", "study_id", "test_code", "source", "site_id"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    test_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)  # "CENTRAL" or "LOCAL"
+    site_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    unit: Mapped[str] = mapped_column(String(50), nullable=True)
+    normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
+    sex_applicability: Mapped[str] = mapped_column(String(50), nullable=True)
+    age_low: Mapped[float] = mapped_column(Float, nullable=True)
+    age_high: Mapped[float] = mapped_column(Float, nullable=True)
+    low_bound: Mapped[float] = mapped_column(Float, nullable=True)
+    high_bound: Mapped[float] = mapped_column(Float, nullable=True)
+    critical_low: Mapped[float] = mapped_column(Float, nullable=True)
+    critical_high: Mapped[float] = mapped_column(Float, nullable=True)
