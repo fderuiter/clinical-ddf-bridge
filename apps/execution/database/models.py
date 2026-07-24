@@ -218,6 +218,8 @@ class ClinicalObservation(AuditedModel):
     sdv_verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    laboratory_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    is_out_of_range: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class ClinicalQuery(AuditedModel):
@@ -581,3 +583,38 @@ class ClinicalCodingLedger(AuditedModel):
     recoding_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     decision_by: Mapped[str] = mapped_column(String(255), nullable=True)
     decision_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class Laboratory(AuditedModel):
+    """Represents a central or local laboratory performing trial-related clinical testing."""
+
+    __tablename__ = "laboratories"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_laboratory_code"),
+        Index("idx_laboratory_lookup", "code"),
+    )
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    lab_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "CENTRAL" or "LOCAL"
+    location: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
+class LabReferenceRange(AuditedModel):
+    """Represents a demographic age/sex-adjusted normal reference range for laboratory test findings."""
+
+    __tablename__ = "lab_reference_ranges"
+    __table_args__ = (
+        Index("idx_lab_ref_range_lookup", "test_code", "laboratory_id"),
+        Index("idx_lab_ref_range_demographics", "test_code", "sex"),
+    )
+
+    laboratory_id: Mapped[str] = mapped_column(String(255), nullable=True)  # nullable if applies globally
+    test_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    test_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    sex: Mapped[str] = mapped_column(String(10), default="ALL", nullable=False)  # "M", "F", "ALL"
+    age_min: Mapped[float] = mapped_column(Float, nullable=True)
+    age_max: Mapped[float] = mapped_column(Float, nullable=True)
+    low_value: Mapped[float] = mapped_column(Float, nullable=False)
+    high_value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(50), nullable=False)

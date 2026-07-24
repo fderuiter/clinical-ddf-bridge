@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 235
-- **Passed:** 235 🟢
+- **Total Automated Test Cases Run:** 244
+- **Passed:** 244 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -248,6 +248,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_crud` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_laboratory_crud` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_observation_age_sex_adjusted_range` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_observation_in_range` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_observation_out_of_range_central_lab` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_observation_unit_conversion_range` | `tests.test_lab_range_management` | PRD-QRY-003 | 🟢 PASSED | < 1s |
 | `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |

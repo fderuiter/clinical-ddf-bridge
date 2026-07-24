@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 45
-- **Total Mapped to Automated Tests:** 18
-- **Traceability Coverage:** 40.0%
+- **Total Mapped to Automated Tests:** 19
+- **Traceability Coverage:** 42.2%
 - **SRS Requirements Mapped:** 4 of 5 (80.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -36,7 +36,7 @@
 | PRD-MDR-007 | PRD | **Logical Mapping of I/E Criteria to eCRF Fields** | *None* | ❌ **Unmapped** |
 | PRD-QRY-001 | PRD | **Query State Transitions and Constraints** | *None* | ❌ **Unmapped** |
 | PRD-QRY-002 | PRD | **Query Escalation Rules** | *None* | ❌ **Unmapped** |
-| PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | *None* | ❌ **Unmapped** |
+| PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | `test_laboratory_crud` (tests/test_lab_range_management.py) 🟢<br>`test_lab_reference_range_crud` (tests/test_lab_range_management.py) 🟢<br>`test_observation_in_range` (tests/test_lab_range_management.py) 🟢<br>`test_observation_out_of_range_central_lab` (tests/test_lab_range_management.py) 🟢<br>`test_observation_age_sex_adjusted_range` (tests/test_lab_range_management.py) 🟢<br>`test_observation_unit_conversion_range` (tests/test_lab_range_management.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-004 | PRD | **Longitudinal Validation and Repeat-Visit Logic** | *None* | ❌ **Unmapped** |
 | PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | *None* | ❌ **Unmapped** |
@@ -79,7 +79,6 @@
 - **PRD-MDR-007** (PRD): Logical Mapping of I/E Criteria to eCRF Fields
 - **PRD-QRY-001** (PRD): Query State Transitions and Constraints
 - **PRD-QRY-002** (PRD): Query Escalation Rules
-- **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
 - **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
 - **PRD-QRY-006** (PRD): Automatic Verification Drop upon Data Modification
 - **PRD-SUB-001** (PRD): State Transition Matrix & Enforcements

@@ -32,6 +32,8 @@ from apps.execution.database.models import (
     ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
+    Laboratory,
+    LabReferenceRange,
     TranslationJob,
 )
 from apps.execution.outliers import recalculate_cohort_outliers
@@ -286,6 +288,7 @@ class ObservationCreate(BaseModel):
     value_string: Optional[str] = None
     unit: Optional[str] = None
     observation_date: Optional[datetime] = None
+    laboratory_id: Optional[str] = None
 
 
 class ObservationResponse(BaseModel):
@@ -305,6 +308,8 @@ class ObservationResponse(BaseModel):
     normalized_value: Optional[float] = None
     normalized_unit: Optional[str] = None
     is_outlier: bool
+    laboratory_id: Optional[str] = None
+    is_out_of_range: bool = False
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -368,19 +373,102 @@ async def create_observation(payload: ObservationCreate) -> ObservationResponse:
     async with db_manager.get_session_maker()() as session:
         # Determine study_id
         study_id = payload.study_id
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == payload.subject_id
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj_db = res_subj.scalars().first()
+
         if not study_id:
-            # Query Subject
-            stmt_subj = select(ClinicalSubject).where(
-                ClinicalSubject.subject_id == payload.subject_id
-            )
-            res_subj = await session.execute(stmt_subj)
-            subj_db = res_subj.scalars().first()
             if not subj_db:
                 raise HTTPException(
                     status_code=400,
                     detail="Subject not registered; cannot infer study_id",
                 )
             study_id = subj_db.study_id
+
+        # Determine demographics (gender, age) for reference ranges lookup
+        age = None
+        gender = "ALL"
+        if subj_db and subj_db.encrypted_demographics:
+            try:
+                demo = decrypt_demographics(subj_db.encrypted_demographics)
+                g_val = demo.get("gender") or demo.get("sex")
+                if g_val:
+                    g_normalized = str(g_val).strip().upper()
+                    if g_normalized.startswith("M"):
+                        gender = "M"
+                    elif g_normalized.startswith("F"):
+                        gender = "F"
+
+                if "age" in demo:
+                    try:
+                        age = float(demo["age"])
+                    except ValueError:
+                        pass
+                elif "birthdate" in demo:
+                    try:
+                        bdate = datetime.fromisoformat(str(demo["birthdate"])).date()
+                        ref_date = (payload.observation_date or datetime.now()).date()
+                        age = (ref_date - bdate).days / 365.25
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # Check out-of-range flag triggers
+        is_out_of_range = False
+        matched_range = None
+        if payload.value is not None:
+            # Query lab ranges matching test_code
+            stmt_ranges = select(LabReferenceRange).where(
+                LabReferenceRange.test_code == payload.test_code,
+                LabReferenceRange.is_deleted.is_(False),
+            )
+            if payload.laboratory_id:
+                stmt_ranges = stmt_ranges.where(
+                    LabReferenceRange.laboratory_id == payload.laboratory_id
+                )
+            else:
+                stmt_ranges = stmt_ranges.where(
+                    LabReferenceRange.laboratory_id.is_(None)
+                )
+
+            res_ranges = await session.execute(stmt_ranges)
+            ranges = res_ranges.scalars().all()
+
+            # Fall back to global central defaults if no lab-specific ranges found
+            if not ranges and payload.laboratory_id:
+                stmt_fallback = select(LabReferenceRange).where(
+                    LabReferenceRange.test_code == payload.test_code,
+                    LabReferenceRange.laboratory_id.is_(None),
+                    LabReferenceRange.is_deleted.is_(False),
+                )
+                res_fallback = await session.execute(stmt_fallback)
+                ranges = res_fallback.scalars().all()
+
+            # Filter ranges by demographic rules (sex and age range)
+            for r in ranges:
+                if r.sex != "ALL" and r.sex != gender:
+                    continue
+                if age is not None:
+                    if r.age_min is not None and age < r.age_min:
+                        continue
+                    if r.age_max is not None and age > r.age_max:
+                        continue
+                matched_range = r
+                break
+
+            if matched_range:
+                val_to_compare = payload.value
+                if payload.unit and matched_range.unit and payload.unit != matched_range.unit:
+                    try:
+                        val_to_compare = convert_unit(payload.value, payload.unit, matched_range.unit)
+                    except Exception:
+                        pass
+
+                if val_to_compare < matched_range.low_value or val_to_compare > matched_range.high_value:
+                    is_out_of_range = True
 
         obs_date = payload.observation_date or datetime.now()
         obs = ClinicalObservation(
@@ -397,9 +485,31 @@ async def create_observation(payload: ObservationCreate) -> ObservationResponse:
             normalized_value=norm_val,
             normalized_unit=norm_unit,
             is_outlier=False,
+            laboratory_id=payload.laboratory_id,
+            is_out_of_range=is_out_of_range,
         )
         session.add(obs)
         await session.commit()
+
+        # If flagged out of range, automatically open a ClinicalQuery
+        if is_out_of_range and matched_range:
+            explanation = f"Value {payload.value} {payload.unit or ''} is out of the normal range ({matched_range.low_value} - {matched_range.high_value} {matched_range.unit}) for test {payload.test_code}."
+            query = ClinicalQuery(
+                study_id=study_id,
+                subject_id=payload.subject_id,
+                visit_id=payload.visit_id,
+                domain=payload.domain,
+                test_code=payload.test_code,
+                status="OPEN",
+                explanation=explanation,
+                observation_id=obs.id,
+                message=f"Automated out-of-range trigger: {payload.test_name} value {payload.value} {payload.unit or ''} is out of range.",
+                origin="automated",
+                rule_id="LAB_RANGE_OUT_OF_BOUNDS",
+                created_by="system_process",
+            )
+            session.add(query)
+            await session.commit()
 
         # Recalculate outliers for this cohort
         await recalculate_cohort_outliers(session, study_id, payload.test_code)
@@ -424,7 +534,184 @@ async def create_observation(payload: ObservationCreate) -> ObservationResponse:
             normalized_value=obs_db.normalized_value,
             normalized_unit=obs_db.normalized_unit,
             is_outlier=obs_db.is_outlier,
+            laboratory_id=obs_db.laboratory_id,
+            is_out_of_range=obs_db.is_out_of_range,
         )
+
+
+# ==========================================
+# Laboratory & Lab Reference Range APIs
+# ==========================================
+
+
+class LaboratoryCreate(BaseModel):
+    name: str
+    code: str
+    lab_type: str  # "CENTRAL" or "LOCAL"
+    location: Optional[str] = None
+
+
+class LaboratoryResponse(BaseModel):
+    id: str
+    name: str
+    code: str
+    lab_type: str
+    location: Optional[str] = None
+    version: int
+
+
+class LabReferenceRangeCreate(BaseModel):
+    laboratory_id: Optional[str] = None
+    test_code: str
+    test_name: str
+    sex: str = "ALL"  # "M", "F", "ALL"
+    age_min: Optional[float] = None
+    age_max: Optional[float] = None
+    low_value: float
+    high_value: float
+    unit: str
+
+
+class LabReferenceRangeResponse(BaseModel):
+    id: str
+    laboratory_id: Optional[str] = None
+    test_code: str
+    test_name: str
+    sex: str
+    age_min: Optional[float] = None
+    age_max: Optional[float] = None
+    low_value: float
+    high_value: float
+    unit: str
+    version: int
+
+
+@app.post("/api/v1/execution/laboratories", response_model=LaboratoryResponse, status_code=201)
+async def create_laboratory(payload: LaboratoryCreate) -> LaboratoryResponse:
+    """Create a new central or local laboratory."""
+    async with db_manager.get_session_maker()() as session:
+        # Check if code already exists
+        stmt = select(Laboratory).where(Laboratory.code == payload.code, Laboratory.is_deleted.is_(False))
+        res = await session.execute(stmt)
+        if res.scalars().first():
+            raise HTTPException(status_code=400, detail=f"Laboratory with code {payload.code} already exists.")
+
+        lab = Laboratory(
+            name=payload.name,
+            code=payload.code,
+            lab_type=payload.lab_type,
+            location=payload.location,
+        )
+        session.add(lab)
+        await session.commit()
+
+        stmt_ref = select(Laboratory).where(Laboratory.id == lab.id)
+        res_ref = await session.execute(stmt_ref)
+        lab_db = res_ref.scalar_one()
+        return LaboratoryResponse(
+            id=lab_db.id,
+            name=lab_db.name,
+            code=lab_db.code,
+            lab_type=lab_db.lab_type,
+            location=lab_db.location,
+            version=lab_db.version,
+        )
+
+
+@app.get("/api/v1/execution/laboratories", response_model=list[LaboratoryResponse])
+async def list_laboratories(lab_type: Optional[str] = None) -> list[LaboratoryResponse]:
+    """Retrieve a list of laboratories."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(Laboratory).where(Laboratory.is_deleted.is_(False))
+        if lab_type:
+            stmt = stmt.where(Laboratory.lab_type == lab_type)
+        res = await session.execute(stmt)
+        labs = res.scalars().all()
+        return [
+            LaboratoryResponse(
+                id=lab.id,
+                name=lab.name,
+                code=lab.code,
+                lab_type=lab.lab_type,
+                location=lab.location,
+                version=lab.version,
+            )
+            for lab in labs
+        ]
+
+
+@app.post("/api/v1/execution/lab-ranges", response_model=LabReferenceRangeResponse, status_code=201)
+async def create_lab_reference_range(payload: LabReferenceRangeCreate) -> LabReferenceRangeResponse:
+    """Create a new age/sex-adjusted normal reference range."""
+    async with db_manager.get_session_maker()() as session:
+        # Verify laboratory exists if laboratory_id is provided
+        if payload.laboratory_id:
+            stmt_lab = select(Laboratory).where(Laboratory.id == payload.laboratory_id, Laboratory.is_deleted.is_(False))
+            res_lab = await session.execute(stmt_lab)
+            if not res_lab.scalars().first():
+                raise HTTPException(status_code=400, detail=f"Laboratory with ID {payload.laboratory_id} does not exist.")
+
+        r_range = LabReferenceRange(
+            laboratory_id=payload.laboratory_id,
+            test_code=payload.test_code,
+            test_name=payload.test_name,
+            sex=payload.sex,
+            age_min=payload.age_min,
+            age_max=payload.age_max,
+            low_value=payload.low_value,
+            high_value=payload.high_value,
+            unit=payload.unit,
+        )
+        session.add(r_range)
+        await session.commit()
+
+        stmt_ref = select(LabReferenceRange).where(LabReferenceRange.id == r_range.id)
+        res_ref = await session.execute(stmt_ref)
+        r_db = res_ref.scalar_one()
+        return LabReferenceRangeResponse(
+            id=r_db.id,
+            laboratory_id=r_db.laboratory_id,
+            test_code=r_db.test_code,
+            test_name=r_db.test_name,
+            sex=r_db.sex,
+            age_min=r_db.age_min,
+            age_max=r_db.age_max,
+            low_value=r_db.low_value,
+            high_value=r_db.high_value,
+            unit=r_db.unit,
+            version=r_db.version,
+        )
+
+
+@app.get("/api/v1/execution/lab-ranges", response_model=list[LabReferenceRangeResponse])
+async def list_lab_reference_ranges(
+    laboratory_id: Optional[str] = None, test_code: Optional[str] = None
+) -> list[LabReferenceRangeResponse]:
+    """Retrieve a list of normal reference ranges."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange).where(LabReferenceRange.is_deleted.is_(False))
+        if laboratory_id:
+            stmt = stmt.where(LabReferenceRange.laboratory_id == laboratory_id)
+        if test_code:
+            stmt = stmt.where(LabReferenceRange.test_code == test_code)
+        res = await session.execute(stmt)
+        ranges = res.scalars().all()
+        return [
+            LabReferenceRangeResponse(
+                id=r.id,
+                laboratory_id=r.laboratory_id,
+                test_code=r.test_code,
+                test_name=r.test_name,
+                sex=r.sex,
+                age_min=r.age_min,
+                age_max=r.age_max,
+                low_value=r.low_value,
+                high_value=r.high_value,
+                unit=r.unit,
+                version=r.version,
+            )
+            for r in ranges
+        ]
 
 
 # ==========================================
