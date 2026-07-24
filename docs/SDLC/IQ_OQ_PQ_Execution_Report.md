@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 480
-- **Passed:** 480 🟢
+- **Total Automated Test Cases Run:** 503
+- **Passed:** 503 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -175,9 +175,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dataset_json_integration_structure` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_declarative_mappings_coverage` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_ae_sorting_ongoing_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_dm_age_precision_and_controlled_terminology` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_dm_demographics` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_lb_verbatim_normalized_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_mh_sequencing_and_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_vs_baseline_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_helpers` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_race` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_severity` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
