@@ -1,5 +1,6 @@
-from typing import List, Dict, Optional
-from tmf_reference_model.models import Zone, Section, Artifact, TaxonomyCatalog
+from typing import Dict, List, Optional
+
+from tmf_reference_model.models import Artifact, Section, TaxonomyCatalog, Zone
 
 # Raw DIA TMF Reference Model structure for the seeded v3.2.0 version
 DIA_V3_2_0_RAW = {
