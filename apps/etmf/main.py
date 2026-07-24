@@ -258,9 +258,12 @@ class QCTransitionSuccessResponse(BaseModel):
     """
     Response schema for a successful eTMF document QC transition.
     """
+
     status: str = Field(..., description="Transition success status")
     document_id: str = Field(..., description="ID of the transitioned document")
-    new_status: str = Field(..., description="The new status of the document after transition")
+    new_status: str = Field(
+        ..., description="The new status of the document after transition"
+    )
 
 
 class AuditLogResponse(BaseModel):
@@ -1082,7 +1085,8 @@ async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
 
 
 @app.post(
-    "/api/v1/etmf/documents/{document_id}/transition", response_model=QCTransitionSuccessResponse
+    "/api/v1/etmf/documents/{document_id}/transition",
+    response_model=QCTransitionSuccessResponse,
 )
 async def transition_document_status_endpoint(
     request: Request,

@@ -389,7 +389,9 @@ async def test_qc_transition_records_detailed_audit_trail_and_role_normalization
     and time in both transition history and the audit ledger, with role normalization.
     """
     client = TestClient(app)
-    headers_admin = get_auth_headers(roles="ADMIN, sponsor_dm ", change_reason="Ingest doc")
+    headers_admin = get_auth_headers(
+        roles="ADMIN, sponsor_dm ", change_reason="Ingest doc"
+    )
 
     # Ingest document
     payload = {
@@ -432,7 +434,10 @@ async def test_qc_transition_records_detailed_audit_trail_and_role_normalization
     assert history[0]["actor_role"] == "sponsor_dm,admin"
     assert history[0]["from_status"] == "DRAFT"
     assert history[0]["to_status"] == "TECHNICAL_QC"
-    assert history[0]["reason_for_change"] == "Completed technical QC check with valid reason"
+    assert (
+        history[0]["reason_for_change"]
+        == "Completed technical QC check with valid reason"
+    )
     assert history[0]["actor_id"] == "test_user"
     assert "timestamp" in history[0]
 
