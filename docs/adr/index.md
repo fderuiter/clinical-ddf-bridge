@@ -37,6 +37,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-24: Medical Coding Engine Persistence Foundation](2026-07-24-medical-coding-engine-persistence.md)
 - [2026-07-24: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md)
 - [2026-07-24: Continuous FMEA GXP-Aligned Exemption Ledger](2026-07-24-continuous-fmea-gxp-aligned-exemption-ledger.md)
+- [2026-07-24: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md)
 - [2026-07-25: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](2026-07-25-data-driven-edl-model-and-completeness.md)
 - [2026-07-25: eTMF Quality Control Review Lifecycle & Validated State Machine](2026-07-25-etmf-qc-review-workflow.md)
 - [2026-07-26: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](2026-07-26-ctms-foundation-infrastructure.md)
@@ -54,3 +55,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-02: eConsent Scaffold and Shared Part 11 Audit Schemas](2026-08-02-econsent-scaffold-and-part11-audit.md)
 - [2026-08-02: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](2026-08-02-eligibility-criteria-evaluation-engine.md)
 - [2026-08-02: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix](2026-08-02-usdm-v2-v3-canonical-contract-mapping-matrix.md)
+- [2026-08-03: Subject Randomization Lifecycle and State Guards](2026-08-03-subject-randomization-lifecycle-and-state-guards.md)

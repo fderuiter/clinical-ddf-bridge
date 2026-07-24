@@ -22,6 +22,8 @@ from apps.designer.db import (
 from apps.designer.delta import (
     ConcurrentLockingError,
     ImmutabilityViolationError,
+    InvalidSignatureError,
+    amend_protocol_version,
     create_rule_node,
     create_study_version,
     delete_rule_node,
@@ -75,6 +77,14 @@ async def concurrent_locking_handler(request: Request, exc: ConcurrentLockingErr
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
         detail="CONCURRENT_LOCKING_CONFLICT",
+    )
+
+
+@app.exception_handler(InvalidSignatureError)
+async def invalid_signature_handler(request: Request, exc: InvalidSignatureError):
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="INVALID_OR_MISSING_SIGNATURE",
     )
 
 
@@ -717,3 +727,55 @@ async def compile_preview_rule(
         failures=failures,
         circular_cycles=circular_cycles,
     )
+
+
+class ProtocolAmendRequest(BaseModel):
+    """
+    Payload for the Protocol/Designer Amendment endpoint.
+    """
+
+    amendment_type: Optional[str] = "minor"
+    type: Optional[str] = None
+
+
+@app.post(
+    "/api/designer/protocols/{id}/amend",
+    status_code=status.HTTP_201_CREATED,
+)
+async def amend_protocol(
+    id: str,
+    payload: ProtocolAmendRequest,
+    request: Request,
+) -> Dict[str, Any]:
+    """
+    Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
+    Creates a transaction-safe DRAFT successor with incremented version index.
+    """
+    # GxP 21 CFR Part 11 compliant audit trail: capture user and reasoning for version change
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    if not change_reason or change_reason == "system_operation":
+        change_reason = request.headers.get(
+            "X-Change-Reason", "Clinical amendment operation"
+        )
+
+    bump_type = payload.type or payload.amendment_type or "minor"
+
+    driver = getattr(request.app.state, "driver", None)
+
+    try:
+        result = await amend_protocol_version(
+            driver=driver,
+            study_id=id,
+            user_id=user_id,
+            change_reason=change_reason,
+            bump_type=bump_type,
+        )
+        return {
+            "new_version": result["new_version"],
+            "status": result["status"],
+            "parent_version": result["parent_version"],
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

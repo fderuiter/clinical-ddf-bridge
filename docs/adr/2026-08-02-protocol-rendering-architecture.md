@@ -72,6 +72,7 @@ Generate structured HTML from presentation models using Jinja2, compile PDFs usi
 2. **The Solution:** The Designer service must execute all PDF rendering and DOCX generation operations inside standard thread pools (e.g. using FastAPI's `run_in_threadpool` helper or starlette background tasks), safely delegating the heavy computations to worker threads:
    ```python
    from fastapi.concurrency import run_in_threadpool
+
    pdf_bytes = await run_in_threadpool(render_pdf, presentation_model)
    ```
 3. For very large protocols (>200 pages) requiring asynchronous generation feedback, the platform will utilize an out-of-band celery/redis worker queue, returning an HTTP 202 accepted status and a status-polling URL.
