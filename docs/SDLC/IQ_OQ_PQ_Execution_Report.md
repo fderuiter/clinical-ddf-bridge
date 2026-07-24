@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 272
-- **Passed:** 272 🟢
+- **Total Automated Test Cases Run:** 363
+- **Passed:** 363 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -46,6 +46,7 @@ asyncpg                 0.31.0
 bandit                  1.9.4
 beautifulsoup4          4.15.0
 boolean-py              5.0
+brotli                  1.2.0
 cachecontrol            0.14.4
 cadence-clinical         0.1.0       /app
 certifi                 2026.7.22
@@ -55,6 +56,7 @@ charset-normalizer      3.4.9
 click                   8.4.2
 coverage                7.15.2
 cryptography            49.0.0
+cssselect2              0.9.0
 cyclonedx-python-lib    11.11.0
 defusedxml              0.7.1
 detect-secrets          1.5.0
@@ -63,6 +65,7 @@ ecdsa                   0.19.2
 et-xmlfile              2.0.0
 fastapi                 0.139.2
 filelock                3.32.0
+fonttools               4.63.0
 greenlet                3.5.4
 h11                     0.16.0
 httpcore                1.0.9
@@ -73,6 +76,7 @@ idna                    3.18
 iniconfig               2.3.0
 jinja2                  3.1.6
 license-expression      30.4.4
+lxml                    6.1.1
 markdown-it-py          4.2.0
 markupsafe              3.0.3
 mdurl                   0.1.2
@@ -84,6 +88,7 @@ openpyxl                3.1.5
 packageurl-python       0.17.6
 packaging               26.2
 pandas                  3.0.3
+pillow                  12.3.0
 pip                     26.1.2
 pip-api                 0.0.34
 pip-audit               2.10.1
@@ -97,9 +102,11 @@ pyasn1                  0.6.4
 pycparser               3.0
 pydantic                2.13.4
 pydantic-core           2.46.4
+pydyf                   0.12.1
 pyee                    13.0.1
 pygments                2.20.0
 pyparsing               3.3.2
+pyphen                  0.17.2
 pytest                  9.1.1
 pytest-asyncio          1.4.0
 pytest-base-url         2.1.0
@@ -107,6 +114,7 @@ pytest-cov              7.1.0
 pytest-playwright       0.8.0
 python-dateutil         2.9.0.post0
 python-discovery        1.5.0
+python-docx             1.2.0
 python-dotenv           1.2.2
 python-jose             3.5.0
 python-multipart        0.0.32
@@ -124,6 +132,8 @@ sqlalchemy              2.0.51
 starlette               1.3.1
 stevedore               5.9.0
 text-unidecode          1.3
+tinycss2                1.5.1
+tinyhtml5               2.1.0
 tomli                   2.4.1
 tomli-w                 1.2.0
 typing-extensions       4.16.0
@@ -134,8 +144,11 @@ uvicorn                 0.51.0
 uvloop                  0.22.1
 virtualenv              21.7.0
 watchfiles              1.2.0
+weasyprint              69.0
+webencodings            0.5.1
 websockets              16.1.1
 yattag                  1.16.1
+zopfli                  0.4.3
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -267,11 +280,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
-| `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_locks` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_env_vars` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_overrides` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_concept_http_status_error_404` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -286,6 +294,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_search_concepts_success` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_timeout` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_transport_error` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_locks` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_subject_role_routing_restrictions` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -368,6 +381,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_metadata_invalid_version` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_metadata_missing_change_reason_on_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_metadata_valid_initial` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_metadata_valid_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_narrative_item_and_section_views` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized_raises_exception` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deviation_lifecycle_and_traceability_fields` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deviation_rca_capa_relationships_and_cascading` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
