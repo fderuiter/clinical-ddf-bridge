@@ -939,9 +939,6 @@ async def test_etmf_qc_lifecycle_and_audit():
     headers_clinical = get_auth_headers(
         roles="sponsor_clinical", change_reason="Executing clinical check"
     )
-    _headers_monitor = get_auth_headers(
-        roles="monitor", change_reason="Monitoring document status"
-    )
     headers_auditor = get_auth_headers(
         roles="auditor", change_reason="Audit trail lookup"
     )

@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from sqlalchemy import JSON, DateTime, Integer, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -58,3 +58,73 @@ class InteropAuditLog(Base):
     user_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class Instrument(Base):
+    """
+    Represents an eCOA instrument/diary definition for surveys or questionnaires.
+    Defines items (questions), response types/options, and scoring metadata.
+    Includes 21 CFR Part 11 compliant audit and row-versioning fields.
+    """
+
+    __tablename__ = "instruments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    items: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    response_types: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    scoring_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    assignments: Mapped[list["SubjectAssignment"]] = relationship(
+        "SubjectAssignment", back_populates="instrument", cascade="all, delete-orphan"
+    )
+
+
+class SubjectAssignment(Base):
+    """
+    Links a subject to an Instrument with a scheduled due/recurrence window.
+    Complies with GxP/Part 11 audit requirements.
+    """
+
+    __tablename__ = "subject_assignments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    instrument_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("instruments.id"), nullable=False, index=True
+    )
+
+    # Schedulable due-window / recurrence data
+    start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    recurrence_pattern: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )  # e.g. "DAILY", "WEEKLY"
+    due_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    instrument: Mapped["Instrument"] = relationship(
+        "Instrument", back_populates="assignments"
+    )
