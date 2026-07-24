@@ -562,8 +562,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
                     raise HTTPException(status_code=401, detail="Invalid credentials")
         except httpx.RequestError:
             raise HTTPException(
-                status_code=503,
-                detail="Authentication service temporarily unavailable"
+                status_code=503, detail="Authentication service temporarily unavailable"
             )
     else:
         # Fallback to Mock Verification ONLY for Tests
