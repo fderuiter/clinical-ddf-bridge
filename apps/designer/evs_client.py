@@ -28,7 +28,9 @@ class EVSTransportError(EVSClientError):
     pass
 
 
-def normalize_concept(concept_data: Dict[str, Any], default_system: str) -> Dict[str, Any]:
+def normalize_concept(
+    concept_data: Dict[str, Any], default_system: str
+) -> Dict[str, Any]:
     """Normalize EVS concept to the target concept shape: code, decode, system, plus valid."""
     code = concept_data.get("code") or ""
     # "decode" should map to the preferred name, which is "name" or "displayName" in EVS
@@ -72,11 +74,7 @@ class NCIEVSClient:
             or "https://api-evsrest.nci.nih.gov"
         ).rstrip("/")
 
-        self.terminology = (
-            terminology
-            or os.getenv("NCI_EVS_TERMINOLOGY")
-            or "ncit"
-        )
+        self.terminology = terminology or os.getenv("NCI_EVS_TERMINOLOGY") or "ncit"
 
         if timeout is not None:
             self.timeout = timeout
@@ -92,7 +90,9 @@ class NCIEVSClient:
                 pool=pool,
             )
 
-    async def get_concept(self, code: str, client: Optional[httpx.AsyncClient] = None) -> Dict[str, Any]:
+    async def get_concept(
+        self, code: str, client: Optional[httpx.AsyncClient] = None
+    ) -> Dict[str, Any]:
         """Fetch concept details by concept code.
 
         Args:
@@ -137,18 +137,24 @@ class NCIEVSClient:
                 except Exception:
                     pass
                 if is_invalid:
-                    raise EVSNotFoundError(f"Concept not found or invalid: {code}") from e
+                    raise EVSNotFoundError(
+                        f"Concept not found or invalid: {code}"
+                    ) from e
             raise EVSTransportError(
                 f"HTTP error from EVS API: {e.response.status_code} - {e.response.text}"
             ) from e
 
         except httpx.RequestError as e:
-            raise EVSTransportError(f"Transport failure contacting EVS API: {str(e)}") from e
+            raise EVSTransportError(
+                f"Transport failure contacting EVS API: {str(e)}"
+            ) from e
 
         try:
             data = response.json()
         except Exception as e:
-            raise EVSTransportError(f"Failed to parse EVS JSON response: {str(e)}") from e
+            raise EVSTransportError(
+                f"Failed to parse EVS JSON response: {str(e)}"
+            ) from e
 
         return normalize_concept(data, self.terminology)
 
@@ -199,12 +205,16 @@ class NCIEVSClient:
             ) from e
 
         except httpx.RequestError as e:
-            raise EVSTransportError(f"Transport failure contacting EVS API: {str(e)}") from e
+            raise EVSTransportError(
+                f"Transport failure contacting EVS API: {str(e)}"
+            ) from e
 
         try:
             data = response.json()
         except Exception as e:
-            raise EVSTransportError(f"Failed to parse EVS JSON response: {str(e)}") from e
+            raise EVSTransportError(
+                f"Failed to parse EVS JSON response: {str(e)}"
+            ) from e
 
         concepts_list = []
         if isinstance(data, list):

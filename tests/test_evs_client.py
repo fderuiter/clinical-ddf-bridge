@@ -1,5 +1,4 @@
 import os
-import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -19,6 +18,7 @@ async def test_import_does_not_make_network_calls():
     # We can verify by patching the httpx.AsyncClient methods and then performing a reload or importing
     with patch("httpx.AsyncClient.get") as mock_get:
         import apps.designer.evs_client  # noqa: F401
+
         assert not mock_get.called
 
 
@@ -69,7 +69,9 @@ async def test_get_concept_not_found():
 async def test_get_concept_http_status_error_404():
     """Test that a 404 raised via raise_for_status raises EVSNotFoundError."""
     client = NCIEVSClient()
-    mock_request = httpx.Request("GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123")
+    mock_request = httpx.Request(
+        "GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123"
+    )
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 404
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -86,7 +88,9 @@ async def test_get_concept_http_status_error_404():
 async def test_get_concept_invalid_via_400():
     """Test that a 400 response with 'not found' or 'invalid' in body raises EVSNotFoundError."""
     client = NCIEVSClient()
-    mock_request = httpx.Request("GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123")
+    mock_request = httpx.Request(
+        "GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123"
+    )
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 400
     mock_response.json.return_value = {"detail": "Concept C123 was not found."}
@@ -130,7 +134,9 @@ async def test_get_concept_transport_error():
 async def test_get_concept_server_error_500():
     """Test that 5xx status codes raise EVSTransportError."""
     client = NCIEVSClient()
-    mock_request = httpx.Request("GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123")
+    mock_request = httpx.Request(
+        "GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123"
+    )
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 500
     mock_response.text = "Internal Server Error"
