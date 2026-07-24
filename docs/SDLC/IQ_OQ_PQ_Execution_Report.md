@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 235
-- **Passed:** 235 🟢
+- **Total Automated Test Cases Run:** 239
+- **Passed:** 239 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -190,6 +190,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_finances_full_workflow` | `tests.test_ctms_finances` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
