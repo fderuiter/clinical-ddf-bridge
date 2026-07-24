@@ -1,9 +1,13 @@
 import asyncio
+import os
 import uuid
 from typing import Any, Dict
 
 import pytest
 from neo4j.exceptions import TransientError
+
+# Ensure offline terminology fallback is active for test isolation and speed
+os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401

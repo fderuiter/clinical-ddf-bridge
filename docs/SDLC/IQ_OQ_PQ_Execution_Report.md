@@ -371,6 +371,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -561,6 +562,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cache_hit_performs_no_external_lookup` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_existing_cache_consumers_receive_expected_shape` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_expired_entry_fallback_on_unreachable_evs` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_offline_fallback_resolves_supported_seed_concepts` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_active_version_selection` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_artifact_parent_identification` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_canonical_11_zones` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
