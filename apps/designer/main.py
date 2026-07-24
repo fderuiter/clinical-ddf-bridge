@@ -5,11 +5,36 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
 
-from apps.designer.db import get_study_projection, terminology_cache
+from apps.designer.db import (
+    assert_mock_study_mutable,
+    create_mock_rule,
+    create_mock_study_version,
+    delete_mock_rule,
+    get_mock_rule_by_id,
+    get_mock_rules,
+    get_study_projection,
+    terminology_cache,
+    update_mock_rule,
+)
+from apps.designer.delta import (
+    ConcurrentLockingError,
+    ImmutabilityViolationError,
+    create_rule_node,
+    create_study_version,
+    delete_rule_node,
+    get_rules_from_graph,
+    update_rule_node,
+)
 from apps.designer.mapper import map_study_to_usdm
+from apps.designer.rules import (
+    CreateRuleRequest,
+    compile_to_xpath,
+    detect_circular_dependencies,
+    detect_unknown_fields,
+)
 from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
 from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security.middleware import GatewayAuthMiddleware
@@ -33,6 +58,24 @@ class DifferenceResult(BaseModel):
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
 
 app.add_middleware(GatewayAuthMiddleware)
+
+
+@app.exception_handler(ImmutabilityViolationError)
+async def immutability_violation_handler(
+    request: Request, exc: ImmutabilityViolationError
+):
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="IMMUTABILITY_VIOLATION",
+    )
+
+
+@app.exception_handler(ConcurrentLockingError)
+async def concurrent_locking_handler(request: Request, exc: ConcurrentLockingError):
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="CONCURRENT_LOCKING_CONFLICT",
+    )
 
 
 @app.on_event("startup")
@@ -65,13 +108,7 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
     """Returns the legacy internal projection with no USDM formatting.
 
     Args:
-        study_id (str): The unique identifier of the study.
-
-    Returns:
-        Dict[str, Any]: The legacy study projection data.
-
-    Raises:
-        HTTPException: If the study is not found.
+        study_id = get_study_projection(study_id)
     """
     study_data = get_study_projection(study_id)
     if not study_data:
@@ -422,39 +459,66 @@ async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetai
 # Rules Engine (Skip Logic, Constraints, etc.) API Endpoints
 # ==========================================
 
-from fastapi import Request
-from apps.designer.rules import (
-    CreateRuleRequest,
-    ExpressionNode,
-    SkipLogicRule,
-    ConstraintRule,
-    CrossFormCheckRule,
-    compile_to_xpath,
-    detect_unknown_fields,
-    detect_circular_dependencies,
-)
-from apps.designer.db import (
-    get_mock_rules,
-    get_mock_rule_by_id,
-    create_mock_rule,
-    update_mock_rule,
-    delete_mock_rule,
-)
-from apps.designer.delta import (
-    create_rule_node,
-    update_rule_node,
-    delete_rule_node,
-    get_rules_from_graph,
-)
-
 
 class RulePreviewResponse(BaseModel):
     """
     Response for rule preview/validation request.
     """
+
     xpath: str
     failures: List[str]
     circular_cycles: List[str]
+
+
+class CreateStudyVersionRequest(BaseModel):
+    """
+    Request payload to establish a StudyVersion node.
+    """
+
+    id: str
+    version_tag: str
+    status: str  # DRAFT, ACTIVE, LOCKED, PUBLISHED, ARCHIVED
+    version_index: int
+
+
+@app.post("/api/v1/studies/{study_id}/versions", status_code=status.HTTP_201_CREATED)
+async def post_study_version(
+    study_id: str, payload: CreateStudyVersionRequest, request: Request
+) -> Dict[str, Any]:
+    """
+    Establishes a new StudyVersion node under a clinical study.
+    Enforces that concurrent creation with duplicate index or tag fails with 409 Conflict.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    user_id = getattr(request.state, "user_id", "system")
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        await create_study_version(
+            driver,
+            study_id=study_id,
+            version_id=payload.id,
+            version_tag=payload.version_tag,
+            status=payload.status,
+            version_index=payload.version_index,
+            created_by=user_id,
+        )
+    else:
+        create_mock_study_version(
+            study_id,
+            {
+                "id": payload.id,
+                "version_tag": payload.version_tag,
+                "status": payload.status,
+                "version_index": payload.version_index,
+                "created_by": user_id,
+                "created_at": datetime.now().isoformat(),
+            },
+        )
+    return {"status": "success", "message": "Study version created successfully"}
 
 
 @app.get("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_200_OK)
@@ -474,7 +538,9 @@ async def get_study_rules(study_id: str, request: Request) -> List[Dict[str, Any
 
 
 @app.post("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_201_CREATED)
-async def create_study_rule(study_id: str, payload: CreateRuleRequest, request: Request) -> Dict[str, Any]:
+async def create_study_rule(
+    study_id: str, payload: CreateRuleRequest, request: Request
+) -> Dict[str, Any]:
     """
     Creates a new rule for a clinical study, enforcing auth and X-Change-Reason.
     """
@@ -489,14 +555,19 @@ async def create_study_rule(study_id: str, payload: CreateRuleRequest, request: 
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
         import uuid
+
         rule_id = f"rule_{uuid.uuid4().hex[:12]}"
-        await create_rule_node(driver, study_id, user_id, change_reason, rule_id, rule_dict)
+        await create_rule_node(
+            driver, study_id, user_id, change_reason, rule_id, rule_dict
+        )
         rule_dict["id"] = rule_id
         rule_dict["study_id"] = study_id
         rule_dict["version_index"] = 1
         rule_dict["is_deleted"] = False
         return rule_dict
     else:
+        # Check immutability for the mock/in-memory path
+        assert_mock_study_mutable(study_id)
         created = create_mock_rule(study_id, rule_dict)
         # Verify the change justification is captured in the response/metadata
         created["created_by"] = user_id
@@ -505,7 +576,9 @@ async def create_study_rule(study_id: str, payload: CreateRuleRequest, request: 
 
 
 @app.get("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
-async def get_study_rule_by_id(study_id: str, rule_id: str, request: Request) -> Dict[str, Any]:
+async def get_study_rule_by_id(
+    study_id: str, rule_id: str, request: Request
+) -> Dict[str, Any]:
     """
     Retrieves a specific rule by ID.
     """
@@ -548,7 +621,9 @@ async def update_study_rule_by_id(
         if not rule_exists:
             raise HTTPException(status_code=404, detail="Rule not found")
 
-        new_version = await update_rule_node(driver, study_id, rule_id, user_id, change_reason, payload.model_dump())
+        new_version = await update_rule_node(
+            driver, study_id, rule_id, user_id, change_reason, payload.model_dump()
+        )
         rule_dict = payload.model_dump()
         rule_dict["id"] = rule_id
         rule_dict["study_id"] = study_id
@@ -556,6 +631,8 @@ async def update_study_rule_by_id(
         rule_dict["is_deleted"] = False
         return rule_dict
     else:
+        # Check immutability for the mock/in-memory path
+        assert_mock_study_mutable(study_id)
         rule = get_mock_rule_by_id(study_id, rule_id)
         if not rule:
             raise HTTPException(status_code=404, detail="Rule not found")
@@ -565,8 +642,12 @@ async def update_study_rule_by_id(
         return updated
 
 
-@app.delete("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
-async def delete_study_rule_by_id(study_id: str, rule_id: str, request: Request) -> Dict[str, str]:
+@app.delete(
+    "/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK
+)
+async def delete_study_rule_by_id(
+    study_id: str, rule_id: str, request: Request
+) -> Dict[str, str]:
     """
     Soft-deletes a rule, retaining its historical properties in audit.
     """
@@ -587,14 +668,22 @@ async def delete_study_rule_by_id(study_id: str, rule_id: str, request: Request)
         await delete_rule_node(driver, study_id, rule_id, user_id, change_reason)
         return {"status": "success", "message": "Rule successfully deleted"}
     else:
+        # Check immutability for the mock/in-memory path
+        assert_mock_study_mutable(study_id)
         success = delete_mock_rule(study_id, rule_id)
         if not success:
             raise HTTPException(status_code=404, detail="Rule not found")
         return {"status": "success", "message": "Rule successfully deleted"}
 
 
-@app.post("/api/v1/studies/{study_id}/rules/preview", response_model=RulePreviewResponse, status_code=status.HTTP_200_OK)
-async def compile_preview_rule(study_id: str, payload: CreateRuleRequest, request: Request) -> RulePreviewResponse:
+@app.post(
+    "/api/v1/studies/{study_id}/rules/preview",
+    response_model=RulePreviewResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def compile_preview_rule(
+    study_id: str, payload: CreateRuleRequest, request: Request
+) -> RulePreviewResponse:
     """
     Read-only compile and validation preview route.
     Detects unknown field references and circular skip-logic dependencies.
@@ -613,12 +702,14 @@ async def compile_preview_rule(study_id: str, payload: CreateRuleRequest, reques
         existing_rules = get_mock_rules(study_id)
 
     temp_rules = [dict(r) for r in existing_rules]
-    temp_rules.append({
-        "id": "proposed_rule",
-        "type": payload.type,
-        "condition": payload.condition.model_dump(),
-        "target_field": payload.target_field,
-    })
+    temp_rules.append(
+        {
+            "id": "proposed_rule",
+            "type": payload.type,
+            "condition": payload.condition.model_dump(),
+            "target_field": payload.target_field,
+        }
+    )
     circular_cycles = detect_circular_dependencies(temp_rules)
 
     return RulePreviewResponse(

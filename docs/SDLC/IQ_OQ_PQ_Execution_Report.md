@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 272
-- **Passed:** 272 🟢
+- **Total Automated Test Cases Run:** 365
+- **Passed:** 365 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -267,11 +267,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
-| `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_locks` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_env_vars` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_overrides` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_concept_http_status_error_404` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -286,6 +281,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_search_concepts_success` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_timeout` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_transport_error` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_locks` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_subject_role_routing_restrictions` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -434,6 +434,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sha256_hashing_helper` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_context_propagation` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_manifestation_lifecycle` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_study_version_creation_and_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_assert_graph_mutable_library_object_permits_active` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_assert_graph_mutable_library_object_rejects_frozen` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_assert_graph_mutable_permits_draft_active` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_assert_graph_mutable_rejects_frozen_states` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_library_object_version_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_study_version_creation_and_immutability` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_neo4j_create_study_version_duplicate_raises_conflict` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_neo4j_create_study_version_success` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_study_properties_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_fallback` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_env` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_git_https` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
