@@ -8,7 +8,6 @@ documents in compliance with FDA 21 CFR Part 11 and CDISC USDM.
 
 from datetime import datetime, timezone
 from typing import List, Optional
-
 import usdm_model
 from pydantic import BaseModel, Field, model_validator
 
