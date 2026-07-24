@@ -32,7 +32,7 @@ async def setup_db():
 
 
 def get_auth_headers(
-    roles: str = "admin", change_reason: str = "Authorized change"
+    roles: str = "admin", change_reason: str = "Authorized change", sig_token_action: str = None
 ) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
@@ -51,6 +51,18 @@ def get_auth_headers(
     }
     if change_reason:
         headers["X-Change-Reason"] = change_reason
+    if sig_token_action:
+        from jose import jwt
+        tok_payload = {
+            "sub": user_id,
+            "username": user_id,
+            "action": sig_token_action,
+            "roles": [roles] if "," not in roles else roles.split(","),
+            "iat": time.time(),
+            "exp": time.time() + 60.0,
+        }
+        sig_token = jwt.encode(tok_payload, "internal-gateway-secret-12345", algorithm="HS256")
+        headers["X-Sig-Token"] = sig_token
     return headers
 
 
@@ -68,6 +80,8 @@ def test_ctms_health_check():
 
 @pytest.mark.asyncio
 async def test_create_and_list_studies_rbac():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify creation of studies with appropriate RBAC roles, Part 11 audit fields,
     and automatic writing to the append-only CTMSAuditLog.
@@ -132,6 +146,8 @@ async def test_create_and_list_studies_rbac():
 
 @pytest.mark.asyncio
 async def test_get_audit_trail_rbac():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify auditing trail endpoint RBAC restriction and logging behavior.
     """
@@ -171,6 +187,8 @@ async def test_database_manager_uninitialized():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_workflow_happy_path():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Verify scheduling, completing, retrieving, and signing off on monitoring visits.
     Ensure letters are generated, stored, and retrieved without re-rendering.
@@ -293,8 +311,13 @@ async def test_monitoring_visit_workflow_happy_path():
     )
 
     # 3. Monitor supervisory sign-off (Monitor role)
+    headers_signoff = get_auth_headers(
+        roles="Monitor",
+        change_reason="Monitor operations",
+        sig_token_action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+    )
     response_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers_signoff
     )
     assert response_signoff.status_code == 200
     signed_data = response_signoff.json()
@@ -323,6 +346,8 @@ async def test_monitoring_visit_workflow_happy_path():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_workflow_rbac_denials():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Ensure strict RBAC enforcement:
     - Site Investigator cannot create, complete, list, retrieve, or sign off.
@@ -382,8 +407,12 @@ async def test_monitoring_visit_workflow_rbac_denials():
     assert response_comp.status_code == 200
 
     # 4. CRA attempting to sign off -> 403 (Only Monitor / Admin)
+    headers_cra_signoff = get_auth_headers(
+        roles="CRA",
+        sig_token_action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+    )
     response_cra_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=cra_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers_cra_signoff
     )
     assert response_cra_signoff.status_code == 403
 
@@ -396,6 +425,8 @@ async def test_monitoring_visit_workflow_rbac_denials():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_invalid_state_and_findings():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Test various edge-case failures:
     - Completing a non-existent visit
@@ -424,8 +455,12 @@ async def test_monitoring_visit_invalid_state_and_findings():
     visit_id = response_create.json()["id"]
 
     # Try signing off a scheduled visit -> 400
+    headers_invalid_signoff = get_auth_headers(
+        roles="Monitor",
+        sig_token_action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+    )
     response_invalid_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers_invalid_signoff
     )
     assert response_invalid_signoff.status_code == 400
     assert "Only completed" in response_invalid_signoff.json()["detail"]
@@ -478,6 +513,8 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
 @pytest.mark.asyncio
 async def test_recruitment_records_crud_and_audit():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify creation, listing, and audit trails of recruitment records.
     """
@@ -534,6 +571,8 @@ async def test_recruitment_records_crud_and_audit():
 
 @pytest.mark.asyncio
 async def test_site_milestones_crud_and_audit():
+    # @req:PRD-CTMS-001
+    # @req:Trace-6
     """
     Verify site milestones can be created, updated, and logged in audit log.
     """
@@ -608,6 +647,8 @@ async def test_site_milestones_crud_and_audit():
 
 @pytest.mark.asyncio
 async def test_cra_allocations_rbac_reassignment_workload():
+    # @req:PRD-CTMS-003
+    # @req:Trace-6
     """
     Verify RBAC on CRA allocations (Sponsor Admin only), automatic reassignment/deactivation,
     and CRA workload summaries.
@@ -706,6 +747,8 @@ async def test_cra_allocations_rbac_reassignment_workload():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_scheduling_respects_cra_allocation():
+    # @req:PRD-CTMS-003
+    # @req:Trace-6
     """
     Verify scheduling a monitoring visit identifies/respects active CRA allocations.
     """
