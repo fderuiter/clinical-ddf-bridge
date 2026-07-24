@@ -4,67 +4,95 @@ from tmf_reference_model.models import Artifact, Section, TaxonomyCatalog, Zone
 
 # Raw DIA TMF Reference Model structure for the seeded v3.2.0 version
 DIA_V3_2_0_RAW = {
-    1: ("Trial Management", {
-        "01.01": ("Trial Design", [
-            ("01.01.01", "Clinical Trial Protocol"),
-            ("01.01.02", "Clinical Trial Protocol Amendment")
-        ])
-    }),
-    2: ("Central Trial Documents", {
-        "02.01": ("Product Information", [
-            ("02.01.01", "Investigator's Brochure")
-        ])
-    }),
-    3: ("Regulatory", {
-        "03.01": ("Regulatory Submissions", [
-            ("03.01.01", "Regulatory Authority Submission")
-        ])
-    }),
-    4: ("IRB/IEC & other Approvals", {
-        "04.01": ("IRB/IEC Submissions", [
-            ("04.01.01", "IRB/IEC Approval")
-        ])
-    }),
-    5: ("Site Management", {
-        "05.01": ("Site Selection", [
-            ("05.01.01", "Site Feasibility Survey")
-        ])
-    }),
-    6: ("IP & Trial Supplies", {
-        "06.01": ("IP Documentation", [
-            ("06.01.01", "Investigational Product Records")
-        ])
-    }),
-    7: ("Safety Reporting", {
-        "07.01": ("Safety Notifications", [
-            ("07.01.01", "Serious Adverse Event Report")
-        ])
-    }),
-    8: ("Centralized & Local Testing", {
-        "08.01": ("Lab Documentation", [
-            ("08.01.01", "Central Laboratory Certificate")
-        ])
-    }),
-    9: ("Third Parties", {
-        "09.01": ("Vendor Management", [
-            ("09.01.01", "Vendor Service Agreement")
-        ])
-    }),
-    10: ("Data Management", {
-        "10.01": ("Data Management Specifications", [
-            ("10.01.01", "Data Management Plan"),
-            ("10.01.02", "Define-XML Specifications")
-        ]),
-        "10.02": ("Case Report Forms", [
-            ("10.02.01", "Blank CRF")
-        ])
-    }),
-    11: ("Statistics", {
-        "11.01": ("Statistical Analysis", [
-            ("11.01.01", "Statistical Analysis Plan"),
-            ("11.01.02", "Data Lock Certificate")
-        ])
-    })
+    1: (
+        "Trial Management",
+        {
+            "01.01": (
+                "Trial Design",
+                [
+                    ("01.01.01", "Clinical Trial Protocol"),
+                    ("01.01.02", "Clinical Trial Protocol Amendment"),
+                ],
+            )
+        },
+    ),
+    2: (
+        "Central Trial Documents",
+        {"02.01": ("Product Information", [("02.01.01", "Investigator's Brochure")])},
+    ),
+    3: (
+        "Regulatory",
+        {
+            "03.01": (
+                "Regulatory Submissions",
+                [("03.01.01", "Regulatory Authority Submission")],
+            )
+        },
+    ),
+    4: (
+        "IRB/IEC & other Approvals",
+        {"04.01": ("IRB/IEC Submissions", [("04.01.01", "IRB/IEC Approval")])},
+    ),
+    5: (
+        "Site Management",
+        {"05.01": ("Site Selection", [("05.01.01", "Site Feasibility Survey")])},
+    ),
+    6: (
+        "IP & Trial Supplies",
+        {
+            "06.01": (
+                "IP Documentation",
+                [("06.01.01", "Investigational Product Records")],
+            )
+        },
+    ),
+    7: (
+        "Safety Reporting",
+        {
+            "07.01": (
+                "Safety Notifications",
+                [("07.01.01", "Serious Adverse Event Report")],
+            )
+        },
+    ),
+    8: (
+        "Centralized & Local Testing",
+        {
+            "08.01": (
+                "Lab Documentation",
+                [("08.01.01", "Central Laboratory Certificate")],
+            )
+        },
+    ),
+    9: (
+        "Third Parties",
+        {"09.01": ("Vendor Management", [("09.01.01", "Vendor Service Agreement")])},
+    ),
+    10: (
+        "Data Management",
+        {
+            "10.01": (
+                "Data Management Specifications",
+                [
+                    ("10.01.01", "Data Management Plan"),
+                    ("10.01.02", "Define-XML Specifications"),
+                ],
+            ),
+            "10.02": ("Case Report Forms", [("10.02.01", "Blank CRF")]),
+        },
+    ),
+    11: (
+        "Statistics",
+        {
+            "11.01": (
+                "Statistical Analysis",
+                [
+                    ("11.01.01", "Statistical Analysis Plan"),
+                    ("11.01.02", "Data Lock Certificate"),
+                ],
+            )
+        },
+    ),
 }
 
 
@@ -83,7 +111,7 @@ def build_catalog(version: str, raw_data: dict) -> TaxonomyCatalog:
                         code=art_code,
                         name=art_name,
                         section_code=sec_code,
-                        zone_code=zone_code
+                        zone_code=zone_code,
                     )
                 )
             sections.append(
@@ -91,16 +119,10 @@ def build_catalog(version: str, raw_data: dict) -> TaxonomyCatalog:
                     code=sec_code,
                     name=sec_name,
                     zone_code=zone_code,
-                    artifacts=artifacts
+                    artifacts=artifacts,
                 )
             )
-        zones.append(
-            Zone(
-                code=zone_code,
-                name=zone_name,
-                sections=sections
-            )
-        )
+        zones.append(Zone(code=zone_code, name=zone_name, sections=sections))
     return TaxonomyCatalog(version=version, zones=zones)
 
 
@@ -108,6 +130,7 @@ class TaxonomyRegistry:
     """
     Thread-safe or basic registry managing available versions of the DIA TMF Taxonomy Catalog.
     """
+
     def __init__(self):
         self._catalogs: Dict[str, TaxonomyCatalog] = {}
         self._active_version: Optional[str] = None
@@ -117,7 +140,9 @@ class TaxonomyRegistry:
         Register a TaxonomyCatalog. If the version already exists, raise an error to prevent mutability.
         """
         if catalog.version in self._catalogs:
-            raise ValueError(f"Catalog version '{catalog.version}' is already registered and cannot be modified.")
+            raise ValueError(
+                f"Catalog version '{catalog.version}' is already registered and cannot be modified."
+            )
         self._catalogs[catalog.version] = catalog
 
     def set_active_version(self, version: str) -> None:
@@ -125,7 +150,9 @@ class TaxonomyRegistry:
         Set the active default catalog version.
         """
         if version not in self._catalogs:
-            raise KeyError(f"Cannot set active version to unregistered version '{version}'.")
+            raise KeyError(
+                f"Cannot set active version to unregistered version '{version}'."
+            )
         self._active_version = version
 
     def get_catalog(self, version: str) -> TaxonomyCatalog:

@@ -6,7 +6,7 @@ import pytest
 from neo4j.exceptions import TransientError
 
 # Ensure packages path injection is run before tests start
-import packages
+import packages  # noqa: F401
 
 
 class MockDatabaseState:

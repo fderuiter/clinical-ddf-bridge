@@ -109,11 +109,15 @@ def test_version_isolation():
     """
     # Create a new future catalog version
     future_raw = {
-        1: ("Trial Management", {
-            "01.01": ("Trial Design", [
-                ("01.01.01", "Clinical Trial Protocol Future Edition")
-            ])
-        })
+        1: (
+            "Trial Management",
+            {
+                "01.01": (
+                    "Trial Design",
+                    [("01.01.01", "Clinical Trial Protocol Future Edition")],
+                )
+            },
+        )
     }
     future_catalog = build_catalog("v4.0.0", future_raw)
 
@@ -173,11 +177,7 @@ def test_no_database_dependencies():
     Verify catalog construction is pure in-memory and requires no external connections or database.
     """
     raw_minimal = {
-        1: ("Trial Management", {
-            "01.01": ("Trial Design", [
-                ("01.01.01", "Protocol")
-            ])
-        })
+        1: ("Trial Management", {"01.01": ("Trial Design", [("01.01.01", "Protocol")])})
     }
     pure_catalog = build_catalog("v_pure", raw_minimal)
     assert pure_catalog.version == "v_pure"
