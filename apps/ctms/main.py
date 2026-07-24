@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -229,12 +229,12 @@ async def get_audit_trail(
 
     return [
         CTMSAuditLogResponse(
-            id=l.id,
-            timestamp=l.timestamp.isoformat(),
-            user_id=l.user_id,
-            user_role=l.user_role,
-            action=l.action,
-            details=l.details,
+            id=log.id,
+            timestamp=log.timestamp.isoformat(),
+            user_id=log.user_id,
+            user_role=log.user_role,
+            action=log.action,
+            details=log.details,
         )
-        for l in logs
+        for log in logs
     ]

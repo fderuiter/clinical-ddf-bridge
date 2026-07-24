@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from apps.ctms.database import db_manager
 from apps.ctms.main import app
-from apps.ctms.models import Base, CTMSAuditLog, CTMSStudy
+from apps.ctms.models import Base, CTMSAuditLog
 from apps.gateway.main import generate_signature
 
 
