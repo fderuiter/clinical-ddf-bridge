@@ -22,6 +22,7 @@ from apps.quality.models import (
     RootCauseAnalysis,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import get_normalized_roles
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -206,6 +207,8 @@ async def write_audit_log(
     user_role: str,
     action: str,
     details: str,
+    record_id: Optional[str] = None,
+    change_reason: Optional[str] = None,
 ) -> None:
     """
     Utility helper to write to the append-only QualityAuditLog.
@@ -215,9 +218,52 @@ async def write_audit_log(
         user_role=user_role,
         action=action,
         details=details,
+        record_id=record_id,
+        change_reason=change_reason,
     )
     session.add(log_entry)
     await session.flush()
+
+
+def get_request_roles(request: Request) -> list[str]:
+    return get_normalized_roles(request)
+
+
+def authorize_quality_write(request: Request) -> list[str]:
+    roles = get_request_roles(request)
+    read_only_roles = {
+        "auditor",
+        "inspector",
+        "regulatory_inspector",
+        "viewer",
+        "read_only",
+    }
+    if not roles or any(r in read_only_roles for r in roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Read-only roles are restricted to read-only access.",
+        )
+    return roles
+
+
+def authorize_quality_oversight(request: Request) -> list[str]:
+    roles = authorize_quality_write(request)
+    oversight_roles = {"quality_manager", "qa_lead", "quality_oversight", "admin"}
+    if not any(r in oversight_roles for r in roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Quality oversight role required for CAPA approval or closure.",
+        )
+    return roles
+
+
+def get_user_context(request: Request):
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = request.headers.get("X-User-Roles", "system")
+    change_reason = getattr(
+        request.state, "change_reason", None
+    ) or request.headers.get("X-Change-Reason")
+    return user_id, user_role, change_reason
 
 
 @app.get("/health")
@@ -309,11 +355,12 @@ async def create_deviation(
     """
     Create a new clinical protocol deviation or quality deviation event.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(
-        request.state, "change_reason", "Initial deviation reporting"
-    )
+    authorize_quality_write(request)
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
 
     dev = Deviation(
         study_id=payload.study_id,
@@ -337,6 +384,8 @@ async def create_deviation(
         user_role=user_role,
         action="DEVIATION_CREATE",
         details=f"Created deviation '{payload.title}' for study '{payload.study_id}' with status REPORTED.",
+        record_id=dev.id,
+        change_reason=change_reason,
     )
 
     return map_deviation_to_response(dev)
@@ -353,8 +402,7 @@ async def list_deviations(
     """
     Retrieve clinical deviation records with optional filtering.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
+    user_id, user_role, change_reason = get_user_context(request)
 
     stmt = select(Deviation)
     if study_id:
@@ -389,8 +437,7 @@ async def view_deviation(
     """
     Retrieve a specific clinical deviation by ID.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
+    user_id, user_role, change_reason = get_user_context(request)
 
     stmt = select(Deviation).where(Deviation.id == id)
     result = await session.execute(stmt)
@@ -405,6 +452,7 @@ async def view_deviation(
         user_role=user_role,
         action="DEVIATION_VIEW",
         details=f"Viewed deviation ID: {id}.",
+        record_id=id,
     )
 
     return map_deviation_to_response(dev)
@@ -422,9 +470,12 @@ async def create_or_update_rca(
     Create or update Root Cause Analysis (RCA) linked to a specific deviation.
     Transitions the deviation status to RCA_COMPLETE.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "RCA completed or updated")
+    authorize_quality_write(request)
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
 
     # Verify parent deviation exists
     stmt_dev = select(Deviation).where(Deviation.id == id)
@@ -481,6 +532,8 @@ async def create_or_update_rca(
             user_role=user_role,
             action="DEVIATION_UPDATE",
             details=f"Updated deviation '{dev.title}' (ID: {dev.id}) status to RCA_COMPLETE.",
+            record_id=dev.id,
+            change_reason=change_reason,
         )
 
     await session.flush()
@@ -491,6 +544,8 @@ async def create_or_update_rca(
         user_role=user_role,
         action=action,
         details=f"Performed {action} for deviation ID: {id}.",
+        record_id=rca.id,
+        change_reason=change_reason,
     )
 
     return map_rca_to_response(rca)
@@ -505,9 +560,12 @@ async def create_capa(
     """
     Create a new Corrective and Preventive Action (CAPA) record linked to a deviation.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "CAPA initiation")
+    authorize_quality_write(request)
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
 
     # 1. Validate parent deviation exists
     stmt_dev = select(Deviation).where(Deviation.id == payload.deviation_id)
@@ -575,6 +633,8 @@ async def create_capa(
             user_role=user_role,
             action="DEVIATION_UPDATE",
             details=f"Updated deviation '{dev.title}' (ID: {dev.id}) status to CAPA_INITIATED.",
+            record_id=dev.id,
+            change_reason=change_reason,
         )
 
     await session.flush()
@@ -585,6 +645,8 @@ async def create_capa(
         user_role=user_role,
         action="CAPA_CREATE",
         details=f"Created CAPA (ID: {capa.id}) linked to deviation ID '{payload.deviation_id}' with status INITIATED.",
+        record_id=capa.id,
+        change_reason=change_reason,
     )
 
     return map_capa_to_response(capa)
@@ -600,11 +662,16 @@ async def transition_capa(
     """
     Perform a secure, 21 CFR Part 11 compliant status transition on a CAPA record.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(
-        request.state, "change_reason", f"Transitioned CAPA to {payload.to_status}"
-    )
+    if payload.to_status in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED):
+        authorize_quality_oversight(request)
+    else:
+        authorize_quality_write(request)
+
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
 
     # Fetch CAPA and lock/load parent deviation
     stmt_capa = (
@@ -669,6 +736,8 @@ async def transition_capa(
                 user_role=user_role,
                 action="DEVIATION_UPDATE",
                 details=f"Settled and closed parent deviation (ID: {dev.id}) following CAPA closure.",
+                record_id=dev.id,
+                change_reason=change_reason,
             )
 
     await session.flush()
@@ -679,6 +748,8 @@ async def transition_capa(
         user_role=user_role,
         action="CAPA_TRANSITION",
         details=f"Transitioned CAPA (ID: {capa.id}) status from '{current_status}' to '{target_status}'.",
+        record_id=capa.id,
+        change_reason=change_reason,
     )
 
     return map_capa_to_response(capa)
@@ -694,9 +765,12 @@ async def update_capa(
     """
     Update non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "Update CAPA details")
+    authorize_quality_write(request)
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
 
     stmt_capa = select(CAPARecord).where(CAPARecord.id == id)
     result_capa = await session.execute(stmt_capa)
@@ -743,6 +817,59 @@ async def update_capa(
         user_role=user_role,
         action="CAPA_UPDATE",
         details=f"Updated CAPA record details (ID: {capa.id}).",
+        record_id=capa.id,
+        change_reason=change_reason,
     )
 
     return map_capa_to_response(capa)
+
+
+class AuditLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    timestamp: str
+    user_id: str
+    user_role: str
+    action: str
+    details: str
+    record_id: Optional[str] = None
+    change_reason: Optional[str] = None
+
+
+@app.get("/api/v1/quality/audit-logs", response_model=List[AuditLogResponse])
+async def list_audit_logs(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[AuditLogResponse]:
+    """
+    Retrieve quality audit logs in descending chronological order.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(QualityAuditLog).order_by(QualityAuditLog.timestamp.desc())
+    result = await session.execute(stmt)
+    logs = result.scalars().all()
+
+    # Log listing action
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_role,
+        action="AUDIT_LOG_LIST",
+        details="Listed quality audit logs.",
+    )
+
+    return [
+        AuditLogResponse(
+            id=log.id,
+            timestamp=log.timestamp.isoformat() if log.timestamp else None,
+            user_id=log.user_id,
+            user_role=log.user_role,
+            action=log.action,
+            details=log.details,
+            record_id=log.record_id,
+            change_reason=log.change_reason,
+        )
+        for log in logs
+    ]
