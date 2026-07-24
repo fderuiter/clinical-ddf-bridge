@@ -910,3 +910,11 @@ async def check_completeness(
         missing_artifacts=missing_artifacts,
         per_artifact_detail=per_artifact_detail,
     )
+
+
+@app.get("/api/v1/etmf/test-exception")
+async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
+    """
+    Test-only endpoint to trigger a database session exception and rollback.
+    """
+    raise RuntimeError("Intentional test database rollback error")
