@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
 
-from sqlalchemy import JSON, DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
