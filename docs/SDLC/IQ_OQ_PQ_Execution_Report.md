@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 209
-- **Passed:** 209 🟢
+- **Total Automated Test Cases Run:** 211
+- **Passed:** 211 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -217,6 +217,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_status_transition_raises_error` | `tests.test_etmf_qc` | PRD-QC-002 | 🟢 PASSED | < 1s |
 | `test_new_document_defaults_to_draft` | `tests.test_etmf_qc` | PRD-QC-001 | 🟢 PASSED | < 1s |
 | `test_part11_change_reason_enforcement` | `tests.test_etmf_qc` | PRD-QC-004 | 🟢 PASSED | < 1s |
+| `test_qc_transition_missing_or_blank_change_reason` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_qc_transition_records_detailed_audit_trail_and_role_normalization` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
