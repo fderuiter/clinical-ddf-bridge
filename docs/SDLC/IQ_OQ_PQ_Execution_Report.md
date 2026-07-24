@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 432
-- **Passed:** 432 🟢
+- **Total Automated Test Cases Run:** 431
+- **Passed:** 431 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -124,7 +124,7 @@ pyyaml                  6.0.3
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -517,6 +517,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_neo4j_create_study_version_duplicate_raises_conflict` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_create_study_version_success` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pure_python_transition_guard` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stratification_factors_locking` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_initial_state_and_persistence` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_state_transitions` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblinding_and_withdrawal_behavior` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generic_natural_deduplication_key` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_validation_failures` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_validation_happy_path` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
