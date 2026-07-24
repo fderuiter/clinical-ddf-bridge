@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from apps.execution.biostat import extract_dm, extract_mh
 from apps.execution.biostat.mappings import (
     get_mappings_by_domain,
     get_mappings_for_domain,
@@ -250,3 +251,202 @@ def test_normalize_severity():
 
     with pytest.raises(ValueError):
         normalize_severity(None)
+
+
+# --- Tests for DM and MH Extractors ---
+
+
+def test_extract_dm_demographics():
+    """Verify that extract_dm correctly maps demographics, ARM, sex, and race, and performs age calculations."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-001",
+            "study_id": "STUDY-X",
+            "site_id": "SITE-A",
+            "demographics": {
+                "birthdate": "1990-05-15",
+                "gender": "male",
+                "race": "white",
+                "arm": "Active Arm",
+            },
+        },
+        {
+            "subject_id": "SUBJ-002",
+            "study_id": "STUDY-X",
+            "site_id": "SITE-B",
+            "demographics": {
+                "birthdate": "1985-10-20",
+                "gender": "Female",
+                "race": "black",
+            },
+        },
+    ]
+
+    # Add observations for first exposure
+    observations = [
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "EX",
+            "test_code": "EXSTDTC",
+            "value_string": "2020-05-15T10:00:00",
+        },
+        {
+            "subject_id": "SUBJ-002",
+            "domain": "EX",
+            "test_code": "EXSTDTC",
+            "value_string": "2020-10-20",
+        },
+    ]
+
+    records = extract_dm(subjects, observations)
+    assert len(records) == 2
+
+    rec1 = next(r for r in records if r["SUBJID"] == "SUBJ-001")
+    assert rec1["STUDYID"] == "STUDY-X"
+    assert rec1["USUBJID"] == "STUDY-X-SITE-A-SUBJ-001"
+    assert rec1["BRTHDTC"] == "1990-05-15"
+    assert rec1["SEX"] == "M"
+    assert rec1["RACE"] == "WHITE"
+    assert rec1["ARM"] == "Active Arm"
+    assert rec1["AGE"] == 30  # 2020-05-15 minus 1990-05-15 is exactly 30 years
+    assert rec1["AGEU"] == "YEARS"
+
+    rec2 = next(r for r in records if r["SUBJID"] == "SUBJ-002")
+    assert rec2["USUBJID"] == "STUDY-X-SITE-B-SUBJ-002"
+    assert rec2["SEX"] == "F"
+    assert rec2["RACE"] == "BLACK OR AFRICAN AMERICAN"
+    assert rec2["ARM"] == "SCREEN FAILURE"  # Default
+    assert rec2["AGE"] == 35  # 2020-10-20 minus 1985-10-20 is exactly 35 years
+
+
+def test_extract_dm_age_precision_and_controlled_terminology():
+    """Verify that AGE is only computed when precision is sufficient, and terminology behavior throws expected errors on invalid entries."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-001",
+            "study_id": "STUDY-X",
+            "demographics": {
+                "birthdate": "1990-UN-UN",  # Insufficient precision
+                "gender": "male",
+                "race": "white",
+            },
+        },
+        {
+            "subject_id": "SUBJ-002",
+            "study_id": "STUDY-X",
+            "demographics": {
+                "birthdate": "1990-05-15",
+                "gender": "invalid-gender",  # Invalid SEX
+                "race": "white",
+            },
+        },
+    ]
+
+    observations = [
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "EX",
+            "test_code": "EXSTDTC",
+            "value_string": "2020-05-15",
+        }
+    ]
+
+    # Record 1 should have None for AGE due to insufficient precision
+    records = extract_dm([subjects[0]], observations)
+    assert records[0]["AGE"] is None
+    assert records[0]["AGEU"] == "YEARS"
+
+    # Record 2 should raise ValueError on invalid gender
+    with pytest.raises(ValueError):
+        extract_dm([subjects[1]], observations)
+
+
+def test_extract_mh_sequencing_and_supp():
+    """Verify that MH records have stable per-subject sequencing by date, and unmapped fields are retained in SUPPMH."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-001",
+            "study_id": "STUDY-Y",
+            "site_id": "SITE-Z",
+        }
+    ]
+
+    observations = [
+        # Medical History Event 1 (later onset)
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_1",
+            "test_code": "MHTERM",
+            "value_string": "Asthma",
+        },
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_1",
+            "test_code": "MHSTDTC",
+            "value_string": "2015-06-01",
+        },
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_1",
+            "test_code": "MHDECOD",
+            "value_string": "Asthma PT",
+        },
+        # Medical History Event 2 (earlier onset)
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_2",
+            "test_code": "MHTERM",
+            "value_string": "Hypertension",
+        },
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_2",
+            "test_code": "MHSTDTC",
+            "value_string": "2010-01-01",
+        },
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_2",
+            "test_code": "MHBODSYS",
+            "value_string": "Vascular disorders",
+        },
+        # Non-standard / unmapped qualifier on Event 2
+        {
+            "subject_id": "SUBJ-001",
+            "domain": "MH",
+            "page_id": "page_2",
+            "test_code": "MHSEV",
+            "test_name": "Severity of History Event",
+            "value_string": "MILD",
+        },
+    ]
+
+    mh_records, supp_records = extract_mh(subjects, observations)
+
+    # Hypertension (2010-01-01) must be sorted BEFORE Asthma (2015-06-01)
+    assert len(mh_records) == 2
+    assert mh_records[0]["MHTERM"] == "Hypertension"
+    assert mh_records[0]["MHSEQ"] == 1
+    assert mh_records[0]["MHBODSYS"] == "Vascular disorders"
+
+    assert mh_records[1]["MHTERM"] == "Asthma"
+    assert mh_records[1]["MHSEQ"] == 2
+    assert mh_records[1]["MHDECOD"] == "Asthma PT"
+
+    # Verify SUPPMH records
+    assert len(supp_records) == 1
+    supp = supp_records[0]
+    assert supp.STUDYID == "STUDY-Y"
+    assert supp.RDOMAIN == "MH"
+    assert supp.USUBJID == "STUDY-Y-SITE-Z-SUBJ-001"
+    assert supp.IDVAR == "MHSEQ"
+    assert supp.IDVARVAL == "1"  # Hypertension was assigned MHSEQ=1
+    assert supp.QNAM == "MHSEV"
+    assert supp.QLABEL == "Severity of History Event"
+    assert supp.QVAL == "MILD"
