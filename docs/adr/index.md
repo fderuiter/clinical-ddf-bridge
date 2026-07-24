@@ -48,3 +48,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-31: eCOA Subject Identity, Authorization, and Gateway Routing](2026-07-31-ecoa-subject-identity-and-gateway-routing.md)
 - [2026-08-01: Vue SPA, OIDC, RBAC, and Signing Boundaries](2026-08-01-vue-spa-oidc-rbac-signing-boundaries.md)
 - [2026-08-02: Shared SDTM Foundation Models & Terminology](2026-08-02-sdtm-foundation-models.md)
+- [2026-08-02: RTSM Architecture and Randomization Persistence](2026-08-02-rtsm-architecture-and-randomization-persistence.md)
+- [2026-08-02: Standalone Notifications Service Foundation](2026-08-02-notifications-service-foundation.md)
+- [2026-08-02: eConsent Scaffold and Shared Part 11 Audit Schemas](2026-08-02-econsent-scaffold-and-part11-audit.md)
+- [2026-08-02: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](2026-08-02-eligibility-criteria-evaluation-engine.md)
+- [2026-08-02: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix](2026-08-02-usdm-v2-v3-canonical-contract-mapping-matrix.md)
