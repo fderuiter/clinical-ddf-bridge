@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 263
-- **Passed:** 263 🟢
+- **Total Automated Test Cases Run:** 272
+- **Passed:** 272 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -338,6 +338,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_capa_updates_and_concurrency` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `test_create_and_list_deviations` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_create_and_update_rca` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_icsr_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_icsr_drug_role` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_icsr_patient_age_negative` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_icsr_patient_age_unit` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_meddra_coding_primary_soc` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sae_date_chronology` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sae_date_format` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sae_seq` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sae_seriousness` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sae_severity` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sae_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_icsr_full` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_meddra_coding` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_sae_full_normalization` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_sae_minimum` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_tsdv_config_persistence` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007 | 🟢 PASSED | < 1s |
