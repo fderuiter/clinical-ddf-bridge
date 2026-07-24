@@ -9,7 +9,7 @@ EU Annex 11, and ICH E6(R2).
 
 from enum import Enum
 
-from audit import AuditFields
+from audit import AuditFields  # noqa: F401
 
 
 class OrganizationType(str, Enum):
