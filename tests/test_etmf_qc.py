@@ -345,3 +345,108 @@ async def test_qc_transitions_missing_doc():
         headers=headers_admin,
     )
     assert res_history.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_qc_history_api_and_audit():
+    """
+    Verify that the GET /qc-history API works correctly, returns chronologically,
+    includes status, actor info, change reasons, and logs QC_HISTORY_VIEW.
+    """
+    client = TestClient(app)
+    headers_admin = get_auth_headers(roles="admin", change_reason="Ingest doc")
+
+    # Ingest document
+    payload = {
+        "study_id": "study_001",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_qc_hist.pdf",
+        "content": "Protocol Content for history checking",
+        "mime_type": "application/pdf",
+    }
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
+    assert ingest_resp.status_code == 201
+    assert ingest_resp.json()["document_status"] == "DRAFT"
+    doc_id = ingest_resp.json()["document_id"]
+
+    # Perform sequential transitions
+    headers_dm = get_auth_headers(
+        roles="sponsor_dm", change_reason="Completed technical QC check"
+    )
+    res1 = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Completed technical QC check",
+        },
+        headers=headers_dm,
+    )
+    assert res1.status_code == 200
+
+    headers_clinical = get_auth_headers(
+        roles="sponsor_clinical", change_reason="Completed clinical QC check"
+    )
+    res2 = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={
+            "to_status": "CLINICAL_QC",
+            "reason_for_change": "Completed clinical QC check",
+        },
+        headers=headers_clinical,
+    )
+    assert res2.status_code == 200
+
+    # Retrieve history using the new qc-history endpoint
+    history_resp = client.get(
+        f"/api/v1/etmf/documents/{doc_id}/qc-history",
+        headers=headers_admin,
+    )
+    assert history_resp.status_code == 200
+    history = history_resp.json()
+    assert len(history) == 2
+
+    # Verify chronological order (ascending timestamp order)
+    assert history[0]["from_status"] == "DRAFT"
+    assert history[0]["to_status"] == "TECHNICAL_QC"
+    assert "sponsor_dm" in history[0]["actor_role"]
+    assert history[0]["reason_for_change"] == "Completed technical QC check"
+    assert "timestamp" in history[0]
+
+    assert history[1]["from_status"] == "TECHNICAL_QC"
+    assert history[1]["to_status"] == "CLINICAL_QC"
+    assert "sponsor_clinical" in history[1]["actor_role"]
+    assert history[1]["reason_for_change"] == "Completed clinical QC check"
+    assert "timestamp" in history[1]
+
+    # Verify access is audited with QC_HISTORY_VIEW
+    audit_resp = client.get(
+        "/api/v1/etmf/audit-logs",
+        headers=headers_admin,
+    )
+    assert audit_resp.status_code == 200
+    logs = audit_resp.json()
+
+    qc_hist_view_logs = [
+        log for log in logs
+        if log["action"] == "QC_HISTORY_VIEW" and log["document_id"] == doc_id
+    ]
+    assert len(qc_hist_view_logs) > 0
+    assert "Viewed QC transition history" in qc_hist_view_logs[0]["details"]
+
+
+@pytest.mark.asyncio
+async def test_qc_history_api_not_found():
+    """
+    Verify that GET /qc-history with a non-existent document ID returns a 404 response.
+    """
+    client = TestClient(app)
+    headers_admin = get_auth_headers(roles="admin", change_reason="Retrieve history")
+
+    resp = client.get(
+        "/api/v1/etmf/documents/nonexistent-doc-id/qc-history",
+        headers=headers_admin,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "eTMF Document not found"
