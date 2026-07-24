@@ -68,6 +68,8 @@ def test_ctms_health_check():
 
 @pytest.mark.asyncio
 async def test_create_and_list_studies_rbac():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify creation of studies with appropriate RBAC roles, Part 11 audit fields,
     and automatic writing to the append-only CTMSAuditLog.
@@ -132,6 +134,8 @@ async def test_create_and_list_studies_rbac():
 
 @pytest.mark.asyncio
 async def test_get_audit_trail_rbac():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify auditing trail endpoint RBAC restriction and logging behavior.
     """
@@ -171,6 +175,8 @@ async def test_database_manager_uninitialized():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_workflow_happy_path():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Verify scheduling, completing, retrieving, and signing off on monitoring visits.
     Ensure letters are generated, stored, and retrieved without re-rendering.
@@ -323,6 +329,8 @@ async def test_monitoring_visit_workflow_happy_path():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_workflow_rbac_denials():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Ensure strict RBAC enforcement:
     - Site Investigator cannot create, complete, list, retrieve, or sign off.
@@ -396,6 +404,8 @@ async def test_monitoring_visit_workflow_rbac_denials():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_invalid_state_and_findings():
+    # @req:PRD-CTMS-002
+    # @req:Trace-6
     """
     Test various edge-case failures:
     - Completing a non-existent visit
@@ -478,6 +488,8 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
 @pytest.mark.asyncio
 async def test_recruitment_records_crud_and_audit():
+    # @req:PRD-CTMS-004
+    # @req:Trace-6
     """
     Verify creation, listing, and audit trails of recruitment records.
     """
@@ -534,6 +546,8 @@ async def test_recruitment_records_crud_and_audit():
 
 @pytest.mark.asyncio
 async def test_site_milestones_crud_and_audit():
+    # @req:PRD-CTMS-001
+    # @req:Trace-6
     """
     Verify site milestones can be created, updated, and logged in audit log.
     """
@@ -608,6 +622,8 @@ async def test_site_milestones_crud_and_audit():
 
 @pytest.mark.asyncio
 async def test_cra_allocations_rbac_reassignment_workload():
+    # @req:PRD-CTMS-003
+    # @req:Trace-6
     """
     Verify RBAC on CRA allocations (Sponsor Admin only), automatic reassignment/deactivation,
     and CRA workload summaries.
@@ -706,6 +722,8 @@ async def test_cra_allocations_rbac_reassignment_workload():
 
 @pytest.mark.asyncio
 async def test_monitoring_visit_scheduling_respects_cra_allocation():
+    # @req:PRD-CTMS-003
+    # @req:Trace-6
     """
     Verify scheduling a monitoring visit identifies/respects active CRA allocations.
     """
