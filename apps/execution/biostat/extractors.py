@@ -1,25 +1,9 @@
-import base64
-import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from cryptography.fernet import Fernet
-
 from apps.execution.biostat.models import SUPPRecord
 from apps.execution.biostat.terminology import normalize_race, normalize_sex
-
-# Symmetric encryption helper for patient demographics (matching main.py key)
-_DEMO_KEY = base64.urlsafe_b64encode(b"cadence_clinical_demographics_32")
-_fernet = Fernet(_DEMO_KEY)
-
-
-def decrypt_demographics(encrypted_str: str) -> dict:
-    """Decrypt demographic details to retrieve raw PII payload."""
-    try:
-        decrypted = _fernet.decrypt(encrypted_str.encode("utf-8"))
-        return json.loads(decrypted.decode("utf-8"))
-    except Exception:
-        return {}
+from apps.execution.demographics import decrypt_demographics as decrypt_demographics
 
 
 def calculate_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[int]:
