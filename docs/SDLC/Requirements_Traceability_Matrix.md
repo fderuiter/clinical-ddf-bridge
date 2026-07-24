@@ -5,10 +5,10 @@
 
 ## 1. Traceability Summary
 
-- **Total Documented Requirements:** 45
-- **Total Mapped to Automated Tests:** 19
-- **Traceability Coverage:** 42.2%
-- **SRS Requirements Mapped:** 4 of 5 (80.0%)
+- **Total Documented Requirements:** 50
+- **Total Mapped to Automated Tests:** 24
+- **Traceability Coverage:** 48.0%
+- **SRS Requirements Mapped:** 5 of 6 (83.3%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
 
@@ -16,6 +16,10 @@
 
 | Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| PRD-CTMS-001 | PRD | **Operational Site and Milestone Tracking** | `test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
+| PRD-CTMS-002 | PRD | **Monitoring Visit Reports (MVR) Correspondence Lifecycle** | `test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
+| PRD-CTMS-003 | PRD | **CRA Allocation and Workload Summaries** | `test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
+| PRD-CTMS-004 | PRD | **Standard GxP Site Audit trail** | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
 | PRD-EDC-001 | PRD | **Spreadsheet Ingestion Sheet Structure** | *None* | ❌ **Unmapped** |
 | PRD-EDC-002 | PRD | **Field-Level Ingestion Validations** | *None* | ❌ **Unmapped** |
 | PRD-EDC-003 | PRD | **Dynamic Skip Logic Evaluation** | *None* | ❌ **Unmapped** |
@@ -61,6 +65,7 @@
 | Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | *None* | ❌ **Unmapped** |
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-5 | SRS | **TMF Taxonomy Validation & Integration Assurance**<br>*The eTMF microservice enforces strict catalog-driven classification during document ingestion, rejecting unknown/invalid artifacts or mismatched configurations with HTTP 422, while persisting the resolved taxonomy version and artifact code to ensure compliance.* | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
+| Trace-6 | SRS | **CTMS Monitoring and Site Operations Tracking**<br>*The CTMS microservice implements a structured site monitoring visit lifecycle, milestone tracking, and CRA workload allocation maps. All mutations are secured via OIDC auth, audited via append-only `CTMSAuditLog` entries with explicit change reasons under 21 CFR Part 11 requirements, and covered by automated tests to ensure compliance.* | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
 
 ## 3. Unmapped Requirements
 

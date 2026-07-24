@@ -598,6 +598,25 @@ Source Document Verification is the process by which a clinical research associa
   2. **Field-Based Sampling:** e.g., 100% SDV on primary safety endpoints (Adverse Events, Serious Adverse Events, Key Laboratory variables), and 0% on exploratory questionnaires.
 * The selection of randomized subjects for tSDV must use a deterministic PRNG seeded with the trial's unique random seed combined with the `subject_uuid`, ensuring that the sampling status of a subject is stable and cannot be altered or gamed by site coordinators.
 
+### 7.4 Clinical Trial Management System (CTMS) and Operational Workspace
+To coordinate and track site monitoring, CRA allocations, recruitment progression, and site operational milestones.
+
+#### PRD-CTMS-001: Operational Site and Milestone Tracking
+* The system must track site operational milestones (e.g., SITE_SELECTION, INITIATION_VISIT, SITE_ACTIVATION, FIRST_SUBJECT_ENROLLED) with planned and actual completion dates.
+* Transitioning milestone status requires an explicit change reason to comply with 21 CFR Part 11 auditing.
+
+#### PRD-CTMS-002: Monitoring Visit Reports (MVR) Correspondence Lifecycle
+* The system must manage a structured monitoring visit lifecycle (e.g., SCHEDULED, COMPLETED, SIGNED_OFF).
+* Scheduling a visit must automatically generate and persist a plain-text confirmation letter. Completing a visit must automatically record findings and action items, and generate a follow-up letter containing the severity and description of findings.
+* Retrieving generated letters must return the stored content directly without dynamically re-rendering to guarantee correspondence integrity.
+
+#### PRD-CTMS-003: CRA Allocation and Workload Summaries
+* The system must manage allocations of Clinical Research Associates (CRAs) to studies and sites.
+* Active allocations must map directly to automated workload summaries. Only one active CRA can be assigned to a specific study and site combination at any time; assigning a new CRA must automatically deactivate the previous allocation.
+
+#### PRD-CTMS-004: Standard GxP Site Audit trail
+* All CTMS view logs, milestone updates, visit creations, completions, sign-offs, and allocations must write append-only records to an immutable chronological `CTMSAuditLog` auditing schema.
+
 ---
 
 ## 8. Definition of Done (DoD) & Bi-directional Traceability
