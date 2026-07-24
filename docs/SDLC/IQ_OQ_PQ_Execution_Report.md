@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 459
-- **Passed:** 459 🟢
+- **Total Automated Test Cases Run:** 477
+- **Passed:** 477 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -357,6 +357,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_foreign_key_and_cascade_lifecycle_integrity` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instrument_and_assignment_endpoints_and_auditing` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instrument_and_assignment_orm_persistence` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
@@ -392,6 +395,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_cli_command_python_and_pytest` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_docker_compose_scenarios` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_detect_file_type` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_meddra_parser_init_validation` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_empty_fields_validation` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_hlgt_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_hlt_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_in_batches_invalid_batch_size` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_llt_invalid_code` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_llt_invalid_pt_code` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_llt_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_mdhier_invalid_flag` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_mdhier_missing_fields` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_mdhier_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_pt_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_soc_valid` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parser_incremental_batched_consumption` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_public_entry_point_file_path` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_trigger_logging_on_coding_workflow` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dictionary_import_job_lifecycle` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lookup_and_indexes` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |

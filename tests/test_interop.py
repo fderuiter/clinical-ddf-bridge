@@ -1,15 +1,23 @@
 import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from apps.gateway.main import generate_signature
 from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import pseudonymize_identifier, strip_pii_from_patient
 from apps.interop.main import app
-from apps.interop.models import Base, EPROSubmission, InteropAuditLog
+from apps.interop.models import (
+    Base,
+    EPROSubmission,
+    Instrument,
+    InteropAuditLog,
+    SubjectAssignment,
+)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -532,3 +540,258 @@ async def test_subject_role_authorization_and_identity_binding():
     )
     assert resp.status_code == 201
     assert resp.json()["status"] == "CREATED"
+
+
+@pytest.mark.asyncio
+async def test_instrument_and_assignment_orm_persistence():
+    """
+    Test direct ORM persistence of Instrument and SubjectAssignment.
+    Verifies that fields, relations, and 21 CFR Part 11 audit fields work.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        # Create an Instrument
+        inst = Instrument(
+            name="Daily Pain Scale Questionnaire",
+            description="A diary tracking daily pain levels and symptoms.",
+            items={
+                "q1": "Rate your overall pain today.",
+                "q2": "Did you take any rescue medication?",
+            },
+            response_types={
+                "q1": {"type": "scale", "min": 0, "max": 10},
+                "q2": {"type": "boolean", "options": ["Yes", "No"]},
+            },
+            scoring_metadata={"sum_score_rule": "q1 + (10 if q2 == 'Yes' else 0)"},
+            created_by="doctor_smith",
+            reason_for_change="Author initial daily pain scale template",
+            version_index=1,
+        )
+        session.add(inst)
+        await session.flush()
+
+        # Create an Assignment
+        now_utc = datetime.now(timezone.utc)
+        assign = SubjectAssignment(
+            subject_id="subj_001",
+            instrument_id=inst.id,
+            start_date=now_utc,
+            end_date=now_utc + timedelta(days=30),
+            recurrence_pattern="DAILY",
+            due_at=now_utc + timedelta(hours=12),
+            created_by="nurse_jones",
+            reason_for_change="Assign daily questionnaire for Study screening period",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    # Re-fetch and verify
+    async with async_session() as session:
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Instrument)
+            .where(Instrument.name == "Daily Pain Scale Questionnaire")
+            .options(selectinload(Instrument.assignments))
+        )
+        res = await session.execute(stmt)
+        db_inst = res.scalars().first()
+        assert db_inst is not None
+        assert db_inst.created_by == "doctor_smith"
+        assert db_inst.reason_for_change == "Author initial daily pain scale template"
+        assert db_inst.version_index == 1
+        assert db_inst.items["q1"] == "Rate your overall pain today."
+        assert len(db_inst.assignments) == 1
+
+        db_assign = db_inst.assignments[0]
+        assert db_assign.subject_id == "subj_001"
+        assert db_assign.recurrence_pattern == "DAILY"
+        assert db_assign.created_by == "nurse_jones"
+
+
+@pytest.mark.asyncio
+async def test_foreign_key_and_cascade_lifecycle_integrity():
+    """
+    Verify database schema integrity constraints:
+    - SubjectAssignment cannot refer to a non-existent instrument_id (Foreign Key violation).
+    - Deleting an Instrument cascades and deletes its linked SubjectAssignments.
+    """
+    async_session = db_manager.get_session_maker()
+
+    # 1. Foreign Key constraint check
+    async with async_session() as session:
+        now_utc = datetime.now(timezone.utc)
+        invalid_assign = SubjectAssignment(
+            subject_id="subj_err",
+            instrument_id="non_existent_id_12345",  # Invalid ID
+            start_date=now_utc,
+            end_date=now_utc + timedelta(days=5),
+            created_by="admin",
+            reason_for_change="Invalid assignment",
+            version_index=1,
+        )
+        session.add(invalid_assign)
+        with pytest.raises(IntegrityError):
+            await session.commit()
+        await session.rollback()
+
+    # 2. Cascade delete check
+    async with async_session() as session:
+        inst = Instrument(
+            name="Temporary Survey",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Temp setup",
+            version_index=1,
+        )
+        session.add(inst)
+        await session.flush()
+
+        assign = SubjectAssignment(
+            subject_id="subj_temp",
+            instrument_id=inst.id,
+            start_date=datetime.now(timezone.utc),
+            end_date=datetime.now(timezone.utc) + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Temp assign",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+        # Delete instrument
+        await session.delete(inst)
+        await session.commit()
+
+    # Check that assignment is deleted as well
+    async with async_session() as session:
+        stmt = select(SubjectAssignment).where(
+            SubjectAssignment.subject_id == "subj_temp"
+        )
+        res = await session.execute(stmt)
+        db_assign = res.scalars().first()
+        assert db_assign is None
+
+
+@pytest.mark.asyncio
+async def test_instrument_and_assignment_endpoints_and_auditing():
+    """
+    Test eCOA authoring and scheduling endpoints end-to-end,
+    verifying GxP role security and audit log persistence.
+    """
+    client = TestClient(app)
+
+    # Headers
+    staff_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Author new Instrument definition"
+    )
+    subject_headers = get_auth_headers(
+        roles="Subject", change_reason="View my assignments", user_id="patient_charlie"
+    )
+
+    # 1. Create Instrument (authorized)
+    inst_payload = {
+        "name": "EORTC QLQ-C30",
+        "description": "Cancer patient quality of life questionnaire.",
+        "items": {"q1": "Do you have trouble taking a long walk?"},
+        "response_types": {
+            "q1": {
+                "type": "choice",
+                "options": ["Not at all", "A little", "Quite a bit", "Very much"],
+            }
+        },
+        "scoring_metadata": {"version": "3.0"},
+        "reason_for_change": "Initial authoring of standard oncology quality of life form",
+    }
+
+    resp = client.post(
+        "/api/v1/interop/instruments", json=inst_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    inst_data = resp.json()
+    assert inst_data["name"] == "EORTC QLQ-C30"
+    assert inst_data["created_by"] == "test_user"
+    assert inst_data["reason_for_change"] == "Author new Instrument definition"
+    inst_id = inst_data["id"]
+
+    # 2. Deny non-staff Instrument creation
+    resp = client.post(
+        "/api/v1/interop/instruments", json=inst_payload, headers=subject_headers
+    )
+    assert resp.status_code == 403
+
+    # 3. Create Subject Assignment (authorized)
+    assign_payload = {
+        "subject_id": "patient_charlie",
+        "instrument_id": inst_id,
+        "start_date": datetime.now(timezone.utc).isoformat(),
+        "end_date": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+        "recurrence_pattern": "WEEKLY",
+        "reason_for_change": "Assigning EORTC questionnaire for chemotherapy cycle 1",
+    }
+    resp = client.post(
+        "/api/v1/interop/assignments", json=assign_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    assign_data = resp.json()
+    assert assign_data["subject_id"] == "patient_charlie"
+    assert assign_data["instrument_id"] == inst_id
+    assert assign_data["created_by"] == "test_user"
+
+    # 4. Assignment validation errors (invalid start/end dates)
+    invalid_assign_payload = assign_payload.copy()
+    invalid_assign_payload["start_date"] = (
+        datetime.now(timezone.utc) + timedelta(days=5)
+    ).isoformat()
+    invalid_assign_payload["end_date"] = datetime.now(
+        timezone.utc
+    ).isoformat()  # End before start
+    resp = client.post(
+        "/api/v1/interop/assignments",
+        json=invalid_assign_payload,
+        headers=staff_headers,
+    )
+    assert resp.status_code == 400
+    assert "Assignment start_date cannot be after end_date" in resp.json()["detail"]
+
+    # 5. Assignment validation errors (non-existent instrument_id)
+    missing_inst_payload = assign_payload.copy()
+    missing_inst_payload["instrument_id"] = "non-existent-uuid"
+    resp = client.post(
+        "/api/v1/interop/assignments", json=missing_inst_payload, headers=staff_headers
+    )
+    assert resp.status_code == 404
+
+    # 6. Retrieve Instrument definition
+    resp = client.get(f"/api/v1/interop/instruments/{inst_id}", headers=staff_headers)
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "EORTC QLQ-C30"
+
+    # 7. Retrieve Subject Assignments (authorized self)
+    resp = client.get(
+        "/api/v1/interop/assignments/subject/patient_charlie", headers=subject_headers
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["instrument_id"] == inst_id
+
+    # 8. Retrieve Subject Assignments (denied other)
+    resp = client.get(
+        "/api/v1/interop/assignments/subject/patient_david", headers=subject_headers
+    )
+    assert resp.status_code == 403
+
+    # 9. Verify InteropAuditLog entries for Instrument and Assignment creation
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(InteropAuditLog).where(
+            InteropAuditLog.action.in_(["CREATE_INSTRUMENT", "CREATE_ASSIGNMENT"])
+        )
+        res = await session.execute(stmt)
+        logs = res.scalars().all()
+        assert len(logs) == 2
+        actions = [log.action for log in logs]
+        assert "CREATE_INSTRUMENT" in actions
+        assert "CREATE_ASSIGNMENT" in actions
