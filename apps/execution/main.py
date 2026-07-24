@@ -32,6 +32,7 @@ from apps.execution.database.models import (
     ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
+    FormSubmission,
     TranslationJob,
 )
 from apps.execution.outliers import recalculate_cohort_outliers
@@ -1181,6 +1182,272 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+        )
+
+
+# ==========================================
+# Form Submission & PI Sign-off API
+# ==========================================
+
+VALID_SIGNING_REASONS = {
+    "I attest that this data is accurate and complete.",
+    "PI approval and sign-off.",
+    "Review and confirmation.",
+    "DATA_RECORDING",
+    "DATA_ENTRY_COMPLETED",
+    "PI_REVIEW",
+    "PI_SIGN_OFF",
+    "COMPLIANCE_ATTESTATION",
+}
+
+
+class FormSubmissionCreate(BaseModel):
+    study_id: str
+    site_id: str
+    subject_id: str
+    visit_id: Optional[str] = None
+    form_id: str
+
+
+class FormSubmissionResponse(BaseModel):
+    id: str
+    study_id: str
+    site_id: str
+    subject_id: str
+    visit_id: Optional[str] = None
+    form_id: str
+    status: str
+    version: int
+    is_deleted: bool
+    signature_manifest: Optional[dict[str, Any]] = None
+
+
+class FormSubmissionApprove(BaseModel):
+    signature_manifest: dict[str, Any]
+    signing_reason: str
+
+
+@app.post(
+    "/api/v1/execution/form-submissions",
+    response_model=FormSubmissionResponse,
+    status_code=201,
+)
+async def create_form_submission(
+    request: Request, payload: FormSubmissionCreate
+) -> FormSubmissionResponse:
+    """Create a new FormSubmission in DRAFT status."""
+    verify_change_justification(request)
+
+    async with db_manager.get_session_maker()() as session:
+        sub = FormSubmission(
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            subject_id=payload.subject_id,
+            visit_id=payload.visit_id,
+            form_id=payload.form_id,
+            status="DRAFT",
+            signature_manifest=None,
+        )
+        session.add(sub)
+        await session.commit()
+
+        # Query back to get the database values
+        stmt = select(FormSubmission).where(FormSubmission.id == sub.id)
+        res = await session.execute(stmt)
+        sub_db = res.scalar_one()
+
+        return FormSubmissionResponse(
+            id=sub_db.id,
+            study_id=sub_db.study_id,
+            site_id=sub_db.site_id,
+            subject_id=sub_db.subject_id,
+            visit_id=sub_db.visit_id,
+            form_id=sub_db.form_id,
+            status=sub_db.status,
+            version=sub_db.version,
+            is_deleted=sub_db.is_deleted,
+            signature_manifest=sub_db.signature_manifest,
+        )
+
+
+@app.post(
+    "/api/v1/execution/form-submissions/{submission_id}/complete",
+    response_model=FormSubmissionResponse,
+)
+async def complete_form_submission(
+    submission_id: str, request: Request
+) -> FormSubmissionResponse:
+    """Transition a FormSubmission from DRAFT to COMPLETED."""
+    verify_change_justification(request)
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(FormSubmission).where(
+            FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        sub = res.scalars().first()
+        if not sub:
+            raise HTTPException(status_code=404, detail="Form submission not found")
+
+        if sub.status != "DRAFT":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Form submission can only be completed from DRAFT status. Current: {sub.status}",
+            )
+
+        sub.status = "COMPLETED"
+        await session.commit()
+
+        # Query back
+        stmt_ref = select(FormSubmission).where(FormSubmission.id == submission_id)
+        res_ref = await session.execute(stmt_ref)
+        sub_db = res_ref.scalar_one()
+
+        return FormSubmissionResponse(
+            id=sub_db.id,
+            study_id=sub_db.study_id,
+            site_id=sub_db.site_id,
+            subject_id=sub_db.subject_id,
+            visit_id=sub_db.visit_id,
+            form_id=sub_db.form_id,
+            status=sub_db.status,
+            version=sub_db.version,
+            is_deleted=sub_db.is_deleted,
+            signature_manifest=sub_db.signature_manifest,
+        )
+
+
+@app.post(
+    "/api/v1/execution/form-submissions/{submission_id}/approve",
+    response_model=FormSubmissionResponse,
+)
+async def approve_form_submission(
+    submission_id: str, request: Request, payload: FormSubmissionApprove
+) -> FormSubmissionResponse:
+    """PI Approve/Sign-off a completed FormSubmission."""
+    verify_change_justification(request)
+    verify_roles(request, ["investigator"])
+
+    # Validate signing reason
+    if payload.signing_reason not in VALID_SIGNING_REASONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid signing reason. Must be one of: {sorted(list(VALID_SIGNING_REASONS))}",
+        )
+
+    # Validate signature manifest is non-empty
+    if not payload.signature_manifest:
+        raise HTTPException(
+            status_code=400,
+            detail="Signature manifest is required for PI sign-off.",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(FormSubmission).where(
+            FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        sub = res.scalars().first()
+        if not sub:
+            raise HTTPException(status_code=404, detail="Form submission not found")
+
+        if sub.status != "COMPLETED":
+            raise HTTPException(
+                status_code=400,
+                detail=f"PI approval must only be possible from COMPLETED status. Current: {sub.status}",
+            )
+
+        sub.status = "APPROVED"
+        sub.signature_manifest = payload.signature_manifest
+        await session.commit()
+
+        # Query back
+        stmt_ref = select(FormSubmission).where(FormSubmission.id == submission_id)
+        res_ref = await session.execute(stmt_ref)
+        sub_db = res_ref.scalar_one()
+
+        return FormSubmissionResponse(
+            id=sub_db.id,
+            study_id=sub_db.study_id,
+            site_id=sub_db.site_id,
+            subject_id=sub_db.subject_id,
+            visit_id=sub_db.visit_id,
+            form_id=sub_db.form_id,
+            status=sub_db.status,
+            version=sub_db.version,
+            is_deleted=sub_db.is_deleted,
+            signature_manifest=sub_db.signature_manifest,
+        )
+
+
+@app.get(
+    "/api/v1/execution/form-submissions",
+    response_model=List[FormSubmissionResponse],
+)
+async def list_form_submissions(
+    study_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    visit_id: Optional[str] = None,
+    form_id: Optional[str] = None,
+) -> List[FormSubmissionResponse]:
+    """List form submissions with filters."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(FormSubmission).where(FormSubmission.is_deleted.is_(False))
+        if study_id:
+            stmt = stmt.where(FormSubmission.study_id == study_id)
+        if subject_id:
+            stmt = stmt.where(FormSubmission.subject_id == subject_id)
+        if visit_id:
+            stmt = stmt.where(FormSubmission.visit_id == visit_id)
+        if form_id:
+            stmt = stmt.where(FormSubmission.form_id == form_id)
+
+        res = await session.execute(stmt)
+        subs = res.scalars().all()
+
+        return [
+            FormSubmissionResponse(
+                id=sub.id,
+                study_id=sub.study_id,
+                site_id=sub.site_id,
+                subject_id=sub.subject_id,
+                visit_id=sub.visit_id,
+                form_id=sub.form_id,
+                status=sub.status,
+                version=sub.version,
+                is_deleted=sub.is_deleted,
+                signature_manifest=sub.signature_manifest,
+            )
+            for sub in subs
+        ]
+
+
+@app.get(
+    "/api/v1/execution/form-submissions/{submission_id}",
+    response_model=FormSubmissionResponse,
+)
+async def get_form_submission(submission_id: str) -> FormSubmissionResponse:
+    """Retrieve a single form submission by ID."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(FormSubmission).where(
+            FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        sub = res.scalars().first()
+        if not sub:
+            raise HTTPException(status_code=404, detail="Form submission not found")
+
+        return FormSubmissionResponse(
+            id=sub.id,
+            study_id=sub.study_id,
+            site_id=sub.site_id,
+            subject_id=sub.subject_id,
+            visit_id=sub.visit_id,
+            form_id=sub.form_id,
+            status=sub.status,
+            version=sub.version,
+            is_deleted=sub.is_deleted,
+            signature_manifest=sub.signature_manifest,
         )
 
 
