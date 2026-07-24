@@ -291,10 +291,7 @@ class TerminologyEnum(str, Enum):
     WHODrug = "WHODrug"
 
 
-class CDASHMapping(BaseModel):
-    domain: str
-    variable_name: str
-    data_type: str
+from shared_validators import CDASHMapping
 
 
 class AllowableUnit(BaseModel):
