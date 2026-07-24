@@ -1,15 +1,26 @@
 from typing import Dict, List
+
 from pydantic import BaseModel, Field
 
 
 class VariableMapping(BaseModel):
     """Represents a declarative mapping rule for an SDTM variable from CDASH sources."""
+
     domain: str = Field(..., description="Target SDTM domain (e.g., 'DM', 'AE')")
-    variable_name: str = Field(..., description="Target SDTM variable name (e.g., 'USUBJID')")
-    source_field: str = Field(..., description="CDASH source field path or logic (e.g., 'Subject.UID')")
+    variable_name: str = Field(
+        ..., description="Target SDTM variable name (e.g., 'USUBJID')"
+    )
+    source_field: str = Field(
+        ..., description="CDASH source field path or logic (e.g., 'Subject.UID')"
+    )
     data_type: str = Field(..., description="Data type ('Char' or 'Num')")
-    transformation_kind: str = Field(..., description="Kind of mapping transformation (e.g., 'DIRECT', 'CONCATENATION', 'COMPUTED', 'FIXED', 'CONTROLLED_TERMINOLOGY')")
-    rule_description: str = Field(..., description="Detailed text explanation of the transformation logic")
+    transformation_kind: str = Field(
+        ...,
+        description="Kind of mapping transformation (e.g., 'DIRECT', 'CONCATENATION', 'COMPUTED', 'FIXED', 'CONTROLLED_TERMINOLOGY')",
+    )
+    rule_description: str = Field(
+        ..., description="Detailed text explanation of the transformation logic"
+    )
 
 
 # The canonical collection of SDTM variable mappings for DM, AE, VS, LB, and MH domains.
@@ -21,7 +32,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Metadata.StudyID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of the unique protocol identifier."
+        rule_description="Direct copy of the unique protocol identifier.",
     ),
     VariableMapping(
         domain="DM",
@@ -29,7 +40,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.UID",
         data_type="Char",
         transformation_kind="CONCATENATION",
-        rule_description="Concatenation of STUDYID, Site ID (SITEID), and Subject ID (SUBJID): STUDYID-SITEID-SUBJID."
+        rule_description="Concatenation of STUDYID, Site ID (SITEID), and Subject ID (SUBJID): STUDYID-SITEID-SUBJID.",
     ),
     VariableMapping(
         domain="DM",
@@ -37,7 +48,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.ID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of the site-specific subject number."
+        rule_description="Direct copy of the site-specific subject number.",
     ),
     VariableMapping(
         domain="DM",
@@ -45,7 +56,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="EX.EXSTDTC",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Date/Time of first study treatment exposure. Imputed as ISO 8601 string."
+        rule_description="Date/Time of first study treatment exposure. Imputed as ISO 8601 string.",
     ),
     VariableMapping(
         domain="DM",
@@ -53,7 +64,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="DS.DSSTDTC",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Date/Time of last study exposure or study completion/withdrawal."
+        rule_description="Date/Time of last study exposure or study completion/withdrawal.",
     ),
     VariableMapping(
         domain="DM",
@@ -61,7 +72,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="DM.BRTHDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Date of birth in ISO 8601 format (YYYY-MM-DD). Partial dates allowed."
+        rule_description="Date of birth in ISO 8601 format (YYYY-MM-DD). Partial dates allowed.",
     ),
     VariableMapping(
         domain="DM",
@@ -69,7 +80,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Computed as floor((RFSTDTC - BRTHDTC) / 365.25)."
+        rule_description="Computed as floor((RFSTDTC - BRTHDTC) / 365.25).",
     ),
     VariableMapping(
         domain="DM",
@@ -77,7 +88,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Fixed Value",
         data_type="Char",
         transformation_kind="FIXED",
-        rule_description="Static value set to 'YEARS'."
+        rule_description="Static value set to 'YEARS'.",
     ),
     VariableMapping(
         domain="DM",
@@ -85,7 +96,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="DM.SEX",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Checked against CDISC Controlled Terminology ('M', 'F', 'U')."
+        rule_description="Checked against CDISC Controlled Terminology ('M', 'F', 'U').",
     ),
     VariableMapping(
         domain="DM",
@@ -93,7 +104,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="DM.RACE",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Checked against CDISC Controlled Terminology. If multiple checked, set to 'MULTIPLE'."
+        rule_description="Checked against CDISC Controlled Terminology. If multiple checked, set to 'MULTIPLE'.",
     ),
     VariableMapping(
         domain="DM",
@@ -101,9 +112,8 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Randomization.Arm",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Set to the randomized trial arm description. Defaults to 'SCREEN FAILURE' if not randomized."
+        rule_description="Set to the randomized trial arm description. Defaults to 'SCREEN FAILURE' if not randomized.",
     ),
-
     # --- AE (Adverse Events) ---
     VariableMapping(
         domain="AE",
@@ -111,7 +121,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Metadata.StudyID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of the unique protocol identifier."
+        rule_description="Direct copy of the unique protocol identifier.",
     ),
     VariableMapping(
         domain="AE",
@@ -119,7 +129,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.UID",
         data_type="Char",
         transformation_kind="CONCATENATION",
-        rule_description="Derived unique subject identifier."
+        rule_description="Derived unique subject identifier.",
     ),
     VariableMapping(
         domain="AE",
@@ -127,7 +137,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="System Generated",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Monotonically increasing sequence integer per subject, sorted by AESTDTC."
+        rule_description="Monotonically increasing sequence integer per subject, sorted by AESTDTC.",
     ),
     VariableMapping(
         domain="AE",
@@ -135,7 +145,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AETERM",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Verbatim term of the adverse event as entered by investigator."
+        rule_description="Verbatim term of the adverse event as entered by investigator.",
     ),
     VariableMapping(
         domain="AE",
@@ -143,7 +153,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AELOC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Anatomical location, if applicable. Maps to custom qualifiers if non-standard."
+        rule_description="Anatomical location, if applicable. Maps to custom qualifiers if non-standard.",
     ),
     VariableMapping(
         domain="AE",
@@ -151,7 +161,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Date/Time of local adverse event onset (captured on device)."
+        rule_description="Date/Time of local adverse event onset (captured on device).",
     ),
     VariableMapping(
         domain="AE",
@@ -159,7 +169,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AESTDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Start date/time of adverse event in ISO 8601 format. Partial dates allowed."
+        rule_description="Start date/time of adverse event in ISO 8601 format. Partial dates allowed.",
     ),
     VariableMapping(
         domain="AE",
@@ -167,7 +177,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AEENDTC",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="End date/time of adverse event. If ongoing, set to null and flag AEENGRY as 'ONGOING'."
+        rule_description="End date/time of adverse event. If ongoing, set to null and flag AEENGRY as 'ONGOING'.",
     ),
     VariableMapping(
         domain="AE",
@@ -175,7 +185,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AESEV",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Mapped to CDISC CT: 'MILD', 'MODERATE', 'SEVERE'."
+        rule_description="Mapped to CDISC CT: 'MILD', 'MODERATE', 'SEVERE'.",
     ),
     VariableMapping(
         domain="AE",
@@ -183,7 +193,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AESER",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Serious Adverse Event flag: 'Y' or 'N'."
+        rule_description="Serious Adverse Event flag: 'Y' or 'N'.",
     ),
     VariableMapping(
         domain="AE",
@@ -191,7 +201,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AEREL",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Relationship to treatment: 'RELATED', 'NOT RELATED', 'POSSIBLY RELATED'."
+        rule_description="Relationship to treatment: 'RELATED', 'NOT RELATED', 'POSSIBLY RELATED'.",
     ),
     VariableMapping(
         domain="AE",
@@ -199,9 +209,8 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="AE.AEOUT",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Outcome: 'RECOVERED/RESOLVED', 'RECOVERING/RESOLVING', 'FATAL', etc."
+        rule_description="Outcome: 'RECOVERED/RESOLVED', 'RECOVERING/RESOLVING', 'FATAL', etc.",
     ),
-
     # --- VS (Vital Signs) ---
     VariableMapping(
         domain="VS",
@@ -209,7 +218,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Metadata.StudyID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of unique protocol identifier."
+        rule_description="Direct copy of unique protocol identifier.",
     ),
     VariableMapping(
         domain="VS",
@@ -217,7 +226,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.UID",
         data_type="Char",
         transformation_kind="CONCATENATION",
-        rule_description="Derived unique subject identifier."
+        rule_description="Derived unique subject identifier.",
     ),
     VariableMapping(
         domain="VS",
@@ -225,7 +234,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="System Generated",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Monotonically increasing sequence integer per subject, sorted by VSDTC."
+        rule_description="Monotonically increasing sequence integer per subject, sorted by VSDTC.",
     ),
     VariableMapping(
         domain="VS",
@@ -233,7 +242,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSTESTCD",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Short test code (e.g., 'SYSBP', 'DIABP', 'PULSE', 'TEMP', 'HEIGHT', 'WEIGHT')."
+        rule_description="Short test code (e.g., 'SYSBP', 'DIABP', 'PULSE', 'TEMP', 'HEIGHT', 'WEIGHT').",
     ),
     VariableMapping(
         domain="VS",
@@ -241,7 +250,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSTEST",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Full test name (e.g., 'Systolic Blood Pressure', 'Pulse Rate')."
+        rule_description="Full test name (e.g., 'Systolic Blood Pressure', 'Pulse Rate').",
     ),
     VariableMapping(
         domain="VS",
@@ -249,7 +258,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSORRES",
         data_type="Num",
         transformation_kind="DIRECT",
-        rule_description="Original verbatim result captured in eCRF."
+        rule_description="Original verbatim result captured in eCRF.",
     ),
     VariableMapping(
         domain="VS",
@@ -257,7 +266,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSORRESU",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Original unit (e.g., 'mmHg', 'beats/min', '[degF]')."
+        rule_description="Original unit (e.g., 'mmHg', 'beats/min', '[degF]').",
     ),
     VariableMapping(
         domain="VS",
@@ -265,7 +274,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Standardized result represented as a character string."
+        rule_description="Standardized result represented as a character string.",
     ),
     VariableMapping(
         domain="VS",
@@ -273,7 +282,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Standardized numeric result. Converted to UCUM standards."
+        rule_description="Standardized numeric result. Converted to UCUM standards.",
     ),
     VariableMapping(
         domain="VS",
@@ -281,7 +290,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Standardized unit derived from UCUM target standards (e.g., 'mmHg', 'Cel')."
+        rule_description="Standardized unit derived from UCUM target standards (e.g., 'mmHg', 'Cel').",
     ),
     VariableMapping(
         domain="VS",
@@ -289,7 +298,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSPOS",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Subject position during measurement: 'SUPINE', 'SITTING', 'STANDING'."
+        rule_description="Subject position during measurement: 'SUPINE', 'SITTING', 'STANDING'.",
     ),
     VariableMapping(
         domain="VS",
@@ -297,7 +306,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="VS.VSDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Date/Time of vital signs measurement in ISO 8601 format."
+        rule_description="Date/Time of vital signs measurement in ISO 8601 format.",
     ),
     VariableMapping(
         domain="VS",
@@ -305,9 +314,8 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Vital signs Baseline Flag: Set to 'Y' if baseline record, otherwise null."
+        rule_description="Vital signs Baseline Flag: Set to 'Y' if baseline record, otherwise null.",
     ),
-
     # --- LB (Laboratory Findings) ---
     VariableMapping(
         domain="LB",
@@ -315,7 +323,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Metadata.StudyID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of unique protocol identifier."
+        rule_description="Direct copy of unique protocol identifier.",
     ),
     VariableMapping(
         domain="LB",
@@ -323,7 +331,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.UID",
         data_type="Char",
         transformation_kind="CONCATENATION",
-        rule_description="Derived unique subject identifier."
+        rule_description="Derived unique subject identifier.",
     ),
     VariableMapping(
         domain="LB",
@@ -331,7 +339,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="System Generated",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Monotonically increasing sequence integer, sorted by LBDTC and LBSPEC."
+        rule_description="Monotonically increasing sequence integer, sorted by LBDTC and LBSPEC.",
     ),
     VariableMapping(
         domain="LB",
@@ -339,7 +347,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBTESTCD",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Lab test short code (e.g., 'ALT', 'AST', 'CREAT', 'GLUC', 'HEMOG')."
+        rule_description="Lab test short code (e.g., 'ALT', 'AST', 'CREAT', 'GLUC', 'HEMOG').",
     ),
     VariableMapping(
         domain="LB",
@@ -347,7 +355,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBTEST",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Full lab test name (e.g., 'Alanine Aminotransferase', 'Glucose')."
+        rule_description="Full lab test name (e.g., 'Alanine Aminotransferase', 'Glucose').",
     ),
     VariableMapping(
         domain="LB",
@@ -355,7 +363,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBORRES",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Original verbatim result (alphanumeric)."
+        rule_description="Original verbatim result (alphanumeric).",
     ),
     VariableMapping(
         domain="LB",
@@ -363,7 +371,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBORRESU",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Original result unit."
+        rule_description="Original result unit.",
     ),
     VariableMapping(
         domain="LB",
@@ -371,7 +379,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Standardized character result."
+        rule_description="Standardized character result.",
     ),
     VariableMapping(
         domain="LB",
@@ -379,7 +387,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Standardized numeric result. Standardized using UCUM matrices."
+        rule_description="Standardized numeric result. Standardized using UCUM matrices.",
     ),
     VariableMapping(
         domain="LB",
@@ -387,7 +395,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Standardized unit (e.g., 'g/L', 'umol/L')."
+        rule_description="Standardized unit (e.g., 'g/L', 'umol/L').",
     ),
     VariableMapping(
         domain="LB",
@@ -395,7 +403,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="Normal range reference indicator: 'LOW', 'NORMAL', 'HIGH'."
+        rule_description="Normal range reference indicator: 'LOW', 'NORMAL', 'HIGH'.",
     ),
     VariableMapping(
         domain="LB",
@@ -403,7 +411,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Date/Time of specimen collection in ISO 8601 format."
+        rule_description="Date/Time of specimen collection in ISO 8601 format.",
     ),
     VariableMapping(
         domain="LB",
@@ -411,9 +419,8 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="LB.LBLOINC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="LOINC code mapped to the lab test."
+        rule_description="LOINC code mapped to the lab test.",
     ),
-
     # --- MH (Medical History) ---
     VariableMapping(
         domain="MH",
@@ -421,7 +428,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Metadata.StudyID",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Direct copy of unique protocol identifier."
+        rule_description="Direct copy of unique protocol identifier.",
     ),
     VariableMapping(
         domain="MH",
@@ -429,7 +436,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Subject.UID",
         data_type="Char",
         transformation_kind="CONCATENATION",
-        rule_description="Derived unique subject identifier."
+        rule_description="Derived unique subject identifier.",
     ),
     VariableMapping(
         domain="MH",
@@ -437,7 +444,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="System Generated",
         data_type="Num",
         transformation_kind="COMPUTED",
-        rule_description="Monotonically increasing sequence integer, sorted by MHDTC."
+        rule_description="Monotonically increasing sequence integer, sorted by MHDTC.",
     ),
     VariableMapping(
         domain="MH",
@@ -445,7 +452,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="MH.MHTERM",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Medical history verbatim term."
+        rule_description="Medical history verbatim term.",
     ),
     VariableMapping(
         domain="MH",
@@ -453,7 +460,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="MedDRA Preferred Term (PT) code derived from dictionary coding."
+        rule_description="MedDRA Preferred Term (PT) code derived from dictionary coding.",
     ),
     VariableMapping(
         domain="MH",
@@ -461,7 +468,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="Computed",
         data_type="Char",
         transformation_kind="COMPUTED",
-        rule_description="MedDRA System Organ Class (SOC) description."
+        rule_description="MedDRA System Organ Class (SOC) description.",
     ),
     VariableMapping(
         domain="MH",
@@ -469,7 +476,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="MH.MHSTDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="Onset date of medical history condition in ISO 8601 format. Partial dates common."
+        rule_description="Onset date of medical history condition in ISO 8601 format. Partial dates common.",
     ),
     VariableMapping(
         domain="MH",
@@ -477,7 +484,7 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="MH.MHENDTC",
         data_type="Char",
         transformation_kind="DIRECT",
-        rule_description="End date of medical history condition. Null if ongoing."
+        rule_description="End date of medical history condition. Null if ongoing.",
     ),
     VariableMapping(
         domain="MH",
@@ -485,8 +492,8 @@ SDTM_MAPPINGS: List[VariableMapping] = [
         source_field="MH.MHENRTP",
         data_type="Char",
         transformation_kind="CONTROLLED_TERMINOLOGY",
-        rule_description="Relationship to study start: 'BEFORE', 'ONGOING'."
-    )
+        rule_description="Relationship to study start: 'BEFORE', 'ONGOING'.",
+    ),
 ]
 
 

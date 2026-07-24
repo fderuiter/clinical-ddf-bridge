@@ -26,12 +26,13 @@ async def setup_db():
     await db_manager.close()
 
 
-def get_auth_headers(roles: str = "admin", change_reason: str = "") -> dict:
+def get_auth_headers(
+    roles: str = "admin", change_reason: str = "", user_id: str = "test_user"
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
     timestamp = str(time.time())
-    user_id = "test_user"
     sig = generate_signature(
         user_id, roles, timestamp, version="2", change_reason=change_reason
     )
@@ -422,3 +423,112 @@ async def test_bulk_offline_sync():
         assert sub1.answers["pain"] == 2
         assert sub1.answers["nausea"] == "mild"
         assert sub1.version_index == 2
+
+
+@pytest.mark.asyncio
+async def test_subject_role_authorization_and_identity_binding():
+    """
+    Test Subject role authorization and identity binding rules.
+    - An authenticated Subject can submit their own ePRO record.
+    - An authenticated Subject cannot submit/sync records for another subject (returns 403).
+    - An authenticated Subject cannot access staff-only endpoints like FHIR prefill (returns 403).
+    - Staff members can submit/sync for any subject without restriction.
+    """
+    client = TestClient(app)
+
+    # Case 1: Subject submitting their own record -> 201 Created
+    headers_subject_self = get_auth_headers(
+        roles="Subject", change_reason="Submit my diary", user_id="patient_alice"
+    )
+    payload_self = {
+        "subject_id": "patient_alice",
+        "diary_id": "daily_pain_scale",
+        "device_timestamp": "2026-07-22T20:00:00Z",
+        "answers": {"pain_level": 2},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "device_ios_alice",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=payload_self, headers=headers_subject_self
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "CREATED"
+
+    # Case 2: Subject submitting another subject's record -> 403 Forbidden
+    headers_subject_other = get_auth_headers(
+        roles="Subject", change_reason="Submit someone's diary", user_id="patient_alice"
+    )
+    payload_other = {
+        "subject_id": "patient_bob",
+        "diary_id": "daily_pain_scale",
+        "device_timestamp": "2026-07-22T20:00:00Z",
+        "answers": {"pain_level": 3},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "device_ios_alice",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=payload_other, headers=headers_subject_other
+    )
+    assert resp.status_code == 403
+    assert "Access denied" in resp.json()["detail"]
+
+    # Case 3: Subject performing bulk sync with mixed subject IDs -> 403 Forbidden
+    bulk_payload_invalid = {
+        "submissions": [
+            {
+                "subject_id": "patient_alice",
+                "diary_id": "daily_pain_scale_1",
+                "device_timestamp": "2026-07-22T20:00:00Z",
+                "answers": {"pain_level": 2},
+                "offline_sync_markers": {
+                    "sequence_number": 1,
+                    "client_id": "device_ios_alice",
+                    "conflict_strategy": "CLIENT_WINS",
+                },
+            },
+            {
+                "subject_id": "patient_bob",  # Mismatch!
+                "diary_id": "daily_pain_scale_2",
+                "device_timestamp": "2026-07-22T20:05:00Z",
+                "answers": {"pain_level": 5},
+                "offline_sync_markers": {
+                    "sequence_number": 2,
+                    "client_id": "device_ios_alice",
+                    "conflict_strategy": "CLIENT_WINS",
+                },
+            },
+        ]
+    }
+    resp = client.post(
+        "/api/v1/interop/epro/sync",
+        json=bulk_payload_invalid,
+        headers=headers_subject_self,
+    )
+    assert resp.status_code == 403
+    assert "Access denied" in resp.json()["detail"]
+
+    # Case 4: Subject trying to access staff-only FHIR prefill -> 403 Forbidden
+    fhir_payload = {"study_id": "study_xyz", "bundle": {"resourceType": "Bundle"}}
+    resp = client.post(
+        "/api/v1/interop/fhir/prefill", json=fhir_payload, headers=headers_subject_self
+    )
+    assert resp.status_code == 403
+    assert "Access denied" in resp.json()["detail"]
+
+    # Case 5: Staff member submitting for any subject -> 201 Created
+    headers_staff = get_auth_headers(
+        roles="admin,sponsor_dm",
+        change_reason="Submit on behalf of Bob",
+        user_id="staff_1",
+    )
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=payload_other, headers=headers_staff
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "CREATED"

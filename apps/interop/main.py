@@ -8,6 +8,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.interop.auth import (
+    require_staff_role,
+    verify_subject_bulk_identity,
+    verify_subject_identity,
+)
 from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter
 from apps.interop.models import Base, EPROSubmission, InteropAuditLog
@@ -267,6 +272,7 @@ async def fhir_prefill(
     Ingest a standard FHIR Bundle payload, pseudonymize Patient ID,
     strip all Direct Identifiers (PII), and return mapped CDASH eCRF fields.
     """
+    require_staff_role(request)
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
 
@@ -296,6 +302,7 @@ async def epro_submit(
     Secure REST endpoint for mobile apps to submit a single participant diary/survey entry.
     Handles offline queue reconciliation & conflict resolution on duplicate sync requests.
     """
+    verify_subject_identity(request, payload.subject_id)
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
 
@@ -324,6 +331,9 @@ async def epro_sync(
     Secure bulk sync endpoint for offline queues. Performs reconciliation
     and conflict resolution across multiple participant submissions.
     """
+    verify_subject_bulk_identity(
+        request, [sub.subject_id for sub in payload.submissions]
+    )
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
 

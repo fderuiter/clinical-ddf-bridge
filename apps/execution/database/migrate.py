@@ -13,6 +13,8 @@ from apps.execution.database.models import (  # noqa: F401
     ClinicalObservation,
     ClinicalQuery,
     DictionaryImportJob,
+    FormSubmission,
+    LabReferenceRange,
     MedDRAHierarchy,
     MedDRATerm,
     SDVSignOff,
@@ -338,6 +340,42 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 )
 
 
+async def upgrade_existing_tables(conn) -> None:
+    """
+    Upgrades pre-existing tables with new columns if they do not exist.
+    This ensures schema evolution is deployable without relying on create_all to alter tables.
+    """
+    from sqlalchemy import inspect
+
+    def get_columns(sync_conn):
+        insp = inspect(sync_conn)
+        # Check if clinical_observations table exists first to avoid error on completely empty DB
+        if not insp.has_table("clinical_observations"):
+            return []
+        return [col["name"] for col in insp.get_columns("clinical_observations")]
+
+    existing_cols = await conn.run_sync(get_columns)
+    if not existing_cols:
+        return
+
+    new_cols_to_add = [
+        ("lab_source", "VARCHAR(50)"),
+        ("lab_site_id", "VARCHAR(255)"),
+        ("lab_indicator", "VARCHAR(50)"),
+        ("lab_out_of_range", "BOOLEAN"),
+        ("matched_normal_bounds", "VARCHAR(255)"),
+    ]
+
+    for col_name, col_type in new_cols_to_add:
+        if col_name not in existing_cols:
+            print(f"Adding missing column {col_name} to clinical_observations table...")
+            await conn.execute(
+                text(
+                    f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+                )
+            )
+
+
 async def run_migrations(database_url: str) -> None:
     """
     Execute asynchronous pre-boot schema migrations.
@@ -363,6 +401,9 @@ async def run_migrations(database_url: str) -> None:
 
             # Setup metadata tables
             await conn.run_sync(Base.metadata.create_all)
+
+            # Upgrade existing tables with new columns
+            await upgrade_existing_tables(conn)
 
             # Deploy database triggers
             await deploy_database_triggers(conn, engine.dialect.name)
