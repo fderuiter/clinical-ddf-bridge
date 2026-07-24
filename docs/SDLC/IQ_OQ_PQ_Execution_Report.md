@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 246
-- **Passed:** 246 🟢
+- **Total Automated Test Cases Run:** 259
+- **Passed:** 259 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -234,6 +234,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_gateway_subject_role_routing_restrictions` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -258,6 +259,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
