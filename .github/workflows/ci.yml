@@ -55,7 +55,13 @@ jobs:
       # This is because pnpm check executes the full pytest suite (including layout validators),
       # which requires chromium to be available.
       - name: Install Playwright Browsers
-        run: uv run playwright install --with-deps chromium
+        run: |
+          for i in {1..3}; do
+            uv run playwright install --with-deps chromium && break || {
+              echo "Playwright install failed on attempt $i, retrying in 10s..."
+              sleep 10
+            }
+          done
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
