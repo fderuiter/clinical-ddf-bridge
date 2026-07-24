@@ -95,6 +95,9 @@ def normalize_state(state: Any) -> str | None:
 def guard_subject_transition(current_state: Any, target_state: Any) -> None:
     """Guards transitions between subject states according to the protocol state machine.
 
+    This validator acts as the centralized pure-Python guardian of subject state
+    pathways, enforcing GxP compliant pathways to prevent protocol deviations.
+
     Args:
         current_state (Any): The current state of the subject, or None.
         target_state (Any): The requested new state.
