@@ -10,6 +10,7 @@ discriminated union payload structures.
 from datetime import datetime
 from enum import Enum
 from typing import List, Literal, Optional, Union
+
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Annotated
 

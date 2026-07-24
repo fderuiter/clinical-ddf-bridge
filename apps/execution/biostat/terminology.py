@@ -1,6 +1,5 @@
 import re
-from typing import List, Union, Optional
-
+from typing import List, Optional, Union
 
 # CDISC Controlled Terminology sets
 VALID_SEX_VALUES = {"M", "F", "U"}

@@ -1,24 +1,22 @@
 import pytest
 from pydantic import ValidationError
 
+from apps.execution.biostat.mappings import (
+    get_mappings_by_domain,
+    get_mappings_for_domain,
+)
 from apps.execution.biostat.models import (
-    VariableMetadata,
-    SUPPRecord,
-    DatasetJSONItemGroup,
     ClinicalData,
     DatasetJSON,
-)
-from apps.execution.biostat.mappings import (
-    SDTM_MAPPINGS,
-    get_mappings_for_domain,
-    get_mappings_by_domain,
+    DatasetJSONItemGroup,
+    SUPPRecord,
+    VariableMetadata,
 )
 from apps.execution.biostat.terminology import (
-    normalize_sex,
     normalize_race,
     normalize_severity,
+    normalize_sex,
 )
-
 
 # --- Tests for Pydantic v2 Models ---
 
