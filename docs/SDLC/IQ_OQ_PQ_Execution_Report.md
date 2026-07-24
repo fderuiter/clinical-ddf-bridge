@@ -36,7 +36,82 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-
+Package            Version     Editable project location
+------------------ ----------- -------------------------
+aiosqlite          0.22.1
+annotated-doc      0.0.4
+annotated-types    0.7.0
+anyio              4.14.2
+asyncpg            0.31.0
+beautifulsoup4     4.15.0
+brotli             1.2.0
+cadence-clinical         0.1.0       /app
+certifi            2026.7.22
+cffi               2.1.0
+charset-normalizer 3.4.9
+click              8.4.2
+coverage           7.15.2
+cryptography       49.0.0
+cssselect2         0.9.0
+defusedxml         0.7.1
+ecdsa              0.19.2
+et-xmlfile         2.0.0
+fastapi            0.139.2
+fonttools          4.63.0
+greenlet           3.5.4
+h11                0.16.0
+httpcore           1.0.9
+httptools          0.8.0
+httpx              0.28.1
+idna               3.18
+iniconfig          2.3.0
+jinja2             3.1.6
+lxml               6.1.1
+markupsafe         3.0.3
+neo4j              6.2.0
+numpy              2.5.1
+openpyxl           3.1.5
+packaging          26.2
+pandas             3.0.3
+pillow             12.3.0
+pluggy             1.6.0
+pyasn1             0.6.4
+pycparser          3.0
+pydantic           2.13.4
+pydantic-core      2.46.4
+pydyf              0.12.1
+pygments           2.20.0
+pyphen             0.17.2
+pytest             9.1.1
+pytest-asyncio     1.4.0
+pytest-cov         7.1.0
+python-dateutil    2.9.0.post0
+python-docx        1.2.0
+python-dotenv      1.2.2
+python-jose        3.5.0
+python-multipart   0.0.32
+pytz               2026.2
+pyyaml             6.0.3
+requests           2.34.2
+rsa                4.9.1
+six                1.17.0
+soupsieve          2.9.1
+sqlalchemy         2.0.51
+starlette          1.3.1
+tinycss2           1.5.1
+tinyhtml5          2.1.0
+typing-extensions  4.16.0
+typing-inspection  0.4.2
+urllib3            2.7.0
+usdm               0.67.0
+uvicorn            0.51.0
+uvloop             0.22.1
+watchfiles         1.2.0
+weasyprint         69.0
+webencodings       0.5.1
+websockets         16.1.1
+yattag             1.16.1
+zopfli             0.4.3
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -161,6 +236,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_authoring_mutations_rejected_for_auditors` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clause_lifecycle_and_versioning_audit` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_econsent_database_schema_creation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_econsent_document_lifecycle_and_audit_context` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -169,6 +246,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_econsent_pydantic_schemas` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_auth_middleware_denials` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_shared_audit_fields_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_template_lifecycle_and_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_append_only_versions_and_deduplication` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
