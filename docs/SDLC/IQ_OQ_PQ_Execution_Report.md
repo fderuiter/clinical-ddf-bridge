@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 478
-- **Passed:** 478 🟢
+- **Total Automated Test Cases Run:** 480
+- **Passed:** 480 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -38,6 +38,7 @@ The Installation Qualification verifies that the software execution environment,
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
+aiosmtplib              5.1.2
 aiosqlite               0.22.1
 annotated-doc           0.0.4
 annotated-types         0.7.0
@@ -435,12 +436,15 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
