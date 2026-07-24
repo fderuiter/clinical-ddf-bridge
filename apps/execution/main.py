@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 import uuid
@@ -7,7 +6,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, AsyncGenerator, List, Optional
 
-from cryptography.fernet import Fernet
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -36,6 +34,15 @@ from apps.execution.database.models import (
     FormSubmission,
     TranslationJob,
 )
+from apps.execution.demographics import (
+    decrypt_demographics as decrypt_demographics,
+)
+from apps.execution.demographics import (
+    encrypt_demographics as encrypt_demographics,
+)
+from apps.execution.demographics import (
+    get_safe_demographics as get_safe_demographics,
+)
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
@@ -51,36 +58,6 @@ from packages.security import (
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-
-# Symmetric encryption helper for patient demographics
-_DEMO_KEY = base64.urlsafe_b64encode(b"cadence_clinical_demographics_32")
-_fernet = Fernet(_DEMO_KEY)
-
-
-def encrypt_demographics(data: dict) -> str:
-    """Encrypt demographics dictionary payload to protect PII.
-
-    Args:
-        data (dict): Dictionary containing patient identifying details.
-
-    Returns:
-        str: Encrypted and base64-encoded string.
-    """
-    serialized = json.dumps(data)
-    return _fernet.encrypt(serialized.encode("utf-8")).decode("utf-8")
-
-
-def decrypt_demographics(encrypted_str: str) -> dict:
-    """Decrypt demographic details to retrieve raw PII payload.
-
-    Args:
-        encrypted_str (str): The encrypted demographic payload.
-
-    Returns:
-        dict: Decrypted raw dictionary.
-    """
-    decrypted = _fernet.decrypt(encrypted_str.encode("utf-8"))
-    return json.loads(decrypted.decode("utf-8"))
 
 
 @asynccontextmanager
