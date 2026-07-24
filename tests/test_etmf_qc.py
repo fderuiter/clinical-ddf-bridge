@@ -345,3 +345,112 @@ async def test_qc_transitions_missing_doc():
         headers=headers_admin,
     )
     assert res_history.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_qc_transition_missing_or_blank_change_reason():
+    """
+    Verify that transitioning status with missing or blank X-Change-Reason is rejected with HTTP 400.
+    """
+    client = TestClient(app)
+    headers_admin = get_auth_headers(roles="admin", change_reason="Ingest doc")
+
+    # Ingest document first
+    payload = {
+        "study_id": "study_001",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol.pdf",
+        "content": "Protocol Content",
+        "mime_type": "application/pdf",
+    }
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
+    doc_id = ingest_resp.json()["document_id"]
+
+    # Try transition with blank X-Change-Reason
+    headers_blank = get_auth_headers(roles="sponsor_dm", change_reason="   ")
+    res_blank = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Completed technical QC check with valid reason",
+        },
+        headers=headers_blank,
+    )
+    assert res_blank.status_code == 400
+    assert "Change reason" in res_blank.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_qc_transition_records_detailed_audit_trail_and_role_normalization():
+    """
+    Verify successful transition records actor, role, reason, source/target status,
+    and time in both transition history and the audit ledger, with role normalization.
+    """
+    client = TestClient(app)
+    headers_admin = get_auth_headers(roles="ADMIN, sponsor_dm ", change_reason="Ingest doc")
+
+    # Ingest document
+    payload = {
+        "study_id": "study_001",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol.pdf",
+        "content": "Protocol Content",
+        "mime_type": "application/pdf",
+    }
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
+    doc_id = ingest_resp.json()["document_id"]
+
+    # Transition with mixed-case and padded roles
+    headers_mixed = get_auth_headers(
+        roles=" Sponsor_dm , admin ",
+        change_reason="Execute valid technical QC",
+    )
+    res = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Completed technical QC check with valid reason",
+        },
+        headers=headers_mixed,
+    )
+    assert res.status_code == 200
+
+    # Retrieve history and verify details
+    history_resp = client.get(
+        f"/api/v1/etmf/documents/{doc_id}/transitions",
+        headers=headers_admin,
+    )
+    assert history_resp.status_code == 200
+    history = history_resp.json()
+    assert len(history) == 1
+
+    # Check that roles are normalized
+    assert history[0]["actor_role"] == "sponsor_dm,admin"
+    assert history[0]["from_status"] == "DRAFT"
+    assert history[0]["to_status"] == "TECHNICAL_QC"
+    assert history[0]["reason_for_change"] == "Completed technical QC check with valid reason"
+    assert history[0]["actor_id"] == "test_user"
+    assert "timestamp" in history[0]
+
+    # Retrieve audit log and verify details
+    audit_resp = client.get(
+        f"/api/v1/etmf/audit-logs?document_id={doc_id}",
+        headers=headers_admin,
+    )
+    assert audit_resp.status_code == 200
+    audit_logs = audit_resp.json()
+
+    # Filter for QC_TRANSITION logs
+    qc_transitions = [log for log in audit_logs if log["action"] == "QC_TRANSITION"]
+    assert len(qc_transitions) == 1
+
+    qc_log = qc_transitions[0]
+    assert qc_log["user_id"] == "test_user"
+    assert qc_log["user_role"] == "sponsor_dm,admin"
+    assert "DRAFT" in qc_log["details"]
+    assert "TECHNICAL_QC" in qc_log["details"]
+    assert "Completed technical QC check with valid reason" in qc_log["details"]
