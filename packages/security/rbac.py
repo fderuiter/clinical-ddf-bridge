@@ -59,8 +59,21 @@ def verify_is_auditor(request: Request) -> list[str]:
 
 
 ROLE_EXPANSIONS = {
-    "site investigator": {"site investigator", "investigator", "site-investigator", "site_investigator", "investigator_user"},
-    "data manager": {"data manager", "data_manager", "data-manager", "sponsor_dm", "dm", "admin"},
+    "site investigator": {
+        "site investigator",
+        "investigator",
+        "site-investigator",
+        "site_investigator",
+        "investigator_user",
+    },
+    "data manager": {
+        "data manager",
+        "data_manager",
+        "data-manager",
+        "sponsor_dm",
+        "dm",
+        "admin",
+    },
     "cra": {"cra"},
     "auditor": {"auditor", "inspector", "regulatory_inspector"},
     "sponsor admin": {"sponsor admin", "sponsor_admin", "admin"},
@@ -72,6 +85,7 @@ def require_roles(*allowed_roles: str):
     FastAPI dependency factory to enforce that the caller has at least one of the allowed roles.
     Allows case-insensitive, whitespace-insensitive matches and role synonym expansion.
     """
+
     def dependency(request: Request) -> list[str]:
         roles = get_normalized_roles(request)
         expanded_allowed = set()
@@ -87,5 +101,5 @@ def require_roles(*allowed_roles: str):
                 detail="User role is not authorized for this action.",
             )
         return roles
-    return dependency
 
+    return dependency

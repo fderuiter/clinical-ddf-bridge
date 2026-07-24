@@ -553,7 +553,9 @@ async def test_rejection_and_cancellation_reason_requirements() -> None:
         # Reopen/Reject with reason should succeed
         resp_reopen_ok = await client.post(
             f"/api/v1/execution/queries/{q_id}/reopen",
-            headers=get_v2_auth_headers(roles="Data Manager", change_reason="Please re-verify"),
+            headers=get_v2_auth_headers(
+                roles="Data Manager", change_reason="Please re-verify"
+            ),
         )
         assert resp_reopen_ok.status_code == 200
         assert resp_reopen_ok.json()["status"] == "REOPENED"
@@ -581,12 +583,7 @@ async def test_rejection_and_cancellation_reason_requirements() -> None:
 @pytest.mark.asyncio
 async def test_query_role_gates_robustness() -> None:
     """Test detailed role-based access control requirements on query execution APIs."""
-    dm_headers = get_v2_auth_headers(
-        roles="Data Manager", change_reason="DM raises query"
-    )
-    cra_headers = get_v2_auth_headers(
-        roles="CRA", change_reason="CRA raises query"
-    )
+    cra_headers = get_v2_auth_headers(roles="CRA", change_reason="CRA raises query")
     inv_headers = get_v2_auth_headers(
         roles="Investigator", change_reason="Investigator responds"
     )
@@ -655,4 +652,3 @@ async def test_query_role_gates_robustness() -> None:
             headers=cra_headers,
         )
         assert resp_cra_close.status_code == 200
-

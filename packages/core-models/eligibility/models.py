@@ -10,7 +10,7 @@ import re
 from typing import Any, Dict, List, Literal, Optional
 
 # Import standard GxP audit fields
-from organization_domain.models import AuditFields
+from audit import AuditFields
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Regex pattern for eCRF.<DOMAIN>.<VARIABLE> references

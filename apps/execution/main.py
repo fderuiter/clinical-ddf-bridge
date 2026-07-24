@@ -37,19 +37,17 @@ from apps.execution.database.models import (
     TranslationJob,
 )
 from apps.execution.outliers import recalculate_cohort_outliers
+from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
-    verify_not_auditor,
     ROLE_CRA,
     ROLE_DATA_MANAGER,
     ROLE_SITE_INVESTIGATOR,
-    ROLE_AUDITOR,
-    ROLE_SPONSOR_ADMIN,
-    require_roles,
     get_normalized_roles,
+    require_roles,
+    verify_not_auditor,
 )
-from apps.execution.query_service import QueryService, StateTransitionError
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -1159,7 +1157,7 @@ async def open_query(
     if target_status not in ("CANDIDATE", "OPEN"):
         raise HTTPException(
             status_code=400,
-            detail=f"Initial status must be CANDIDATE or OPEN. Received: {target_status}"
+            detail=f"Initial status must be CANDIDATE or OPEN. Received: {target_status}",
         )
 
     async with db_manager.get_session_maker()() as session:
@@ -1672,7 +1670,11 @@ async def reopen_query(
     if payload is not None:
         reason_str = payload.reason or ""
     else:
-        reason_str = request.headers.get("X-Change-Reason", "") or current_change_reason.get() or ""
+        reason_str = (
+            request.headers.get("X-Change-Reason", "")
+            or current_change_reason.get()
+            or ""
+        )
     has_reason = bool(reason_str and reason_str.strip())
 
     async with db_manager.get_session_maker()() as session:
@@ -1685,7 +1687,9 @@ async def reopen_query(
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
         try:
-            QueryService.validate_transition(q.status, "REOPENED", has_reason=has_reason)
+            QueryService.validate_transition(
+                q.status, "REOPENED", has_reason=has_reason
+            )
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -1753,7 +1757,9 @@ async def cancel_query(
     verify_change_justification(request)
 
     if not payload.reason or not payload.reason.strip():
-        raise HTTPException(status_code=400, detail="Cancellation requires a non-empty reason.")
+        raise HTTPException(
+            status_code=400, detail="Cancellation requires a non-empty reason."
+        )
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
@@ -1838,27 +1844,54 @@ async def update_query_state(
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
         target_status = payload.status.upper()
-        
+
         # Validate transition
-        reason_val = (payload.cancellation_reason or payload.explanation or request.headers.get("X-Change-Reason", "") or current_change_reason.get() or "").strip()
+        reason_val = (
+            payload.cancellation_reason
+            or payload.explanation
+            or request.headers.get("X-Change-Reason", "")
+            or current_change_reason.get()
+            or ""
+        ).strip()
         has_reason = bool(reason_val)
 
         try:
-            QueryService.validate_transition(q.status, target_status, has_reason=has_reason)
+            QueryService.validate_transition(
+                q.status, target_status, has_reason=has_reason
+            )
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
         # Enforce role boundaries depending on target transition state
         user_roles = get_normalized_roles(request)
-        cra_dm_roles = {"cra", "data manager", "data_manager", "sponsor_dm", "dm", "admin"}
-        inv_roles = {"site investigator", "site_investigator", "site-investigator", "investigator", "investigator_user"}
+        cra_dm_roles = {
+            "cra",
+            "data manager",
+            "data_manager",
+            "sponsor_dm",
+            "dm",
+            "admin",
+        }
+        inv_roles = {
+            "site investigator",
+            "site_investigator",
+            "site-investigator",
+            "investigator",
+            "investigator_user",
+        }
 
         if target_status in ("CANDIDATE", "OPEN", "CLOSED", "REOPENED", "CANCELLED"):
             if not any(r in cra_dm_roles for r in user_roles):
-                raise HTTPException(status_code=403, detail="User role is not authorized for this action.")
+                raise HTTPException(
+                    status_code=403,
+                    detail="User role is not authorized for this action.",
+                )
         elif target_status == "ANSWERED":
             if not any(r in inv_roles for r in user_roles):
-                raise HTTPException(status_code=403, detail="User role is not authorized for this action.")
+                raise HTTPException(
+                    status_code=403,
+                    detail="User role is not authorized for this action.",
+                )
 
         q.status = target_status
         if payload.explanation is not None:
