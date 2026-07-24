@@ -368,7 +368,11 @@ async def upgrade_existing_tables(conn) -> None:
     for col_name, col_type in new_cols_to_add:
         if col_name not in existing_cols:
             print(f"Adding missing column {col_name} to clinical_observations table...")
-            await conn.execute(text(f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"))
+            await conn.execute(
+                text(
+                    f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+                )
+            )
 
 
 async def run_migrations(database_url: str) -> None:

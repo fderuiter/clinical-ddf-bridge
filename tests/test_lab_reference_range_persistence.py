@@ -208,7 +208,9 @@ async def test_lab_reference_range_audit_and_triggers():
                 Exception, match="Hard deletions are strictly forbidden"
             ):
                 await session.execute(
-                    text("DELETE FROM lab_reference_ranges WHERE id = :id;").bindparams(id=range_id)
+                    text("DELETE FROM lab_reference_ranges WHERE id = :id;").bindparams(
+                        id=range_id
+                    )
                 )
 
 
@@ -244,7 +246,9 @@ async def test_clinical_observation_extended_fields():
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-002")
+            select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == "SUBJ-002"
+            )
         )
         saved_obs = result.scalar_one()
 
@@ -273,7 +277,8 @@ async def test_schema_evolution_migration_upgrade():
     # We define a minimal model representing the legacy table schema.
     async with temp_engine.begin() as conn:
         # Create legacy table schema manually
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE clinical_observations (
                 id VARCHAR(36) PRIMARY KEY,
                 version INTEGER,
@@ -296,7 +301,8 @@ async def test_schema_evolution_migration_upgrade():
                 sdv_verified_at TIMESTAMP,
                 page_id VARCHAR(255)
             );
-        """))
+        """)
+        )
 
     # 2. Run our upgrade_existing_tables function
     async with temp_engine.begin() as conn:
@@ -304,8 +310,10 @@ async def test_schema_evolution_migration_upgrade():
 
     # 3. Verify that the new snapshot/source columns were successfully added
     async with temp_engine.begin() as conn:
+
         def get_columns(sync_conn):
             from sqlalchemy import inspect
+
             insp = inspect(sync_conn)
             return [col["name"] for col in insp.get_columns("clinical_observations")]
 
@@ -319,6 +327,8 @@ async def test_schema_evolution_migration_upgrade():
             "matched_normal_bounds",
         ]
         for col in expected_added_cols:
-            assert col in updated_cols, f"Column {col} should have been added by migration."
+            assert col in updated_cols, (
+                f"Column {col} should have been added by migration."
+            )
 
     await temp_engine.dispose()

@@ -75,7 +75,7 @@ def normalize_race(val: Union[str, List[str]]) -> str:
         raise ValueError("RACE string cannot be blank")
 
     # Split on comma, semicolon, or " and "
-    parts = re.split(r',|;| and | AND ', raw_str, flags=re.IGNORECASE)
+    parts = re.split(r",|;| and | AND ", raw_str, flags=re.IGNORECASE)
     parts = [p.strip() for p in parts if p.strip()]
 
     if len(parts) > 1:
@@ -84,7 +84,7 @@ def normalize_race(val: Union[str, List[str]]) -> str:
     # Single race term normalization
     cleaned = parts[0].upper()
     # Remove duplicate internal spaces
-    cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
 
     # Exact matches first
     if cleaned in VALID_RACE_VALUES:
@@ -97,9 +97,17 @@ def normalize_race(val: Union[str, List[str]]) -> str:
         return "BLACK OR AFRICAN AMERICAN"
     if cleaned in {"ASIAN", "EAST ASIAN", "SOUTH ASIAN"}:
         return "ASIAN"
-    if cleaned in {"AMERICAN INDIAN", "ALASKA NATIVE", "AMERICAN INDIAN OR ALASKA NATIVE"}:
+    if cleaned in {
+        "AMERICAN INDIAN",
+        "ALASKA NATIVE",
+        "AMERICAN INDIAN OR ALASKA NATIVE",
+    }:
         return "AMERICAN INDIAN OR ALASKA NATIVE"
-    if cleaned in {"HAWAIIAN", "PACIFIC ISLANDER", "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"}:
+    if cleaned in {
+        "HAWAIIAN",
+        "PACIFIC ISLANDER",
+        "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER",
+    }:
         return "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
     if cleaned in {"MULTIPLE", "MIXED", "MORE THAN ONE RACE"}:
         return "MULTIPLE"

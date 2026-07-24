@@ -618,7 +618,9 @@ class LabReferenceRange(AuditedModel):
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     test_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source: Mapped[str] = mapped_column(String(50), nullable=False)  # "CENTRAL" or "LOCAL"
+    source: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "CENTRAL" or "LOCAL"
     site_id: Mapped[str] = mapped_column(String(255), nullable=True)
     unit: Mapped[str] = mapped_column(String(50), nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)

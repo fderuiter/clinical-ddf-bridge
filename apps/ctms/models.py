@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, Float, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -154,103 +154,3 @@ async def write_audit_log(
     )
     session.add(log_entry)
     await session.flush()
-
-
-class InvestigatorGrant(Base):
-    """
-    Represents an investigator grant associated with a trial site, study, and investigator.
-    Tracks total budget, currency, status, and complies with Part 11 requirements.
-    """
-    __tablename__ = "ctms_investigator_grants"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    investigator_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    total_budget: Mapped[float] = mapped_column(Float, nullable=False)
-    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)  # DRAFT, APPROVED
-
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
-
-class BudgetLineItem(Base):
-    """
-    Represents an itemized budget line item within an investigator grant.
-    """
-    __tablename__ = "ctms_budget_line_items"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    grant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    category: Mapped[str] = mapped_column(String(255), nullable=False)
-    planned_amount: Mapped[float] = mapped_column(Float, nullable=False)
-    actual_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
-
-class PaymentMilestone(Base):
-    """
-    Represents a planned payment milestone tied to specific conditions or triggers.
-    """
-    __tablename__ = "ctms_payment_milestones"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    grant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    description: Mapped[str] = mapped_column(String(1000), nullable=False)
-    trigger_type: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. VISIT_COMPLETED, STUDY_APPROVED, MANUAL
-    trigger_condition: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)  # e.g. "IMV"
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
-    trigger_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    payment_status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)  # PENDING, TRIGGERED, PAID
-
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
-
-class InvestigatorPayable(Base):
-    """
-    A payable ledger record generated upon triggering of a milestone.
-    """
-    __tablename__ = "ctms_investigator_payables"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    milestone_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True, unique=True)
-    grant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
-    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="UNPAID", nullable=False)  # UNPAID, PAID
-    payment_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
