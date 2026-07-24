@@ -41,6 +41,7 @@ MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
 
 # --- Mock Study Version Content ---
 MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
+MOCK_STUDY_PROJECTIONS_BY_VERSION: Dict[str, Dict[str, Any]] = {}
 
 
 def create_mock_study_version(study_id: str, version_data: Dict[str, Any]):
@@ -57,6 +58,27 @@ def create_mock_study_version(study_id: str, version_data: Dict[str, Any]):
 
             raise ConcurrentLockingError("Version index or tag already exists")
 
+    # Automatically sign the version payload if signature not present
+    if "signature" not in version_data:
+        import os
+
+        from packages.security.signing import generate_canonical_signature
+
+        payload = {
+            "id": version_data.get("id") or "legacy_ver",
+            "version_tag": version_data.get("version_tag") or "1.0",
+            "status": version_data.get("status") or "DRAFT",
+            "version_index": version_data.get("version_index") or 1,
+            "created_by": version_data.get("created_by") or "system",
+        }
+        if "created_at" in version_data:
+            payload["created_at"] = str(version_data["created_at"])
+        if "parent_version" in version_data:
+            payload["parent_version"] = version_data["parent_version"]
+
+        secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+        version_data["signature"] = generate_canonical_signature(payload, secret)
+
     MOCK_STUDY_VERSIONS[study_id].append(version_data)
 
 
@@ -65,6 +87,13 @@ def assert_mock_study_mutable(study_id: str):
     versions = MOCK_STUDY_VERSIONS.get(study_id, [])
     if versions:
         latest = versions[-1]
+        
+        # Verify signature on load!
+        from apps.designer.delta import InvalidSignatureError, verify_version_signature
+        if not verify_version_signature(latest):
+            print(f"[AUDIT] [SECURITY_ALERT] Invalid or missing signature on load for StudyVersion: {latest.get('id')}.")
+            raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
+
         status = latest.get("status")
         if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
             from apps.designer.delta import ImmutabilityViolationError

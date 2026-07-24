@@ -395,3 +395,249 @@ async def test_api_study_version_creation_and_guards():
         )
         assert res_fail_delete.status_code == 403
         assert "IMMUTABILITY_VIOLATION" in res_fail_delete.json()["detail"]
+
+
+# =====================================================================
+# 4. DESIGNER AMENDMENT FORK OPERATION TESTS
+# =====================================================================
+
+
+@pytest.mark.asyncio
+async def test_api_protocol_amendment_minor_and_major_bumps():
+    """
+    Validates minor clinical-amendment and major design-restructuring bumps.
+    Checks that predecessor/successor links are established, signatures are generated,
+    and the source graph remains unchanged.
+    """
+    study_id = "amend_bump_test_study"
+    
+    import copy
+
+    from apps.designer.db import (
+        MOCK_STUDIES,
+        MOCK_STUDY_PROJECTIONS_BY_VERSION,
+        MOCK_STUDY_VERSIONS,
+    )
+    MOCK_STUDY_VERSIONS[study_id] = []
+    MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
+    MOCK_STUDIES[study_id]["study_id"] = study_id
+    MOCK_STUDIES[study_id]["current_version"] = "2.1"
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Establish parent locked version (2.1)
+        res_parent = await client.post(
+            f"/api/v1/studies/{study_id}/versions",
+            json={
+                "id": "v_parent",
+                "version_tag": "2.1",
+                "status": "LOCKED",
+                "version_index": 2,
+            },
+            headers=get_auth_headers(),
+        )
+        assert res_parent.status_code == 201
+
+        # 2. Perform a minor clinical-amendment bump
+        res_minor = await client.post(
+            f"/api/designer/protocols/{study_id}/amend",
+            json={"amendment_type": "clinical-amendment"},
+            headers=get_auth_headers(change_reason="Minor clinical tweak"),
+        )
+        assert res_minor.status_code == 201
+        data_minor = res_minor.json()
+        assert data_minor["new_version"] == "2.2"
+        assert data_minor["status"] == "DRAFT"
+        assert data_minor["parent_version"] == "2.1"
+
+        # Check that parent projection remains unchanged
+        parent_projection = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(f"{study_id}:2.1")
+        assert parent_projection is not None
+        assert parent_projection["current_version"] == "2.1"
+
+        # Check that new draft version is active
+        current_projection = MOCK_STUDIES[study_id]
+        assert current_projection["current_version"] == "2.2"
+        assert len(current_projection["actions"]) > 0
+        latest_action = current_projection["actions"][-1]
+        assert latest_action["change_reason"] == "Minor clinical tweak"
+        assert latest_action["parent_version"] == "2.1"
+        assert latest_action["new_version"] == "2.2"
+
+        # 3. Perform a major design-restructuring bump
+        # Advance the 2.2 to LOCKED state first to allow amending it
+        latest_ver = MOCK_STUDY_VERSIONS[study_id][-1]
+        latest_ver["status"] = "LOCKED"
+        # Re-sign
+        import os
+
+        from packages.security.signing import generate_canonical_signature
+        payload = {
+            "id": latest_ver["id"],
+            "version_tag": latest_ver["version_tag"],
+            "status": "LOCKED",
+            "version_index": latest_ver["version_index"],
+            "created_by": latest_ver["created_by"],
+        }
+        if "created_at" in latest_ver:
+            payload["created_at"] = str(latest_ver["created_at"])
+        if "parent_version" in latest_ver:
+            payload["parent_version"] = latest_ver["parent_version"]
+        secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+        latest_ver["signature"] = generate_canonical_signature(payload, secret)
+        
+        res_major = await client.post(
+            f"/api/designer/protocols/{study_id}/amend",
+            json={"type": "design-restructuring"},
+            headers=get_auth_headers(change_reason="Major restructuring"),
+        )
+        assert res_major.status_code == 201
+        data_major = res_major.json()
+        assert data_major["new_version"] == "3.0"
+        assert data_major["status"] == "DRAFT"
+        assert data_major["parent_version"] == "2.2"
+
+
+@pytest.mark.asyncio
+async def test_api_protocol_amendment_invalid_signature_rejected():
+    """
+    Validates that missing or tampered signatures are rejected on load.
+    """
+    study_id = "signature_rejection_test_study"
+    
+    import copy
+
+    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+    MOCK_STUDY_VERSIONS[study_id] = []
+    MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
+    MOCK_STUDIES[study_id]["study_id"] = study_id
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Establish parent version
+        res_parent = await client.post(
+            f"/api/v1/studies/{study_id}/versions",
+            json={
+                "id": "v_parent",
+                "version_tag": "2.1",
+                "status": "LOCKED",
+                "version_index": 2,
+            },
+            headers=get_auth_headers(),
+        )
+        assert res_parent.status_code == 201
+
+        # Tamper with the signature of the parent version
+        MOCK_STUDY_VERSIONS[study_id][0]["signature"] = "invalid-tampered-signature"
+
+        # Attempt to amend should fail with 400 detail="INVALID_OR_MISSING_SIGNATURE"
+        res_amend = await client.post(
+            f"/api/designer/protocols/{study_id}/amend",
+            json={"amendment_type": "clinical-amendment"},
+            headers=get_auth_headers(),
+        )
+        assert res_amend.status_code == 400
+        assert res_amend.json()["detail"] == "INVALID_OR_MISSING_SIGNATURE"
+
+
+@pytest.mark.asyncio
+async def test_api_protocol_amendment_concurrency_race():
+    """
+    Validates that concurrent amendments on the same study/protocol produce a conflict.
+    """
+    study_id = "concurrency_race_test_study"
+    
+    import asyncio
+    import copy
+
+    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+    MOCK_STUDY_VERSIONS[study_id] = []
+    MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
+    MOCK_STUDIES[study_id]["study_id"] = study_id
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Establish parent version
+        res_parent = await client.post(
+            f"/api/v1/studies/{study_id}/versions",
+            json={
+                "id": "v_parent",
+                "version_tag": "2.1",
+                "status": "LOCKED",
+                "version_index": 2,
+            },
+            headers=get_auth_headers(),
+        )
+        assert res_parent.status_code == 201
+
+        # Issue multiple concurrent amendment requests
+        tasks = [
+            client.post(
+                f"/api/designer/protocols/{study_id}/amend",
+                json={"amendment_type": "clinical-amendment"},
+                headers=get_auth_headers(),
+            )
+            for _ in range(3)
+        ]
+        
+        responses = await asyncio.gather(*tasks)
+        
+        # One of them should succeed (201), others should fail due to race safety (409 Conflict)
+        success_count = sum(1 for r in responses if r.status_code == 201)
+        conflict_count = sum(1 for r in responses if r.status_code == 409)
+        
+        assert success_count == 1
+        assert conflict_count == 2
+
+
+def test_bump_version_edge_cases():
+    """
+    Directly tests the bump_version helper with various semantic inputs.
+    """
+    from apps.designer.delta import bump_version
+    
+    # Minor bumps
+    assert bump_version("1.0", "minor") == "1.1"
+    assert bump_version("v2.1", "clinical-amendment") == "v2.2"
+    assert bump_version("1", "minor") == "1.1"
+    
+    # Major bumps
+    assert bump_version("1.0", "major") == "2.0"
+    assert bump_version("v2.1.3", "design-restructuring") == "v3.0.0"
+    
+    # Invalid tag format fallback
+    assert bump_version("invalid_tag", "minor") == "invalid_tag-draft"
+
+
+@pytest.mark.asyncio
+async def test_api_protocol_amendment_invalid_study_404():
+    """
+    Validates that amending an invalid study ID returns a 404.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        res = await client.post(
+            "/api/designer/protocols/non_existent_study_id/amend",
+            json={"amendment_type": "minor"},
+            headers=get_auth_headers(),
+        )
+        assert res.status_code == 404
+
+
+def test_verify_version_signature_edge_cases():
+    """
+    Validates verify_version_signature with empty or invalid structures.
+    """
+    from apps.designer.delta import verify_version_signature
+    
+    # Empty dictionary
+    assert not verify_version_signature({})
+    
+    # Dict without signature
+    assert not verify_version_signature({"id": "v_123", "status": "DRAFT"})
+
+
