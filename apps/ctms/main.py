@@ -11,12 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.ctms.database import db_manager
 from apps.ctms.models import (
     Base,
+    BudgetLineItem,
     CRAAllocation,
     CTMSAuditLog,
     CTMSStudy,
     GeneratedLetter,
+    InvestigatorGrant,
+    InvestigatorPayable,
     MonitoringVisit,
     MonitoringVisitFinding,
+    PaymentMilestone,
     RecruitmentRecord,
     SiteMilestone,
     write_audit_log,
@@ -275,6 +279,177 @@ class CRAWorkloadItem(BaseModel):
     active_allocations_count: int
     allocated_sites: List[str]
     allocated_studies: List[str]
+
+
+# --- Investigator Grant & Financial Schemas ---
+class BudgetLineItemCreate(BaseModel):
+    category: str = Field(
+        ..., description="Category of budget item (VISIT_COST, EQUIPMENT, etc.)"
+    )
+    description: str = Field(..., description="Description of budget line item")
+    amount: float = Field(..., description="Budget item cost")
+
+
+class BudgetLineItemResponse(BaseModel):
+    id: str
+    grant_id: str
+    category: str
+    description: str
+    amount: float
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class PaymentMilestoneCreate(BaseModel):
+    milestone_name: str = Field(
+        ..., description="Descriptive name of the payment milestone"
+    )
+    trigger_condition: str = Field(
+        ..., description="Trigger condition (VISIT_COMPLETED, STUDY_APPROVED, MANUAL)"
+    )
+    amount: float = Field(
+        ..., description="Payment amount associated with the milestone"
+    )
+
+
+class PaymentMilestoneResponse(BaseModel):
+    id: str
+    grant_id: str
+    milestone_name: str
+    trigger_condition: str
+    amount: float
+    is_triggered: bool
+    triggered_at: Optional[str]
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class InvestigatorGrantCreate(BaseModel):
+    study_id: str = Field(..., description="Clinical study ID")
+    site_id: str = Field(..., description="Site ID")
+    total_budget: float = Field(
+        0.0, description="Overall budget allocated for the site"
+    )
+    currency: Optional[str] = Field("USD", description="Currency code")
+
+
+class InvestigatorGrantUpdate(BaseModel):
+    total_budget: Optional[float] = Field(None, description="Updated budget")
+    currency: Optional[str] = Field(None, description="Updated currency")
+    status: Optional[str] = Field(None, description="Updated status (DRAFT, APPROVED)")
+
+
+class InvestigatorGrantResponse(BaseModel):
+    id: str
+    study_id: str
+    site_id: str
+    total_budget: float
+    currency: str
+    status: str
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class InvestigatorPayableResponse(BaseModel):
+    id: str
+    grant_id: str
+    milestone_id: Optional[str]
+    amount: float
+    payment_status: str
+    due_date: Optional[str]
+    paid_at: Optional[str]
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+def check_financial_write_roles(roles_str: str) -> None:
+    """Enforces that financial writes are restricted to Grants Manager or Sponsor Admin."""
+    check_roles(roles_str, ["grants manager", "sponsor admin", "system"])
+
+
+def check_grant_mutable(grant: InvestigatorGrant) -> None:
+    """Approved grants are locked from editing."""
+    if grant.status == "APPROVED":
+        raise HTTPException(
+            status_code=400, detail="Approved grants are locked from editing."
+        )
+
+
+async def evaluate_milestones_for_grant(
+    session: AsyncSession,
+    grant_id: str,
+    condition: str,
+    user_id: str,
+    change_reason: str,
+) -> None:
+    """
+    Deterministic, idempotent evaluation of payment milestones for a given condition.
+    Triggers matching milestones and creates single InvestigatorPayable records.
+    """
+    # 1. Fetch the grant
+    grant_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    grant_res = await session.execute(grant_stmt)
+    grant = grant_res.scalars().first()
+    if not grant:
+        return
+
+    # Only approved grants can trigger payments!
+    if grant.status != "APPROVED":
+        return
+
+    # 2. Fetch untriggered milestones with matching trigger_condition
+    ms_stmt = select(PaymentMilestone).where(
+        PaymentMilestone.grant_id == grant_id,
+        PaymentMilestone.trigger_condition == condition.upper(),
+        PaymentMilestone.is_triggered.is_(False),
+    )
+    ms_res = await session.execute(ms_stmt)
+    milestones = ms_res.scalars().all()
+
+    for ms in milestones:
+        # Check if a payable already exists for this milestone to ensure idempotence
+        p_stmt = select(InvestigatorPayable).where(
+            InvestigatorPayable.grant_id == grant_id,
+            InvestigatorPayable.milestone_id == ms.id,
+        )
+        p_res = await session.execute(p_stmt)
+        existing_payable = p_res.scalars().first()
+
+        if not existing_payable:
+            # Trigger the milestone
+            ms.is_triggered = True
+            ms.triggered_at = datetime.utcnow()
+            ms.version_index += 1
+            ms.reason_for_change = f"Automated trigger on condition: {condition}"
+            session.add(ms)
+
+            # Create the payable
+            payable = InvestigatorPayable(
+                grant_id=grant_id,
+                milestone_id=ms.id,
+                amount=ms.amount,
+                payment_status="PENDING",
+                created_by=user_id,
+                reason_for_change=change_reason,
+                version_index=1,
+            )
+            session.add(payable)
+
+            await write_audit_log(
+                session=session,
+                user_id=user_id,
+                user_role="system",
+                action="TRIGGER_MILESTONE",
+                details=f"Triggered milestone '{ms.milestone_name}' ({ms.id}) for grant '{grant_id}' due to condition '{condition}'. Created pending payable of {ms.amount} {grant.currency}.",
+            )
 
 
 @app.get("/health")
@@ -651,6 +826,23 @@ async def complete_monitoring_visit(
         action="GENERATE_LETTER",
         details=f"Generated follow-up letter for visit '{visit.id}'.",
     )
+
+    # 6. Trigger automatic milestone evaluation for any approved grants matching study_id and site_id
+    grants_stmt = select(InvestigatorGrant).where(
+        InvestigatorGrant.study_id == visit.study_id,
+        InvestigatorGrant.site_id == visit.site_id,
+        InvestigatorGrant.status == "APPROVED",
+    )
+    grants_res = await session.execute(grants_stmt)
+    matching_grants = grants_res.scalars().all()
+    for grant in matching_grants:
+        await evaluate_milestones_for_grant(
+            session=session,
+            grant_id=grant.id,
+            condition="VISIT_COMPLETED",
+            user_id=user_id,
+            change_reason="Automated trigger on Visit Completion milestone",
+        )
 
     return MonitoringVisitResponse(
         id=visit.id,
@@ -1490,4 +1682,730 @@ async def retrieve_workload_summaries(
             allocated_studies=list(info["allocated_studies"]),
         )
         for cra_id, info in cra_workload_map.items()
+    ]
+
+
+# --- Investigator Grants Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/grants",
+    response_model=InvestigatorGrantResponse,
+    status_code=201,
+)
+async def create_grant(
+    request: Request,
+    payload: InvestigatorGrantCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> InvestigatorGrantResponse:
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    grant = InvestigatorGrant(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        total_budget=payload.total_budget,
+        currency=payload.currency or "USD",
+        status="DRAFT",
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(grant)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_GRANT",
+        details=f"Created grant for study '{payload.study_id}' site '{payload.site_id}' with budget {payload.total_budget} {grant.currency}.",
+    )
+
+    return InvestigatorGrantResponse(
+        id=grant.id,
+        study_id=grant.study_id,
+        site_id=grant.site_id,
+        total_budget=grant.total_budget,
+        currency=grant.currency,
+        status=grant.status,
+        created_at=grant.created_at.isoformat(),
+        created_by=grant.created_by,
+        reason_for_change=grant.reason_for_change,
+        version_index=grant.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/grants",
+    response_model=List[InvestigatorGrantResponse],
+)
+async def list_grants(
+    request: Request,
+    study_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[InvestigatorGrantResponse]:
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        [
+            "monitor",
+            "cra",
+            "admin",
+            "sponsor admin",
+            "grants manager",
+            "auditor",
+            "system",
+            "anonymous",
+        ],
+    )
+
+    stmt = select(InvestigatorGrant)
+    if study_id:
+        stmt = stmt.where(InvestigatorGrant.study_id == study_id)
+    if site_id:
+        stmt = stmt.where(InvestigatorGrant.site_id == site_id)
+
+    stmt = stmt.order_by(InvestigatorGrant.created_at.desc())
+    result = await session.execute(stmt)
+    grants = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_GRANTS",
+        details="Listed investigator grants.",
+    )
+
+    return [
+        InvestigatorGrantResponse(
+            id=g.id,
+            study_id=g.study_id,
+            site_id=g.site_id,
+            total_budget=g.total_budget,
+            currency=g.currency,
+            status=g.status,
+            created_at=g.created_at.isoformat(),
+            created_by=g.created_by,
+            reason_for_change=g.reason_for_change,
+            version_index=g.version_index,
+        )
+        for g in grants
+    ]
+
+
+@app.get(
+    "/api/v1/ctms/grants/{grant_id}",
+    response_model=InvestigatorGrantResponse,
+)
+async def get_grant(
+    grant_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> InvestigatorGrantResponse:
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        [
+            "monitor",
+            "cra",
+            "admin",
+            "sponsor admin",
+            "grants manager",
+            "auditor",
+            "system",
+            "anonymous",
+        ],
+    )
+
+    stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    result = await session.execute(stmt)
+    grant = result.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="GET_GRANT",
+        details=f"Retrieved grant '{grant_id}'.",
+    )
+
+    return InvestigatorGrantResponse(
+        id=grant.id,
+        study_id=grant.study_id,
+        site_id=grant.site_id,
+        total_budget=grant.total_budget,
+        currency=grant.currency,
+        status=grant.status,
+        created_at=grant.created_at.isoformat(),
+        created_by=grant.created_by,
+        reason_for_change=grant.reason_for_change,
+        version_index=grant.version_index,
+    )
+
+
+@app.put(
+    "/api/v1/ctms/grants/{grant_id}",
+    response_model=InvestigatorGrantResponse,
+)
+async def update_grant(
+    grant_id: str,
+    request: Request,
+    payload: InvestigatorGrantUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> InvestigatorGrantResponse:
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    result = await session.execute(stmt)
+    grant = result.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    check_grant_mutable(grant)
+
+    # Apply changes
+    trigger_approval = False
+    if payload.total_budget is not None:
+        grant.total_budget = payload.total_budget
+    if payload.currency is not None:
+        grant.currency = payload.currency
+    if payload.status is not None:
+        if payload.status.upper() == "APPROVED" and grant.status != "APPROVED":
+            grant.status = "APPROVED"
+            trigger_approval = True
+        else:
+            grant.status = payload.status
+
+    grant.version_index += 1
+    grant.reason_for_change = change_reason
+    session.add(grant)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="UPDATE_GRANT",
+        details=f"Updated grant '{grant_id}'. New Status: '{grant.status}'. Budget: {grant.total_budget}.",
+    )
+
+    if trigger_approval:
+        await evaluate_milestones_for_grant(
+            session=session,
+            grant_id=grant.id,
+            condition="STUDY_APPROVED",
+            user_id=user_id,
+            change_reason="Automated trigger on Study Approved milestone",
+        )
+
+    return InvestigatorGrantResponse(
+        id=grant.id,
+        study_id=grant.study_id,
+        site_id=grant.site_id,
+        total_budget=grant.total_budget,
+        currency=grant.currency,
+        status=grant.status,
+        created_at=grant.created_at.isoformat(),
+        created_by=grant.created_by,
+        reason_for_change=grant.reason_for_change,
+        version_index=grant.version_index,
+    )
+
+
+# --- Budget Line Items Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/grants/{grant_id}/budget-items",
+    response_model=BudgetLineItemResponse,
+    status_code=201,
+)
+async def create_budget_line_item(
+    grant_id: str,
+    request: Request,
+    payload: BudgetLineItemCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> BudgetLineItemResponse:
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    # Fetch grant
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    grant = g_res.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    check_grant_mutable(grant)
+
+    item = BudgetLineItem(
+        grant_id=grant_id,
+        category=payload.category,
+        description=payload.description,
+        amount=payload.amount,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(item)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_BUDGET_ITEM",
+        details=f"Created budget line item '{payload.category}' for grant '{grant_id}' with amount {payload.amount}.",
+    )
+
+    return BudgetLineItemResponse(
+        id=item.id,
+        grant_id=item.grant_id,
+        category=item.category,
+        description=item.description,
+        amount=item.amount,
+        created_at=item.created_at.isoformat(),
+        created_by=item.created_by,
+        reason_for_change=item.reason_for_change,
+        version_index=item.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/grants/{grant_id}/budget-items",
+    response_model=List[BudgetLineItemResponse],
+)
+async def list_budget_line_items(
+    grant_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[BudgetLineItemResponse]:
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        [
+            "monitor",
+            "cra",
+            "admin",
+            "sponsor admin",
+            "grants manager",
+            "auditor",
+            "system",
+            "anonymous",
+        ],
+    )
+
+    # Confirm grant exists
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    if not g_res.scalars().first():
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    stmt = (
+        select(BudgetLineItem)
+        .where(BudgetLineItem.grant_id == grant_id)
+        .order_by(BudgetLineItem.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    items = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_BUDGET_ITEMS",
+        details=f"Listed budget items for grant '{grant_id}'.",
+    )
+
+    return [
+        BudgetLineItemResponse(
+            id=item.id,
+            grant_id=item.grant_id,
+            category=item.category,
+            description=item.description,
+            amount=item.amount,
+            created_at=item.created_at.isoformat(),
+            created_by=item.created_by,
+            reason_for_change=item.reason_for_change,
+            version_index=item.version_index,
+        )
+        for item in items
+    ]
+
+
+# --- Payment Milestones Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/grants/{grant_id}/milestones",
+    response_model=PaymentMilestoneResponse,
+    status_code=201,
+)
+async def create_payment_milestone(
+    grant_id: str,
+    request: Request,
+    payload: PaymentMilestoneCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> PaymentMilestoneResponse:
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    # Fetch grant
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    grant = g_res.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    check_grant_mutable(grant)
+
+    # Validate trigger condition
+    tc = payload.trigger_condition.upper()
+    if tc not in ("VISIT_COMPLETED", "STUDY_APPROVED", "MANUAL"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid trigger condition: {payload.trigger_condition}",
+        )
+
+    ms = PaymentMilestone(
+        grant_id=grant_id,
+        milestone_name=payload.milestone_name,
+        trigger_condition=tc,
+        amount=payload.amount,
+        is_triggered=False,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(ms)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_PAYMENT_MILESTONE",
+        details=f"Created payment milestone '{payload.milestone_name}' for grant '{grant_id}' with trigger condition '{tc}' and amount {payload.amount}.",
+    )
+
+    return PaymentMilestoneResponse(
+        id=ms.id,
+        grant_id=ms.grant_id,
+        milestone_name=ms.milestone_name,
+        trigger_condition=ms.trigger_condition,
+        amount=ms.amount,
+        is_triggered=ms.is_triggered,
+        triggered_at=ms.triggered_at.isoformat() if ms.triggered_at else None,
+        created_at=ms.created_at.isoformat(),
+        created_by=ms.created_by,
+        reason_for_change=ms.reason_for_change,
+        version_index=ms.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/grants/{grant_id}/milestones",
+    response_model=List[PaymentMilestoneResponse],
+)
+async def list_payment_milestones(
+    grant_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[PaymentMilestoneResponse]:
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        [
+            "monitor",
+            "cra",
+            "admin",
+            "sponsor admin",
+            "grants manager",
+            "auditor",
+            "system",
+            "anonymous",
+        ],
+    )
+
+    # Confirm grant exists
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    if not g_res.scalars().first():
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    stmt = (
+        select(PaymentMilestone)
+        .where(PaymentMilestone.grant_id == grant_id)
+        .order_by(PaymentMilestone.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    milestones = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_PAYMENT_MILESTONES",
+        details=f"Listed payment milestones for grant '{grant_id}'.",
+    )
+
+    return [
+        PaymentMilestoneResponse(
+            id=ms.id,
+            grant_id=ms.grant_id,
+            milestone_name=ms.milestone_name,
+            trigger_condition=ms.trigger_condition,
+            amount=ms.amount,
+            is_triggered=ms.is_triggered,
+            triggered_at=ms.triggered_at.isoformat() if ms.triggered_at else None,
+            created_at=ms.created_at.isoformat(),
+            created_by=ms.created_by,
+            reason_for_change=ms.reason_for_change,
+            version_index=ms.version_index,
+        )
+        for ms in milestones
+    ]
+
+
+@app.post(
+    "/api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger",
+    response_model=PaymentMilestoneResponse,
+)
+async def trigger_manual_milestone(
+    grant_id: str,
+    milestone_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> PaymentMilestoneResponse:
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    # Fetch grant
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    grant = g_res.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    # Fetch milestone
+    stmt = select(PaymentMilestone).where(
+        PaymentMilestone.id == milestone_id, PaymentMilestone.grant_id == grant_id
+    )
+    result = await session.execute(stmt)
+    ms = result.scalars().first()
+
+    if not ms:
+        raise HTTPException(status_code=404, detail="Payment milestone not found")
+
+    if ms.trigger_condition != "MANUAL":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only MANUAL milestones can be manually triggered via this endpoint. Milestone has condition: {ms.trigger_condition}",
+        )
+
+    # Trigger manually
+    if not ms.is_triggered:
+        if grant.status != "APPROVED":
+            raise HTTPException(
+                status_code=400,
+                detail="Milestones can only be triggered on approved grants.",
+            )
+
+        ms.is_triggered = True
+        ms.triggered_at = datetime.utcnow()
+        ms.version_index += 1
+        ms.reason_for_change = change_reason
+        session.add(ms)
+
+        # Check if payable already exists to make it idempotent
+        p_stmt = select(InvestigatorPayable).where(
+            InvestigatorPayable.grant_id == grant_id,
+            InvestigatorPayable.milestone_id == ms.id,
+        )
+        p_res = await session.execute(p_stmt)
+        existing_payable = p_res.scalars().first()
+
+        if not existing_payable:
+            payable = InvestigatorPayable(
+                grant_id=grant_id,
+                milestone_id=ms.id,
+                amount=ms.amount,
+                payment_status="PENDING",
+                created_by=user_id,
+                reason_for_change=change_reason,
+                version_index=1,
+            )
+            session.add(payable)
+
+            await write_audit_log(
+                session=session,
+                user_id=user_id,
+                user_role=user_roles,
+                action="MANUAL_TRIGGER_MILESTONE",
+                details=f"Manually triggered milestone '{ms.milestone_name}' ({ms.id}) for grant '{grant_id}'. Created pending payable of {ms.amount} {grant.currency}.",
+            )
+
+        await session.flush()
+
+    return PaymentMilestoneResponse(
+        id=ms.id,
+        grant_id=ms.grant_id,
+        milestone_name=ms.milestone_name,
+        trigger_condition=ms.trigger_condition,
+        amount=ms.amount,
+        is_triggered=ms.is_triggered,
+        triggered_at=ms.triggered_at.isoformat() if ms.triggered_at else None,
+        created_at=ms.created_at.isoformat(),
+        created_by=ms.created_by,
+        reason_for_change=ms.reason_for_change,
+        version_index=ms.version_index,
+    )
+
+
+@app.post(
+    "/api/v1/ctms/grants/{grant_id}/evaluate",
+    status_code=200,
+)
+async def evaluate_grant_milestones(
+    grant_id: str,
+    request: Request,
+    condition: str = "STUDY_APPROVED",
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Manually run the milestone evaluation engine for a specific condition."""
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_financial_write_roles(user_roles)
+
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    grant = g_res.scalars().first()
+
+    if not grant:
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    await evaluate_milestones_for_grant(
+        session=session,
+        grant_id=grant_id,
+        condition=condition,
+        user_id=user_id,
+        change_reason=change_reason,
+    )
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="EVALUATE_MILESTONES",
+        details=f"Evaluated milestones for grant '{grant_id}' under condition '{condition}'.",
+    )
+
+    return {
+        "status": "success",
+        "message": f"Milestone evaluation executed for condition: {condition}",
+    }
+
+
+# --- Investigator Payables Endpoints ---
+
+
+@app.get(
+    "/api/v1/ctms/grants/{grant_id}/payables",
+    response_model=List[InvestigatorPayableResponse],
+)
+async def list_investigator_payables(
+    grant_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[InvestigatorPayableResponse]:
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        [
+            "monitor",
+            "cra",
+            "admin",
+            "sponsor admin",
+            "grants manager",
+            "auditor",
+            "system",
+            "anonymous",
+        ],
+    )
+
+    # Confirm grant exists
+    g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
+    g_res = await session.execute(g_stmt)
+    if not g_res.scalars().first():
+        raise HTTPException(status_code=404, detail="Investigator grant not found")
+
+    stmt = (
+        select(InvestigatorPayable)
+        .where(InvestigatorPayable.grant_id == grant_id)
+        .order_by(InvestigatorPayable.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    payables = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_PAYABLES",
+        details=f"Listed payables for grant '{grant_id}'.",
+    )
+
+    return [
+        InvestigatorPayableResponse(
+            id=p.id,
+            grant_id=p.grant_id,
+            milestone_id=p.milestone_id,
+            amount=p.amount,
+            payment_status=p.payment_status,
+            due_date=p.due_date.isoformat() if p.due_date else None,
+            paid_at=p.paid_at.isoformat() if p.paid_at else None,
+            created_at=p.created_at.isoformat(),
+            created_by=p.created_by,
+            reason_for_change=p.reason_for_change,
+            version_index=p.version_index,
+        )
+        for p in payables
     ]
