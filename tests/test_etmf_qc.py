@@ -429,7 +429,8 @@ async def test_qc_history_api_and_audit():
     logs = audit_resp.json()
 
     qc_hist_view_logs = [
-        log for log in logs
+        log
+        for log in logs
         if log["action"] == "QC_HISTORY_VIEW" and log["document_id"] == doc_id
     ]
     assert len(qc_hist_view_logs) > 0

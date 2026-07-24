@@ -6,6 +6,11 @@ from packages.security.context import (
     current_timestamp,
     current_user_id,
 )
+from packages.security.rbac import (
+    get_normalized_roles,
+    verify_is_auditor,
+    verify_not_auditor,
+)
 from packages.security.signing import (
     canonical_serialize,
     generate_canonical_signature,
@@ -22,4 +27,7 @@ __all__ = [
     "canonical_serialize",
     "generate_canonical_signature",
     "verify_canonical_signature",
+    "get_normalized_roles",
+    "verify_not_auditor",
+    "verify_is_auditor",
 ]

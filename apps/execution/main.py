@@ -10,6 +10,7 @@ from typing import Any, AsyncGenerator, List, Optional
 from cryptography.fernet import Fernet
 from fastapi import (
     BackgroundTasks,
+    Depends,
     FastAPI,
     File,
     Form,
@@ -37,6 +38,7 @@ from apps.execution.database.models import (
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.translator import process_translation
 from apps.execution.ucum import convert_unit, get_normalized_representation
+from packages.security import verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -308,7 +310,10 @@ class ObservationResponse(BaseModel):
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
-async def create_subject(payload: SubjectCreate) -> SubjectResponse:
+async def create_subject(
+    payload: SubjectCreate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> SubjectResponse:
     """Create a new clinical subject pseudonymously."""
     encrypted_demo = None
     if payload.demographics is not None:
@@ -336,7 +341,10 @@ async def create_subject(payload: SubjectCreate) -> SubjectResponse:
 
 
 @app.post("/api/v1/execution/visits", response_model=VisitResponse)
-async def create_visit(payload: VisitCreate) -> VisitResponse:
+async def create_visit(
+    payload: VisitCreate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> VisitResponse:
     """Create a new clinical visit."""
     async with db_manager.get_session_maker()() as session:
         vdate = payload.visit_date or datetime.now()
@@ -361,7 +369,10 @@ async def create_visit(payload: VisitCreate) -> VisitResponse:
 
 
 @app.post("/api/v1/execution/observations", response_model=ObservationResponse)
-async def create_observation(payload: ObservationCreate) -> ObservationResponse:
+async def create_observation(
+    payload: ObservationCreate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> ObservationResponse:
     """Create a new clinical observation, performing unit normalization and outlier checks."""
     norm_val, norm_unit = get_normalized_representation(payload.value, payload.unit)
 
@@ -860,9 +871,12 @@ class QueryUpdate(BaseModel):
     escalated_at: Optional[datetime] = None
 
 
-def _is_data_manager(roles_str: str) -> bool:
+def _is_data_manager(roles_str: Any) -> bool:
     """Check if the roles include Data Manager role variations."""
-    roles = [r.strip().lower() for r in roles_str.split(",")]
+    if isinstance(roles_str, str):
+        roles = [r.strip().lower() for r in roles_str.split(",")]
+    else:
+        roles = [str(r).strip().lower() for r in roles_str]
     dm_roles = {
         "data manager",
         "data_manager",
@@ -874,9 +888,12 @@ def _is_data_manager(roles_str: str) -> bool:
     return any(r in dm_roles for r in roles)
 
 
-def _is_investigator(roles_str: str) -> bool:
+def _is_investigator(roles_str: Any) -> bool:
     """Check if the roles include Investigator role variations."""
-    roles = [r.strip().lower() for r in roles_str.split(",")]
+    if isinstance(roles_str, str):
+        roles = [r.strip().lower() for r in roles_str.split(",")]
+    else:
+        roles = [str(r).strip().lower() for r in roles_str]
     inv_roles = {
         "investigator",
         "site_investigator",

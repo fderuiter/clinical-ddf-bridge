@@ -31,7 +31,7 @@ STAGE_TO_REQUIRED_ROLES: Dict[str, list[str]] = {
 }
 
 
-def has_required_role(actor_role: str, target_status: str) -> bool:
+def has_required_role(actor_role: str | list[str], target_status: str) -> bool:
     """
     Checks if the given actor roles contain any role authorized to transition to the target status.
     """
@@ -40,7 +40,10 @@ def has_required_role(actor_role: str, target_status: str) -> bool:
         return True
 
     # Normalize roles to lowercase list
-    actor_roles = [r.strip().lower() for r in actor_role.split(",")]
+    if isinstance(actor_role, str):
+        actor_roles = [r.strip().lower() for r in actor_role.split(",")]
+    else:
+        actor_roles = [str(r).strip().lower() for r in actor_role]
     return any(role in required_roles for role in actor_roles)
 
 
