@@ -1,6 +1,8 @@
 from __future__ import annotations
-from typing import Any, List, Literal, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+
+from typing import Any, List, Literal, Optional
+
+from pydantic import BaseModel, model_validator
 
 
 class FieldReference(BaseModel):
