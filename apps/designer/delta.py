@@ -10,11 +10,13 @@ from neo4j.exceptions import TransientError
 
 class ImmutabilityViolationError(Exception):
     """Raised when trying to mutate a locked, published, or archived graph or version."""
+
     pass
 
 
 class ConcurrentLockingError(Exception):
     """Raised when a concurrent locking/version conflict occurs."""
+
     pass
 
 
@@ -121,13 +123,19 @@ def with_transaction_retry(
     return decorator
 
 
-async def assert_graph_mutable(tx, study_id: Optional[str] = None, object_id: Optional[str] = None):
+async def assert_graph_mutable(
+    tx, study_id: Optional[str] = None, object_id: Optional[str] = None
+):
     """
     Ensures that the study or library object is in a mutable state (DRAFT or ACTIVE).
     Raises ImmutabilityViolationError if the status of the latest version is LOCKED, PUBLISHED, or ARCHIVED.
     """
     # Bypass for unit-test mocks to keep legacy tests green
-    if type(tx).__name__ in ("MagicMock", "AsyncMock") or hasattr(tx, "assert_called") or hasattr(tx, "called"):
+    if (
+        type(tx).__name__ in ("MagicMock", "AsyncMock")
+        or hasattr(tx, "assert_called")
+        or hasattr(tx, "called")
+    ):
         return
 
     if study_id:
@@ -273,7 +281,12 @@ async def create_study_version(
             WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
             RETURN sv.id as id
             """
-            check_ver_res = await tx.run(check_ver_query, study_id=study_id, version_index=version_index, version_tag=version_tag)
+            check_ver_res = await tx.run(
+                check_ver_query,
+                study_id=study_id,
+                version_index=version_index,
+                version_tag=version_tag,
+            )
             existing_ver = await check_ver_res.single()
             if existing_ver:
                 raise ConcurrentLockingError("Version index or tag already exists")
@@ -455,13 +468,19 @@ async def get_study_differences(
 
 @with_transaction_retry()
 async def create_rule_node(
-    driver, study_id: str, user_id: str, change_reason: str, rule_id: str, rule_data: Dict[str, Any]
+    driver,
+    study_id: str,
+    user_id: str,
+    change_reason: str,
+    rule_id: str,
+    rule_data: Dict[str, Any],
 ):
     """
     Creates a new versioned rule under a study.
     Connects to an Action node via AFTER.
     """
     import json
+
     action_id = str(uuid.uuid4())
     condition_json = json.dumps(rule_data.get("condition", {}))
 
@@ -505,7 +524,9 @@ async def create_rule_node(
             await assert_graph_mutable(tx, study_id=study_id)
 
             # Lock study root node
-            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            await tx.run(
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
+            )
             result = await tx.run(
                 query,
                 study_id=study_id,
@@ -527,13 +548,19 @@ async def create_rule_node(
 
 @with_transaction_retry()
 async def update_rule_node(
-    driver, study_id: str, rule_id: str, user_id: str, change_reason: str, rule_data: Dict[str, Any]
+    driver,
+    study_id: str,
+    rule_id: str,
+    user_id: str,
+    change_reason: str,
+    rule_data: Dict[str, Any],
 ):
     """
     Updates an existing rule by creating a new version.
     Connects to Action via BEFORE/AFTER and uses PREVIOUS_VERSION.
     """
     import json
+
     action_id = str(uuid.uuid4())
     condition_json = json.dumps(rule_data.get("condition", {}))
 
@@ -582,7 +609,9 @@ async def update_rule_node(
             # Assert immutability
             await assert_graph_mutable(tx, study_id=study_id)
 
-            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            await tx.run(
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
+            )
             result = await tx.run(
                 query,
                 study_id=study_id,
@@ -655,7 +684,9 @@ async def delete_rule_node(
             # Assert immutability
             await assert_graph_mutable(tx, study_id=study_id)
 
-            await tx.run("MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id)
+            await tx.run(
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
+            )
             result = await tx.run(
                 query,
                 study_id=study_id,
@@ -673,6 +704,7 @@ async def get_rules_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
     Retrieves all active rules (not soft-deleted) for a study.
     """
     import json
+
     query = """
     MATCH (s:Study {id: $study_id})-[:HAS_RULE]->(r:Rule)-[:HAS_VERSION]->(rv:RuleVersion)
     WHERE NOT (rv)<-[:PREVIOUS_VERSION]-() AND rv.is_deleted = false

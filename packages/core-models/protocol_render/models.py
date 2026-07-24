@@ -8,6 +8,7 @@ documents in compliance with FDA 21 CFR Part 11 and CDISC USDM.
 
 from datetime import datetime, timezone
 from typing import List, Optional
+
 import usdm_model
 from pydantic import BaseModel, Field, model_validator
 
@@ -56,7 +57,9 @@ class NarrativeItemView(BaseModel):
     Presentation view of a single narrative content block (e.g., paragraph, list item, or note).
     """
 
-    id: str = Field(..., description="Unique identifier for the narrative content item.")
+    id: str = Field(
+        ..., description="Unique identifier for the narrative content item."
+    )
     name: Optional[str] = Field(None, description="Optional name/tag for the item.")
     text: str = Field(..., description="The narrative text content.")
     order: int = Field(..., description="Sequential sorting order within its section.")
@@ -69,7 +72,8 @@ class NarrativeSectionView(BaseModel):
 
     section_id: str = Field(..., description="Unique identifier of the section.")
     section_number: Optional[str] = Field(
-        None, description="Formatted section hierarchy identifier (e.g., '1.1', '2.3.1')."
+        None,
+        description="Formatted section hierarchy identifier (e.g., '1.1', '2.3.1').",
     )
     title: str = Field(..., description="The heading or title of the section.")
     items: List[NarrativeItemView] = Field(
@@ -94,13 +98,16 @@ class SynopsisView(BaseModel):
         None, description="Sponsor protocol identification number."
     )
     sponsor_name: Optional[str] = Field(None, description="Name of the study sponsor.")
-    phase: Optional[str] = Field(None, description="Clinical trial phase (e.g. Phase I, Phase II).")
+    phase: Optional[str] = Field(
+        None, description="Clinical trial phase (e.g. Phase I, Phase II)."
+    )
     objectives: List[str] = Field(
         default_factory=list,
         description="Key objectives of the clinical trial represented as strings.",
     )
     study_design_type: Optional[str] = Field(
-        None, description="The structural design type (e.g., Randomized, Double-Blind, Parallel)."
+        None,
+        description="The structural design type (e.g., Randomized, Double-Blind, Parallel).",
     )
     population: Optional[str] = Field(
         None, description="Summary of target study population and eligibility criteria."
@@ -123,7 +130,9 @@ class SoAHeaderEpoch(BaseModel):
     """
 
     epoch_id: str = Field(..., description="Unique epoch identifier.")
-    epoch_name: str = Field(..., description="Name of the study epoch (e.g., Treatment, Follow-up).")
+    epoch_name: str = Field(
+        ..., description="Name of the study epoch (e.g., Treatment, Follow-up)."
+    )
     sequence: int = Field(..., description="Sequence number of the epoch.")
 
 
@@ -147,7 +156,8 @@ class SoACellView(BaseModel):
     encounter_id: str = Field(..., description="Target encounter/visit identifier.")
     epoch_id: str = Field(..., description="Associated study epoch identifier.")
     is_applicable: bool = Field(
-        ..., description="Whether the activity is planned to occur during this encounter."
+        ...,
+        description="Whether the activity is planned to occur during this encounter.",
     )
     details: Optional[str] = Field(
         None, description="Optional timing windows, constraints, or instruction notes."
@@ -160,7 +170,9 @@ class SoARowView(BaseModel):
     """
 
     activity_id: str = Field(..., description="Unique activity/procedure identifier.")
-    activity_name: str = Field(..., description="Name or label of the activity/procedure.")
+    activity_name: str = Field(
+        ..., description="Name or label of the activity/procedure."
+    )
     cells: List[SoACellView] = Field(
         default_factory=list,
         description="Applicability cell mapping for each encounter column.",
@@ -200,10 +212,11 @@ class RenderedProtocolDocument(BaseModel):
     )
     narrative_sections: List[NarrativeSectionView] = Field(
         default_factory=list,
-        description="The ordered and structured narrative sections."
+        description="The ordered and structured narrative sections.",
     )
     soa_matrix: SoAMatrixView = Field(
-        ..., description="The structured Schedule of Activities (SoA) presentation matrix."
+        ...,
+        description="The structured Schedule of Activities (SoA) presentation matrix.",
     )
     source_study: Optional[usdm_model.Study] = Field(
         None,

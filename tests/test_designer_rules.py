@@ -31,7 +31,9 @@ GATEWAY_SECRET = "internal-gateway-secret-12345"
 
 
 def get_auth_headers(
-    user_id="test_designer", roles="STUDY_DESIGNER", change_reason="Adding skip logic rules"
+    user_id="test_designer",
+    roles="STUDY_DESIGNER",
+    change_reason="Adding skip logic rules",
 ):
     timestamp = str(time.time())
     payload = {
@@ -58,6 +60,7 @@ def get_auth_headers(
 # 1. SCHEMA VALIDATION TESTS
 # =====================================================================
 
+
 def test_valid_skip_logic_schema():
     payload = {
         "type": "skip_logic",
@@ -65,18 +68,12 @@ def test_valid_skip_logic_schema():
             "type": "comparison",
             "operator": "==",
             "operands": [
-                {
-                    "type": "field_ref",
-                    "field_ref": {"field_id": "VSPERF"}
-                },
-                {
-                    "type": "constant",
-                    "value": "N"
-                }
-            ]
+                {"type": "field_ref", "field_ref": {"field_id": "VSPERF"}},
+                {"type": "constant", "value": "N"},
+            ],
         },
         "action": "hide",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
     req = CreateRuleRequest(**payload)
     assert req.type == "skip_logic"
@@ -86,13 +83,7 @@ def test_valid_skip_logic_schema():
 
 def test_invalid_skip_logic_schema_missing_fields():
     # Missing action and target_field for skip_logic
-    payload = {
-        "type": "skip_logic",
-        "condition": {
-            "type": "constant",
-            "value": True
-        }
-    }
+    payload = {"type": "skip_logic", "condition": {"type": "constant", "value": True}}
     with pytest.raises(ValueError) as exc:
         CreateRuleRequest(**payload)
     assert "target_field" in str(exc.value) or "action" in str(exc.value)
@@ -107,11 +98,11 @@ def test_invalid_logical_not_arity():
             "operator": "not",
             "operands": [
                 {"type": "constant", "value": True},
-                {"type": "constant", "value": False}
-            ]
+                {"type": "constant", "value": False},
+            ],
         },
         "action": "hide",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
     with pytest.raises(ValueError) as exc:
         CreateRuleRequest(**payload)
@@ -125,12 +116,10 @@ def test_invalid_comparison_arity():
         "condition": {
             "type": "comparison",
             "operator": "==",
-            "operands": [
-                {"type": "constant", "value": 5}
-            ]
+            "operands": [{"type": "constant", "value": 5}],
         },
         "action": "hide",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
     with pytest.raises(ValueError) as exc:
         CreateRuleRequest(**payload)
@@ -141,14 +130,17 @@ def test_invalid_comparison_arity():
 # 2. XPATH COMPILATION TESTS
 # =====================================================================
 
+
 def test_xpath_compile_simple():
     node = ExpressionNode(
         type="comparison",
         operator="==",
         operands=[
-            ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="VSSBP")),
-            ExpressionNode(type="constant", value=120)
-        ]
+            ExpressionNode(
+                type="field_ref", field_ref=FieldReference(field_id="VSSBP")
+            ),
+            ExpressionNode(type="constant", value=120),
+        ],
     )
     xpath = compile_to_xpath(node)
     assert xpath == "(/clinical_data/VSSBP = 120)"
@@ -162,17 +154,23 @@ def test_xpath_compile_logical_and_functions():
             ExpressionNode(
                 type="function",
                 operator="is_not_empty",
-                operands=[ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="VSSBP"))]
+                operands=[
+                    ExpressionNode(
+                        type="field_ref", field_ref=FieldReference(field_id="VSSBP")
+                    )
+                ],
             ),
             ExpressionNode(
                 type="comparison",
                 operator=">",
                 operands=[
-                    ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="VSSBP")),
-                    ExpressionNode(type="constant", value=200)
-                ]
-            )
-        ]
+                    ExpressionNode(
+                        type="field_ref", field_ref=FieldReference(field_id="VSSBP")
+                    ),
+                    ExpressionNode(type="constant", value=200),
+                ],
+            ),
+        ],
     )
     xpath = compile_to_xpath(node)
     assert "not(empty(/clinical_data/VSSBP))" in xpath
@@ -184,6 +182,7 @@ def test_xpath_compile_logical_and_functions():
 # 3. UNKNOWN FIELDS AND CIRCULAR CYCLES
 # =====================================================================
 
+
 def test_detect_unknown_fields():
     study_projection = {
         "arms": [
@@ -191,9 +190,7 @@ def test_detect_unknown_fields():
                 "visits": [
                     {
                         "visit_id": "visit_1",
-                        "activities": [
-                            {"activity_id": "act_1", "name": "Vitals"}
-                        ]
+                        "activities": [{"activity_id": "act_1", "name": "Vitals"}],
                     }
                 ]
             }
@@ -201,11 +198,15 @@ def test_detect_unknown_fields():
     }
 
     # Valid field
-    node_valid = ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="act_1"))
+    node_valid = ExpressionNode(
+        type="field_ref", field_ref=FieldReference(field_id="act_1")
+    )
     assert len(detect_unknown_fields(node_valid, study_projection)) == 0
 
     # Invalid field
-    node_invalid = ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="nonexistent_field"))
+    node_invalid = ExpressionNode(
+        type="field_ref", field_ref=FieldReference(field_id="nonexistent_field")
+    )
     failures = detect_unknown_fields(node_invalid, study_projection)
     assert len(failures) == 1
     assert "Unknown field reference: 'nonexistent_field'" in failures[0]
@@ -218,29 +219,27 @@ def test_detect_circular_dependencies():
             "id": "rule_a",
             "type": "skip_logic",
             "target_field": "field_A",
-            "condition": {
-                "type": "field_ref",
-                "field_ref": {"field_id": "field_B"}
-            }
+            "condition": {"type": "field_ref", "field_ref": {"field_id": "field_B"}},
         },
         {
             "id": "rule_b",
             "type": "skip_logic",
             "target_field": "field_B",
-            "condition": {
-                "type": "field_ref",
-                "field_ref": {"field_id": "field_A"}
-            }
-        }
+            "condition": {"type": "field_ref", "field_ref": {"field_id": "field_A"}},
+        },
     ]
     cycles = detect_circular_dependencies(rules)
     assert len(cycles) > 0
-    assert "field_A -> field_B -> field_A" in cycles[0] or "field_B -> field_A -> field_B" in cycles[0]
+    assert (
+        "field_A -> field_B -> field_A" in cycles[0]
+        or "field_B -> field_A -> field_B" in cycles[0]
+    )
 
 
 # =====================================================================
 # 4. REST API CRUD & PREVIEW TESTS
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_rules_crud_endpoints():
@@ -258,17 +257,17 @@ async def test_rules_crud_endpoints():
                 "operator": "==",
                 "operands": [
                     {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
-                    {"type": "constant", "value": "N"}
-                ]
+                    {"type": "constant", "value": "N"},
+                ],
             },
             "action": "hide",
-            "target_field": "act_2"
+            "target_field": "act_2",
         }
 
         create_res = await client.post(
             "/api/v1/studies/study_1/rules",
             json=rule_payload,
-            headers=get_auth_headers()
+            headers=get_auth_headers(),
         )
         assert create_res.status_code == 201
         created_data = create_res.json()
@@ -279,8 +278,7 @@ async def test_rules_crud_endpoints():
 
         # 2. Get rules list
         list_res = await client.get(
-            "/api/v1/studies/study_1/rules",
-            headers=get_auth_headers()
+            "/api/v1/studies/study_1/rules", headers=get_auth_headers()
         )
         assert list_res.status_code == 200
         assert len(list_res.json()) == 1
@@ -288,8 +286,7 @@ async def test_rules_crud_endpoints():
 
         # 3. Get rule by ID
         get_res = await client.get(
-            f"/api/v1/studies/study_1/rules/{rule_id}",
-            headers=get_auth_headers()
+            f"/api/v1/studies/study_1/rules/{rule_id}", headers=get_auth_headers()
         )
         assert get_res.status_code == 200
         assert get_res.json()["target_field"] == "act_2"
@@ -300,7 +297,7 @@ async def test_rules_crud_endpoints():
         update_res = await client.put(
             f"/api/v1/studies/study_1/rules/{rule_id}",
             json=update_payload,
-            headers=get_auth_headers()
+            headers=get_auth_headers(),
         )
         assert update_res.status_code == 200
         updated_data = update_res.json()
@@ -315,16 +312,16 @@ async def test_rules_crud_endpoints():
                 "operator": "==",
                 "operands": [
                     {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
-                    {"type": "constant", "value": "N"}
-                ]
+                    {"type": "constant", "value": "N"},
+                ],
             },
             "action": "hide",
-            "target_field": "act_1"  # Causes circle since act_1 depends on act_1
+            "target_field": "act_1",  # Causes circle since act_1 depends on act_1
         }
         preview_res = await client.post(
             "/api/v1/studies/study_1/rules/preview",
             json=preview_payload,
-            headers=get_auth_headers()
+            headers=get_auth_headers(),
         )
         assert preview_res.status_code == 200
         preview_data = preview_res.json()
@@ -334,16 +331,14 @@ async def test_rules_crud_endpoints():
 
         # 6. Delete the rule
         del_res = await client.delete(
-            f"/api/v1/studies/study_1/rules/{rule_id}",
-            headers=get_auth_headers()
+            f"/api/v1/studies/study_1/rules/{rule_id}", headers=get_auth_headers()
         )
         assert del_res.status_code == 200
         assert del_res.json()["status"] == "success"
 
         # Verify soft-deleted rule is no longer in active list
         list_res_after = await client.get(
-            "/api/v1/studies/study_1/rules",
-            headers=get_auth_headers()
+            "/api/v1/studies/study_1/rules", headers=get_auth_headers()
         )
         assert len(list_res_after.json()) == 0
 
@@ -361,6 +356,7 @@ async def test_rules_auth_gateways():
 # =====================================================================
 # 5. NEO4J CYPHER INTEGRATION TESTS
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_neo4j_create_rule():
@@ -382,7 +378,7 @@ async def test_neo4j_create_rule():
         "type": "skip_logic",
         "condition": {"type": "constant", "value": True},
         "action": "hide",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
 
     res = await create_rule_node(
@@ -413,7 +409,7 @@ async def test_neo4j_update_rule():
         "type": "skip_logic",
         "condition": {"type": "constant", "value": True},
         "action": "show",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
 
     res = await update_rule_node(
@@ -462,7 +458,7 @@ async def test_neo4j_get_rules():
         "type": "skip_logic",
         "condition_json": '{"type": "constant", "value": true}',
         "action": "show",
-        "target_field": "VSSBP"
+        "target_field": "VSSBP",
     }
 
     result_mock = AsyncMock()
@@ -479,6 +475,7 @@ async def test_neo4j_get_rules():
 # 6. DDF / USDM PROJECTION MAPPING TESTS
 # =====================================================================
 
+
 def test_map_study_to_usdm_with_rules():
     study_data = {
         "study_id": "study_1",
@@ -493,11 +490,9 @@ def test_map_study_to_usdm_with_rules():
                     {
                         "visit_id": "visit_1",
                         "name": "Visit 1",
-                        "activities": [
-                            {"activity_id": "act_1", "name": "Vitals"}
-                        ]
+                        "activities": [{"activity_id": "act_1", "name": "Vitals"}],
                     }
-                ]
+                ],
             }
         ],
         "rules": [
@@ -508,9 +503,9 @@ def test_map_study_to_usdm_with_rules():
                 "target_field": "act_1",
                 "query_message": "Invalid value",
                 "is_deleted": False,
-                "version_index": 1
+                "version_index": 1,
             }
-        ]
+        ],
     }
 
     mapped = map_study_to_usdm(study_data)
