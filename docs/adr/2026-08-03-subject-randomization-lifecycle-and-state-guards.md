@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-In clinical trials, once a subject is randomized, their baseline characteristics (stratification factors) must remain completely static to ensure statistical validity and prevent post-hoc bias. Furthermore, state transitions—such as moving from screening to emergency unblinding or withdrawal—must follow a highly regulated, audited path. 
+In clinical trials, once a subject is randomized, their baseline characteristics (stratification factors) must remain completely static to ensure statistical validity and prevent post-hoc bias. Furthermore, state transitions—such as moving from screening to emergency unblinding or withdrawal—must follow a highly regulated, audited path.
 To satisfy these requirements, the platform needs a secure, randomization-aware state machine and immutable stratification factor locking in the clinical execution subject model (`ClinicalSubject`).
 
 ## 2. Decision Drivers & Constraints
