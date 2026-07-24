@@ -571,6 +571,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_repository_from_git_ssh` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_create_new` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_dry_run` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sync_ruleset_permission_denied_403` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_update_existing` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
