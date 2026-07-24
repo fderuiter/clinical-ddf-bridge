@@ -10,6 +10,7 @@ from apps.ctms.database import db_manager
 from apps.ctms.main import app
 from apps.ctms.models import (
     Base,
+    CRAAllocation,
     CTMSAuditLog,
     GeneratedLetter,
 )
@@ -473,3 +474,277 @@ async def test_monitoring_visit_invalid_state_and_findings():
         headers=cra_headers,
     )
     assert response_no_letter.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_recruitment_records_crud_and_audit():
+    """
+    Verify creation, listing, and audit trails of recruitment records.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="CRA", change_reason="Record site enrollment")
+
+    # 1. Create a Recruitment Record
+    payload = {
+        "site_id": "site_A",
+        "study_id": "study_X",
+        "screened_count": 10,
+        "enrolled_count": 5,
+        "target_count": 20,
+    }
+    response = client.post("/api/v1/ctms/recruitment", json=payload, headers=headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["site_id"] == "site_A"
+    assert data["study_id"] == "study_X"
+    assert data["screened_count"] == 10
+    assert data["enrolled_count"] == 5
+    assert data["target_count"] == 20
+    assert data["version_index"] == 1
+    assert data["created_by"] == "test_user"
+    assert data["reason_for_change"] == "Record site enrollment"
+
+    # 2. List Recruitment Records
+    list_headers = get_auth_headers(roles="Monitor")
+    list_response = client.get(
+        "/api/v1/ctms/recruitment?study_id=study_X", headers=list_headers
+    )
+    assert list_response.status_code == 200
+    records = list_response.json()
+    assert len(records) >= 1
+    assert records[0]["site_id"] == "site_A"
+
+    # Filter with site_id that does not exist should return empty
+    empty_response = client.get(
+        "/api/v1/ctms/recruitment?site_id=site_B", headers=list_headers
+    )
+    assert empty_response.status_code == 200
+    assert len(empty_response.json()) == 0
+
+    # 3. Verify Audit Log entry
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(CTMSAuditLog).where(
+            CTMSAuditLog.action == "CREATE_RECRUITMENT_RECORD"
+        )
+        result = await session.execute(stmt)
+        logs = result.scalars().all()
+        assert len(logs) == 1
+        assert "Recorded recruitment metrics" in logs[0].details
+
+
+@pytest.mark.asyncio
+async def test_site_milestones_crud_and_audit():
+    """
+    Verify site milestones can be created, updated, and logged in audit log.
+    """
+    client = TestClient(app)
+    cra_headers = get_auth_headers(roles="CRA", change_reason="Initial planning")
+
+    # 1. Create site milestone
+    payload = {
+        "site_id": "site_A",
+        "study_id": "study_X",
+        "milestone_type": "SITE_ACTIVATION",
+        "planned_date": (datetime.utcnow() + timedelta(days=30)).isoformat(),
+        "status": "PLANNED",
+    }
+    response = client.post(
+        "/api/v1/ctms/site-milestones", json=payload, headers=cra_headers
+    )
+    assert response.status_code == 201
+    m_data = response.json()
+    assert m_data["status"] == "PLANNED"
+    assert m_data["milestone_type"] == "SITE_ACTIVATION"
+    m_id = m_data["id"]
+
+    # 2. Update site milestone to ACHIEVED
+    update_headers = get_auth_headers(
+        roles="Monitor", change_reason="Site is activated"
+    )
+    update_payload = {
+        "actual_date": datetime.utcnow().isoformat(),
+        "status": "ACHIEVED",
+    }
+    update_response = client.put(
+        f"/api/v1/ctms/site-milestones/{m_id}",
+        json=update_payload,
+        headers=update_headers,
+    )
+    assert update_response.status_code == 200
+    updated_data = update_response.json()
+    assert updated_data["status"] == "ACHIEVED"
+    assert updated_data["actual_date"] is not None
+    assert updated_data["version_index"] == 2
+    assert updated_data["reason_for_change"] == "Site is activated"
+
+    # Try updating non-existent milestone -> 404
+    response_404 = client.put(
+        "/api/v1/ctms/site-milestones/missing-id",
+        json=update_payload,
+        headers=update_headers,
+    )
+    assert response_404.status_code == 404
+
+    # 3. List Milestones
+    list_response = client.get(
+        "/api/v1/ctms/site-milestones?site_id=site_A", headers=update_headers
+    )
+    assert list_response.status_code == 200
+    milestones = list_response.json()
+    assert len(milestones) == 1
+    assert milestones[0]["id"] == m_id
+
+    # 4. Check Audit logs
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(CTMSAuditLog).where(
+            CTMSAuditLog.action.in_(["CREATE_MILESTONE", "UPDATE_MILESTONE"])
+        )
+        result = await session.execute(stmt)
+        logs = result.scalars().all()
+        actions = [log.action for log in logs]
+        assert "CREATE_MILESTONE" in actions
+        assert "UPDATE_MILESTONE" in actions
+
+
+@pytest.mark.asyncio
+async def test_cra_allocations_rbac_reassignment_workload():
+    """
+    Verify RBAC on CRA allocations (Sponsor Admin only), automatic reassignment/deactivation,
+    and CRA workload summaries.
+    """
+    client = TestClient(app)
+    sponsor_admin_headers = get_auth_headers(
+        roles="Sponsor Admin", change_reason="Allocate CRA to Site"
+    )
+    cra_headers = get_auth_headers(roles="CRA")
+
+    # 1. RBAC: Non Sponsor Admin tries to allocate CRA -> 403
+    payload = {
+        "cra_id": "cra_alice",
+        "site_id": "site_A",
+        "study_id": "study_X",
+        "status": "ACTIVE",
+    }
+    response_forbidden = client.post(
+        "/api/v1/ctms/cra-allocations", json=payload, headers=cra_headers
+    )
+    assert response_forbidden.status_code == 403
+
+    # 2. Allocate CRA (Sponsor Admin) -> 201
+    response_ok = client.post(
+        "/api/v1/ctms/cra-allocations", json=payload, headers=sponsor_admin_headers
+    )
+    assert response_ok.status_code == 201
+    alloc1_data = response_ok.json()
+    assert alloc1_data["cra_id"] == "cra_alice"
+    assert alloc1_data["status"] == "ACTIVE"
+    alloc1_id = alloc1_data["id"]
+
+    # 3. Retrieve workload summary -> cra_alice has 1 active allocation
+    workload_headers = get_auth_headers(roles="Monitor")
+    response_wl = client.get(
+        "/api/v1/ctms/cra-allocations/workload", headers=workload_headers
+    )
+    assert response_wl.status_code == 200
+    workload = response_wl.json()
+    assert len(workload) == 1
+    assert workload[0]["cra_id"] == "cra_alice"
+    assert workload[0]["active_allocations_count"] == 1
+    assert "site_A" in workload[0]["allocated_sites"]
+
+    # 4. Reassign site to cra_bob -> cra_alice's allocation becomes INACTIVE, cra_bob's becomes ACTIVE
+    reassign_payload = {
+        "cra_id": "cra_bob",
+        "site_id": "site_A",
+        "study_id": "study_X",
+        "status": "ACTIVE",
+    }
+    response_reassign = client.post(
+        "/api/v1/ctms/cra-allocations",
+        json=reassign_payload,
+        headers=sponsor_admin_headers,
+    )
+    assert response_reassign.status_code == 201
+    alloc2_data = response_reassign.json()
+    assert alloc2_data["cra_id"] == "cra_bob"
+    assert alloc2_data["status"] == "ACTIVE"
+
+    # Verify cra_alice's allocation is now INACTIVE in DB
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(CRAAllocation).where(CRAAllocation.id == alloc1_id)
+        result = await session.execute(stmt)
+        a1 = result.scalars().first()
+        assert a1.status == "INACTIVE"
+        assert a1.effective_end_date is not None
+
+    # Retrieve workload summary again -> cra_bob has 1 active allocation, cra_alice has 0 (not in active map)
+    response_wl2 = client.get(
+        "/api/v1/ctms/cra-allocations/workload", headers=workload_headers
+    )
+    assert response_wl2.status_code == 200
+    workload2 = response_wl2.json()
+    assert len(workload2) == 1
+    assert workload2[0]["cra_id"] == "cra_bob"
+
+    # 5. Non Sponsor Admin tries to update CRA allocation -> 403
+    update_payload = {"status": "INACTIVE"}
+    response_update_forbidden = client.put(
+        f"/api/v1/ctms/cra-allocations/{alloc1_id}",
+        json=update_payload,
+        headers=cra_headers,
+    )
+    assert response_update_forbidden.status_code == 403
+
+    # Sponsor Admin updates allocation -> 200
+    response_update_ok = client.put(
+        f"/api/v1/ctms/cra-allocations/{alloc1_id}",
+        json=update_payload,
+        headers=sponsor_admin_headers,
+    )
+    assert response_update_ok.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_monitoring_visit_scheduling_respects_cra_allocation():
+    """
+    Verify scheduling a monitoring visit identifies/respects active CRA allocations.
+    """
+    client = TestClient(app)
+    sponsor_admin_headers = get_auth_headers(roles="Sponsor Admin")
+    cra_headers = get_auth_headers(roles="CRA")
+
+    # 1. Allocate cra_bob to site_B and study_Y
+    alloc_payload = {
+        "cra_id": "cra_bob",
+        "site_id": "site_B",
+        "study_id": "study_Y",
+        "status": "ACTIVE",
+    }
+    alloc_res = client.post(
+        "/api/v1/ctms/cra-allocations",
+        json=alloc_payload,
+        headers=sponsor_admin_headers,
+    )
+    assert alloc_res.status_code == 201
+
+    # 2. Try to schedule visit for study_Y / site_B using cra_charlie -> 400 Bad Request
+    visit_date = datetime.utcnow() + timedelta(days=5)
+    visit_payload = {
+        "study_id": "study_Y",
+        "site_id": "site_B",
+        "cra_id": "cra_charlie",
+        "visit_type": "IMV",
+        "scheduled_date": visit_date.isoformat(),
+    }
+    visit_res_bad = client.post(
+        "/api/v1/ctms/monitoring-visits", json=visit_payload, headers=cra_headers
+    )
+    assert visit_res_bad.status_code == 400
+    assert "is not allocated" in visit_res_bad.json()["detail"]
+
+    # 3. Schedule visit using allocated cra_bob -> 201 Created
+    visit_payload["cra_id"] = "cra_bob"
+    visit_res_ok = client.post(
+        "/api/v1/ctms/monitoring-visits", json=visit_payload, headers=cra_headers
+    )
+    assert visit_res_ok.status_code == 201

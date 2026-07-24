@@ -62,7 +62,7 @@ async def test_eisf_document_creation_and_site_scoped():
             created_by="user-admin-99",
             metadata_json={"academic_degree": "MD", "specialty": "Oncology"},
             correlation_key="ext-corr-cv-101",
-            content_checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            content_checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  # pragma: allowlist secret
             sync_status="PENDING",
             source_system="eISF",
         )
@@ -92,7 +92,7 @@ async def test_eisf_document_creation_and_site_scoped():
         assert retrieved_doc.correlation_key == "ext-corr-cv-101"
         assert (
             retrieved_doc.content_checksum
-            == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"  # pragma: allowlist secret
         )
         assert retrieved_doc.sync_status == "PENDING"
         assert retrieved_doc.source_system == "eISF"

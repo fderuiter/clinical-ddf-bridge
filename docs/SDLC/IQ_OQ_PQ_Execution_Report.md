@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 425
-- **Passed:** 425 🟢
+- **Total Automated Test Cases Run:** 426
+- **Passed:** 426 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -186,26 +186,27 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_candidate_creation_and_opening_workflow` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_query_creation_with_all_audited_fields` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_query_trial_lock_enforcement_at_visit_level` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_clinical_query_authorization_failures` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_clinical_query_success` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_events_prevent_deletions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_duplicate_active_query_rejected` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_query_role_gates_robustness` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_rejection_and_cancellation_reason_requirements` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
 | `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
+| `test_cra_allocations_rbac_reassignment_workload` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_and_list_studies_rbac` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_health_check` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_audit_trail_rbac` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_scheduling_respects_cra_allocation` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_recruitment_records_crud_and_audit` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_milestones_crud_and_audit` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_profiles` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_custom_literal_terms` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -360,7 +361,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
