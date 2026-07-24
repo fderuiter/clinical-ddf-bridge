@@ -26,6 +26,7 @@ class CAPAStatus(str, Enum):
     IMPLEMENTATION = "IMPLEMENTATION"
     EFFECTIVENESS_CHECK = "EFFECTIVENESS_CHECK"
     CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
 
 
 class DeviationSeverity(str, Enum):
