@@ -216,7 +216,8 @@ async def test_missing_and_invalid_signature_ingestion():
 async def test_audit_logs_group_sealing_and_chaining():
     """Verify compiling, hashing, and sealing of unsealed eTMF audit logs into a Merkle-tree block structure."""
     client = TestClient(app)
-    headers = get_auth_headers(change_reason="audit logs test")
+    headers_write = get_auth_headers(roles="admin", change_reason="audit logs test")
+    headers_auditor = get_auth_headers(roles="auditor", change_reason="audit logs view")
 
     # Ingest a non-signed document to generate audit logs
     payload = {
@@ -226,11 +227,11 @@ async def test_audit_logs_group_sealing_and_chaining():
         "content": "Define content",
         "mime_type": "application/xml",
     }
-    resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers)
+    resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers_write)
     assert resp.status_code == 201
 
     # Retrieve logs to make sure we have them
-    resp_logs = client.get("/api/v1/etmf/audit-logs", headers=headers)
+    resp_logs = client.get("/api/v1/etmf/audit-logs", headers=headers_auditor)
     assert resp_logs.status_code == 200
     logs = resp_logs.json()
     assert len(logs) >= 2  # INGEST and AUDIT_VIEW

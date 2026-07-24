@@ -117,7 +117,7 @@ async def validate_and_transition_document_status(
         from_status=from_status,
         to_status=to_status,
         actor_id=actor_id,
-        actor_role=actor_role,
+        actor_role=",".join(actor_role) if isinstance(actor_role, list) else actor_role,
         reason_for_change=reason_for_change.strip(),
     )
     session.add(transition_record)
