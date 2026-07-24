@@ -229,3 +229,145 @@ async def test_recalculate_cohort_outliers_scenarios(temp_db):
                 assert is_outlier == 1
             else:
                 assert is_outlier == 0
+
+
+def test_etmf_cryptography_and_translator_coverage_boost():
+    from apps.etmf.cryptography import (
+        requires_signature,
+        extract_signature_from_content,
+        verify_x509_signature,
+        validate_document_signature,
+    )
+    from apps.execution.translator import (
+        sanitize_identifier,
+        extract_appearance,
+    )
+
+    # 1. Test requires_signature
+    assert requires_signature("Signed Protocol") is True
+    assert requires_signature("Signature Page") is True
+    assert requires_signature("Normal Document") is False
+    assert requires_signature("Normal Document", {"requires_signature": True}) is True
+    assert requires_signature("Normal Document", {"require_signature": True}) is True
+    assert requires_signature("Normal Document", {"requires_signature": False}) is False
+
+    # 2. Test extract_signature_from_content with PEM certificate and signature
+    pem_content = """
+    Some document text.
+    -----BEGIN CERTIFICATE-----
+    MOCK_CERT_DATA
+    -----END CERTIFICATE-----
+    -----BEGIN SIGNATURE-----
+    TU9DS19TSUdOQVRVUkU=
+    -----END SIGNATURE-----
+    """
+    cert, sig, data = extract_signature_from_content(pem_content)
+    assert cert == "-----BEGIN CERTIFICATE-----\n    MOCK_CERT_DATA\n    -----END CERTIFICATE-----"
+    assert sig == b"MOCK_SIGNATURE"
+    assert "Some document text" in data
+
+    # Test PEM signature with hex fallback
+    pem_content_hex = """
+    Some doc.
+    -----BEGIN CERTIFICATE-----
+    MOCK_CERT_DATA
+    -----END CERTIFICATE-----
+    -----BEGIN SIGNATURE-----
+    4d4f434b
+    -----END SIGNATURE-----
+    """
+    cert_h, sig_h, data_h = extract_signature_from_content(pem_content_hex)
+    assert sig_h == b'\xe1\xde\x1f\xe3~\x1b'
+
+    # Test XML signature tags
+    xml_content = """
+    <Document>
+      <Content>Some GxP data</Content>
+      <X509Certificate>MOCK_CERT_XML</X509Certificate>
+      <SignatureValue>TU9DS19TSUdfWE1M</SignatureValue>
+    </Document>
+    """
+    cert_x, sig_x, data_x = extract_signature_from_content(xml_content)
+    assert "MOCK_CERT_XML" in cert_x
+    assert sig_x == b"MOCK_SIG_XML"
+    assert "Some GxP data" in data_x
+
+    # Test XML signature tags with invalid base64 (hex fallback)
+    xml_content_hex = """
+    <Document>
+      <X509Certificate>MOCK_CERT_XML</X509Certificate>
+      <SignatureValue>4d4f434b</SignatureValue>
+    </Document>
+    """
+    cert_xh, sig_xh, data_xh = extract_signature_from_content(xml_content_hex)
+    assert sig_xh == b'\xe1\xde\x1f\xe3~\x1b'
+
+    # Test empty/no signature
+    cert_e, sig_e, data_e = extract_signature_from_content("Just some normal text")
+    assert cert_e is None
+    assert sig_e is None
+
+    # 3. Test validate_document_signature with mock signatures
+    # Required but missing
+    is_valid, msg = validate_document_signature("Signed Protocol", "No sig here")
+    assert is_valid is False
+    assert "Missing required digital signature" in msg
+
+    # Not required and missing
+    is_valid, msg = validate_document_signature("Normal Doc", "No sig here")
+    assert is_valid is True
+    assert "No signature present" in msg
+
+    # Valid mock signature
+    is_valid, msg = validate_document_signature(
+        "Signed Protocol",
+        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_OK\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----"
+    )
+    assert is_valid is True
+    assert "Valid mock digital signature verified" in msg
+
+    # Invalid mock signature
+    is_valid, msg = validate_document_signature(
+        "Signed Protocol",
+        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----"
+    )
+    assert is_valid is False
+    assert "Invalid mock digital signature detected" in msg
+
+    # Signature from metadata
+    meta = {
+        "digital_signature": {
+            "certificate": "MOCK_SIGNATURE_OK",
+            "signature_value": "TU9DSw=="
+        }
+    }
+    is_valid, msg = validate_document_signature("Signed Protocol", "Content", meta)
+    assert is_valid is True
+    assert "Valid mock digital signature verified" in msg
+
+    # Active validation fail (invalid cert pem)
+    is_valid, msg = validate_document_signature(
+        "Signed Protocol",
+        "-----BEGIN CERTIFICATE-----\nREAL_PEM_BUT_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nU0lHTkFUVVJF\n-----END SIGNATURE-----"
+    )
+    assert is_valid is False
+
+    # 4. Test sanitize_identifier
+    assert sanitize_identifier(None).startswith("item_")
+    assert sanitize_identifier("   ").startswith("item_")
+    assert sanitize_identifier(123).startswith("item_")
+    assert sanitize_identifier("valid_id_123") == "valid_id_123"
+    assert sanitize_identifier("123starts_with_digit") == "item_123starts_with_digit"
+    assert sanitize_identifier("spaced id") == "spaced_id"
+    assert sanitize_identifier("weird$char") == "weird_24char"
+
+    # 5. Test extract_appearance
+    assert extract_appearance({"cols": "2"}) == "w2"
+    assert extract_appearance({"column_span": "3"}) == "w3"
+    assert extract_appearance({"span": "4"}) == "w4"
+    assert extract_appearance({"cols": "5"}) is None
+    assert extract_appearance({"layout": {"cols": "1"}}) == "w1"
+    assert extract_appearance({"grid": {"span": "2"}}) == "w2"
+    assert extract_appearance({"layout": {"cols": "10"}}) is None
+    assert extract_appearance({}) is None
+
