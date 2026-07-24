@@ -28,11 +28,19 @@ from packages.security.middleware import GatewayAuthMiddleware
 class DeviationCreate(BaseModel):
     study_id: str = Field(..., description="Unique identifier of the clinical study")
     site_id: Optional[str] = Field(None, description="Optional clinical site ID")
-    title: str = Field(..., max_length=255, description="A short summary of the deviation")
+    title: str = Field(
+        ..., max_length=255, description="A short summary of the deviation"
+    )
     description: str = Field(..., description="Detailed explanation of the deviation")
-    severity: DeviationSeverity = Field(..., description="Severity level: MINOR, MAJOR, CRITICAL")
-    type: DeviationType = Field(..., description="Type of deviation, e.g., INFORMED_CONSENT")
-    is_protocol_violation: bool = Field(False, description="Whether this constitutes a protocol violation")
+    severity: DeviationSeverity = Field(
+        ..., description="Severity level: MINOR, MAJOR, CRITICAL"
+    )
+    type: DeviationType = Field(
+        ..., description="Type of deviation, e.g., INFORMED_CONSENT"
+    )
+    is_protocol_violation: bool = Field(
+        False, description="Whether this constitutes a protocol violation"
+    )
 
 
 class DeviationResponse(BaseModel):
@@ -54,10 +62,18 @@ class DeviationResponse(BaseModel):
 
 
 class RCACreateOrUpdate(BaseModel):
-    methodology: str = Field(..., max_length=255, description="RCA methodology used, e.g., 5 Whys, Fishbone")
-    investigation_details: str = Field(..., description="Full details of the investigation")
-    root_cause_summary: str = Field(..., description="Summary of the determined root cause")
-    version_index: Optional[int] = Field(None, description="Current expected version index for optimistic locking")
+    methodology: str = Field(
+        ..., max_length=255, description="RCA methodology used, e.g., 5 Whys, Fishbone"
+    )
+    investigation_details: str = Field(
+        ..., description="Full details of the investigation"
+    )
+    root_cause_summary: str = Field(
+        ..., description="Summary of the determined root cause"
+    )
+    version_index: Optional[int] = Field(
+        None, description="Current expected version index for optimistic locking"
+    )
 
 
 class RCAResponse(BaseModel):
@@ -78,23 +94,43 @@ class RCAResponse(BaseModel):
 
 class CAPACreate(BaseModel):
     deviation_id: str = Field(..., description="Reference to the parent deviation ID")
-    rca_id: Optional[str] = Field(None, description="Optional reference to the Root Cause Analysis ID")
+    rca_id: Optional[str] = Field(
+        None, description="Optional reference to the Root Cause Analysis ID"
+    )
     capa_type: str = Field(..., description="Type of CAPA: CORRECTIVE or PREVENTIVE")
-    action_plan: str = Field(..., description="The planned corrective/preventive action steps")
-    preventive_measures: Optional[str] = Field(None, description="Specific measures to prevent recurrence")
-    target_completion_date: Optional[datetime] = Field(None, description="Optional expected completion timestamp")
+    action_plan: str = Field(
+        ..., description="The planned corrective/preventive action steps"
+    )
+    preventive_measures: Optional[str] = Field(
+        None, description="Specific measures to prevent recurrence"
+    )
+    target_completion_date: Optional[datetime] = Field(
+        None, description="Optional expected completion timestamp"
+    )
 
 
 class CAPATransitionRequest(BaseModel):
-    to_status: CAPAStatus = Field(..., description="Target CAPA Status to transition to")
-    version_index: Optional[int] = Field(None, description="Expected version index for optimistic locking")
+    to_status: CAPAStatus = Field(
+        ..., description="Target CAPA Status to transition to"
+    )
+    version_index: Optional[int] = Field(
+        None, description="Expected version index for optimistic locking"
+    )
 
 
 class CAPAUpdate(BaseModel):
-    action_plan: Optional[str] = Field(None, description="The planned corrective/preventive action steps")
-    preventive_measures: Optional[str] = Field(None, description="Specific measures to prevent recurrence")
-    target_completion_date: Optional[datetime] = Field(None, description="Optional expected completion timestamp")
-    version_index: Optional[int] = Field(None, description="Current expected version index for optimistic locking")
+    action_plan: Optional[str] = Field(
+        None, description="The planned corrective/preventive action steps"
+    )
+    preventive_measures: Optional[str] = Field(
+        None, description="Specific measures to prevent recurrence"
+    )
+    target_completion_date: Optional[datetime] = Field(
+        None, description="Optional expected completion timestamp"
+    )
+    version_index: Optional[int] = Field(
+        None, description="Current expected version index for optimistic locking"
+    )
 
 
 class CAPAResponse(BaseModel):
@@ -114,6 +150,7 @@ class CAPAResponse(BaseModel):
     created_by: str
     version_index: int
     reason_for_change: str
+
 
 DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -194,7 +231,11 @@ async def health_check() -> dict[str, str]:
 # CAPA explicit transition map
 CAPA_TRANSITIONS = {
     CAPAStatus.INITIATED: {CAPAStatus.UNDER_REVIEW, CAPAStatus.CANCELLED},
-    CAPAStatus.UNDER_REVIEW: {CAPAStatus.IMPLEMENTATION, CAPAStatus.INITIATED, CAPAStatus.CANCELLED},
+    CAPAStatus.UNDER_REVIEW: {
+        CAPAStatus.IMPLEMENTATION,
+        CAPAStatus.INITIATED,
+        CAPAStatus.CANCELLED,
+    },
     CAPAStatus.IMPLEMENTATION: {CAPAStatus.EFFECTIVENESS_CHECK, CAPAStatus.CANCELLED},
     CAPAStatus.EFFECTIVENESS_CHECK: {CAPAStatus.CLOSED, CAPAStatus.CANCELLED},
     CAPAStatus.CLOSED: set(),
@@ -245,7 +286,9 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
         action_plan=capa.action_plan,
         status=capa.status,
         preventive_measures=capa.preventive_measures,
-        target_completion_date=capa.target_completion_date.isoformat() if capa.target_completion_date else None,
+        target_completion_date=capa.target_completion_date.isoformat()
+        if capa.target_completion_date
+        else None,
         study_id=capa.study_id,
         site_id=capa.site_id,
         created_at=capa.created_at.isoformat(),
@@ -255,7 +298,9 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
     )
 
 
-@app.post("/api/v1/quality/deviations", response_model=DeviationResponse, status_code=201)
+@app.post(
+    "/api/v1/quality/deviations", response_model=DeviationResponse, status_code=201
+)
 async def create_deviation(
     request: Request,
     payload: DeviationCreate,
@@ -266,7 +311,9 @@ async def create_deviation(
     """
     user_id = getattr(request.state, "user_id", "system")
     user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "Initial deviation reporting")
+    change_reason = getattr(
+        request.state, "change_reason", "Initial deviation reporting"
+    )
 
     dev = Deviation(
         study_id=payload.study_id,
@@ -396,7 +443,10 @@ async def create_or_update_rca(
     if rca:
         action = "RCA_UPDATE"
         # Validate version mismatch for optimistic concurrency
-        if payload.version_index is not None and rca.version_index != payload.version_index:
+        if (
+            payload.version_index is not None
+            and rca.version_index != payload.version_index
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=f"Version conflict: The RCA has been modified by another process. Current version: {rca.version_index}.",
@@ -479,7 +529,9 @@ async def create_capa(
 
     # 2. Validate optional RCA if specified
     if payload.rca_id:
-        stmt_rca = select(RootCauseAnalysis).where(RootCauseAnalysis.id == payload.rca_id)
+        stmt_rca = select(RootCauseAnalysis).where(
+            RootCauseAnalysis.id == payload.rca_id
+        )
         result_rca = await session.execute(stmt_rca)
         rca = result_rca.scalars().first()
 
@@ -550,7 +602,9 @@ async def transition_capa(
     """
     user_id = getattr(request.state, "user_id", "system")
     user_role = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", f"Transitioned CAPA to {payload.to_status}")
+    change_reason = getattr(
+        request.state, "change_reason", f"Transitioned CAPA to {payload.to_status}"
+    )
 
     # Fetch CAPA and lock/load parent deviation
     stmt_capa = (
@@ -562,13 +616,18 @@ async def transition_capa(
     capa = result_capa.scalars().first()
 
     if not capa:
-        raise HTTPException(status_code=404, detail=f"CAPA record with ID '{id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"CAPA record with ID '{id}' not found."
+        )
 
     current_status = capa.status
     target_status = payload.to_status
 
     # Validate version mismatch for optimistic concurrency
-    if payload.version_index is not None and capa.version_index != payload.version_index:
+    if (
+        payload.version_index is not None
+        and capa.version_index != payload.version_index
+    ):
         raise HTTPException(
             status_code=409,
             detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
@@ -601,7 +660,9 @@ async def transition_capa(
         if dev and dev.status != DeviationStatus.CLOSED:
             dev.status = DeviationStatus.CLOSED
             dev.version_index += 1
-            dev.reason_for_change = "Settled and closed parent deviation because linked CAPA was closed."
+            dev.reason_for_change = (
+                "Settled and closed parent deviation because linked CAPA was closed."
+            )
             await write_audit_log(
                 session=session,
                 user_id=user_id,
@@ -642,10 +703,15 @@ async def update_capa(
     capa = result_capa.scalars().first()
 
     if not capa:
-        raise HTTPException(status_code=404, detail=f"CAPA record with ID '{id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"CAPA record with ID '{id}' not found."
+        )
 
     # 1. Validate version mismatch for optimistic concurrency
-    if payload.version_index is not None and capa.version_index != payload.version_index:
+    if (
+        payload.version_index is not None
+        and capa.version_index != payload.version_index
+    ):
         raise HTTPException(
             status_code=409,
             detail=f"Version conflict: The CAPA has been modified by another process. Current version: {capa.version_index}.",
