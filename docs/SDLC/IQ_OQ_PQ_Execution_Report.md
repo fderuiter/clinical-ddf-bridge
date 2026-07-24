@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 194
-- **Passed:** 194 🟢
+- **Total Automated Test Cases Run:** 201
+- **Passed:** 201 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -311,6 +311,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_active_version_selection` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_artifact_parent_identification` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_canonical_11_zones` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_explicit_version_selection` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_immutability_properties` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_database_dependencies` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_version_isolation` | `tests.test_tmf_reference_model` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |

@@ -5,6 +5,9 @@ from typing import Any, Dict
 import pytest
 from neo4j.exceptions import TransientError
 
+# Ensure packages path injection is run before tests start
+import packages
+
 
 class MockDatabaseState:
     def __init__(self):
