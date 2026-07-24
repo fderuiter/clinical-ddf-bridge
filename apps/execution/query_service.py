@@ -5,6 +5,8 @@ class StateTransitionError(ValueError):
 
 
 class QueryService:
+    """Service to handle clinical query state machines and transition validation in eClinical environments."""
+
     @staticmethod
     def validate_transition(
         current_status: str,
@@ -12,6 +14,17 @@ class QueryService:
         has_reason: bool = False,
         is_system: bool = False,
     ) -> None:
+        """Validate a transition between query statuses against defined regulatory boundaries.
+
+        Args:
+            current_status: The current status of the clinical query.
+            new_status: The proposed status of the clinical query.
+            has_reason: True if a non-empty comment/reason was supplied.
+            is_system: True if the transition is triggered automatically by the system.
+
+        Raises:
+            StateTransitionError: If the transition is invalid or a required reason is missing.
+        """
         current_status = current_status.upper()
         new_status = new_status.upper()
         if current_status == new_status:
