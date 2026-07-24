@@ -41,33 +41,98 @@ class DatabaseSessionManager:
 
         self.engine = create_async_engine(database_url, **{**engine_options, **kwargs})
 
-        @event.listens_for(self.engine.sync_engine, "connect")
-        def configure_sqlite_connection(dbapi_connection, connection_record):
-            # Globally enforce relational integrity constraints (Foreign Keys) on all SQLite connections
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("PRAGMA foreign_keys=ON")
-            except Exception:
-                pass
-            finally:
-                cursor.close()
+        if database_url.startswith("sqlite"):
 
-            # Register PostgreSQL compatibility functions for SQLite compatibility
-            conn = dbapi_connection
-            for _ in range(5):
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def configure_sqlite_connection(dbapi_connection, connection_record):
+                # Globally enforce relational integrity constraints (Foreign Keys) on all SQLite connections
+                cursor = dbapi_connection.cursor()
+                try:
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                except Exception:
+                    pass
+                finally:
+                    cursor.close()
+
+                # Register PostgreSQL compatibility functions for SQLite compatibility
+                conn = dbapi_connection
+                for _ in range(5):
+                    if hasattr(conn, "create_function"):
+                        break
+                    if hasattr(conn, "connection"):
+                        conn = conn.connection
+                    elif hasattr(conn, "_connection"):
+                        conn = conn._connection
+                    elif hasattr(conn, "dbapi_connection"):
+                        conn = conn.dbapi_connection
+                    else:
+                        break
+
                 if hasattr(conn, "create_function"):
-                    break
-                if hasattr(conn, "connection"):
-                    conn = conn.connection
-                elif hasattr(conn, "_connection"):
-                    conn = conn._connection
-                elif hasattr(conn, "dbapi_connection"):
-                    conn = conn.dbapi_connection
-                else:
-                    break
+                    conn_id = id(conn)
+                    if conn_id not in _sqlite_connection_settings:
+                        _sqlite_connection_settings[conn_id] = {
+                            "cadence.current_user_id": "system",
+                            "cadence.current_change_reason": "system_operation",
+                            "cadence.app_writing": "false",
+                        }
 
-            if hasattr(conn, "create_function"):
-                conn_id = id(conn)
+                    def sqlite_set_config(
+                        name: str, value: Any, is_local: bool = True
+                    ) -> Any:
+                        if conn_id not in _sqlite_connection_settings:
+                            _sqlite_connection_settings[conn_id] = {}
+                        _sqlite_connection_settings[conn_id][name] = (
+                            str(value) if value is not None else None
+                        )
+                        return value
+
+                    def sqlite_current_setting(
+                        name: str, missing_ok: Any = True
+                    ) -> str:
+                        missing_ok_bool = (
+                            bool(missing_ok)
+                            if isinstance(missing_ok, int)
+                            else missing_ok
+                        )
+                        if conn_id not in _sqlite_connection_settings:
+                            return ""
+                        val = _sqlite_connection_settings[conn_id].get(name)
+                        if val is None:
+                            if missing_ok_bool:
+                                return ""
+                            else:
+                                raise Exception(f"Setting {name} not found")
+                        return val
+
+                    conn.create_function("set_config", 3, sqlite_set_config)
+                    conn.create_function("current_setting", 1, sqlite_current_setting)
+                    conn.create_function("current_setting", 2, sqlite_current_setting)
+                    conn.create_function(
+                        "gen_random_uuid", 0, lambda: str(uuid.uuid4())
+                    )
+
+            # Listen to before_cursor_execute on the main thread to sync ContextVars to connection-specific settings
+            @event.listens_for(self.engine.sync_engine, "before_cursor_execute")
+            def sync_context_variables(
+                conn, cursor, statement, parameters, context, executemany
+            ):
+                dbapi_conn = (
+                    conn.connection.dbapi_connection
+                    if hasattr(conn.connection, "dbapi_connection")
+                    else conn.connection
+                )
+                for _ in range(5):
+                    if hasattr(dbapi_conn, "connection"):
+                        dbapi_conn = dbapi_conn.connection
+                    elif hasattr(dbapi_conn, "_connection"):
+                        dbapi_conn = dbapi_conn._connection
+                    elif hasattr(dbapi_conn, "dbapi_connection"):
+                        dbapi_conn = dbapi_conn.dbapi_connection
+                    else:
+                        break
+
+                conn_id = id(dbapi_conn)
                 if conn_id not in _sqlite_connection_settings:
                     _sqlite_connection_settings[conn_id] = {
                         "cadence.current_user_id": "system",
@@ -75,85 +140,28 @@ class DatabaseSessionManager:
                         "cadence.app_writing": "false",
                     }
 
-                def sqlite_set_config(
-                    name: str, value: Any, is_local: bool = True
-                ) -> Any:
-                    if conn_id not in _sqlite_connection_settings:
-                        _sqlite_connection_settings[conn_id] = {}
-                    _sqlite_connection_settings[conn_id][name] = (
-                        str(value) if value is not None else None
-                    )
-                    return value
+                # Safely sync active security ContextVars to connection-level dictionary on the main thread
+                try:
+                    from packages.security.context import current_user_id
 
-                def sqlite_current_setting(name: str, missing_ok: Any = True) -> str:
-                    missing_ok_bool = (
-                        bool(missing_ok) if isinstance(missing_ok, int) else missing_ok
-                    )
-                    if conn_id not in _sqlite_connection_settings:
-                        return ""
-                    val = _sqlite_connection_settings[conn_id].get(name)
-                    if val is None:
-                        if missing_ok_bool:
-                            return ""
-                        else:
-                            raise Exception(f"Setting {name} not found")
-                    return val
+                    val = current_user_id.get()
+                    if val is not None:
+                        _sqlite_connection_settings[conn_id][
+                            "cadence.current_user_id"
+                        ] = str(val)
+                except Exception:
+                    pass
 
-                conn.create_function("set_config", 3, sqlite_set_config)
-                conn.create_function("current_setting", 1, sqlite_current_setting)
-                conn.create_function("current_setting", 2, sqlite_current_setting)
-                conn.create_function("gen_random_uuid", 0, lambda: str(uuid.uuid4()))
+                try:
+                    from packages.security.context import current_change_reason
 
-        # Listen to before_cursor_execute on the main thread to sync ContextVars to connection-specific settings
-        @event.listens_for(self.engine.sync_engine, "before_cursor_execute")
-        def sync_context_variables(
-            conn, cursor, statement, parameters, context, executemany
-        ):
-            dbapi_conn = (
-                conn.connection.dbapi_connection
-                if hasattr(conn.connection, "dbapi_connection")
-                else conn.connection
-            )
-            for _ in range(5):
-                if hasattr(dbapi_conn, "connection"):
-                    dbapi_conn = dbapi_conn.connection
-                elif hasattr(dbapi_conn, "_connection"):
-                    dbapi_conn = dbapi_conn._connection
-                elif hasattr(dbapi_conn, "dbapi_connection"):
-                    dbapi_conn = dbapi_conn.dbapi_connection
-                else:
-                    break
-
-            conn_id = id(dbapi_conn)
-            if conn_id not in _sqlite_connection_settings:
-                _sqlite_connection_settings[conn_id] = {
-                    "cadence.current_user_id": "system",
-                    "cadence.current_change_reason": "system_operation",
-                    "cadence.app_writing": "false",
-                }
-
-            # Safely sync active security ContextVars to connection-level dictionary on the main thread
-            try:
-                from packages.security.context import current_user_id
-
-                val = current_user_id.get()
-                if val is not None:
-                    _sqlite_connection_settings[conn_id]["cadence.current_user_id"] = (
-                        str(val)
-                    )
-            except Exception:
-                pass
-
-            try:
-                from packages.security.context import current_change_reason
-
-                val = current_change_reason.get()
-                if val is not None:
-                    _sqlite_connection_settings[conn_id][
-                        "cadence.current_change_reason"
-                    ] = str(val)
-            except Exception:
-                pass
+                    val = current_change_reason.get()
+                    if val is not None:
+                        _sqlite_connection_settings[conn_id][
+                            "cadence.current_change_reason"
+                        ] = str(val)
+                except Exception:
+                    pass
 
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False

@@ -233,14 +233,13 @@ async def test_recalculate_cohort_outliers_scenarios(temp_db):
 
 def test_etmf_cryptography_and_translator_coverage_boost():
     from apps.etmf.cryptography import (
-        requires_signature,
         extract_signature_from_content,
-        verify_x509_signature,
+        requires_signature,
         validate_document_signature,
     )
     from apps.execution.translator import (
-        sanitize_identifier,
         extract_appearance,
+        sanitize_identifier,
     )
 
     # 1. Test requires_signature
@@ -262,7 +261,10 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     -----END SIGNATURE-----
     """
     cert, sig, data = extract_signature_from_content(pem_content)
-    assert cert == "-----BEGIN CERTIFICATE-----\n    MOCK_CERT_DATA\n    -----END CERTIFICATE-----"
+    assert (
+        cert
+        == "-----BEGIN CERTIFICATE-----\n    MOCK_CERT_DATA\n    -----END CERTIFICATE-----"
+    )
     assert sig == b"MOCK_SIGNATURE"
     assert "Some document text" in data
 
@@ -277,7 +279,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     -----END SIGNATURE-----
     """
     cert_h, sig_h, data_h = extract_signature_from_content(pem_content_hex)
-    assert sig_h == b'\xe1\xde\x1f\xe3~\x1b'
+    assert sig_h == b"\xe1\xde\x1f\xe3~\x1b"
 
     # Test XML signature tags
     xml_content = """
@@ -300,7 +302,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     </Document>
     """
     cert_xh, sig_xh, data_xh = extract_signature_from_content(xml_content_hex)
-    assert sig_xh == b'\xe1\xde\x1f\xe3~\x1b'
+    assert sig_xh == b"\xe1\xde\x1f\xe3~\x1b"
 
     # Test empty/no signature
     cert_e, sig_e, data_e = extract_signature_from_content("Just some normal text")
@@ -321,7 +323,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     # Valid mock signature
     is_valid, msg = validate_document_signature(
         "Signed Protocol",
-        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_OK\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----"
+        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_OK\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----",
     )
     assert is_valid is True
     assert "Valid mock digital signature verified" in msg
@@ -329,7 +331,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     # Invalid mock signature
     is_valid, msg = validate_document_signature(
         "Signed Protocol",
-        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----"
+        "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nTU9DSw==\n-----END SIGNATURE-----",
     )
     assert is_valid is False
     assert "Invalid mock digital signature detected" in msg
@@ -338,7 +340,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     meta = {
         "digital_signature": {
             "certificate": "MOCK_SIGNATURE_OK",
-            "signature_value": "TU9DSw=="
+            "signature_value": "TU9DSw==",
         }
     }
     is_valid, msg = validate_document_signature("Signed Protocol", "Content", meta)
@@ -348,7 +350,7 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     # Active validation fail (invalid cert pem)
     is_valid, msg = validate_document_signature(
         "Signed Protocol",
-        "-----BEGIN CERTIFICATE-----\nREAL_PEM_BUT_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nU0lHTkFUVVJF\n-----END SIGNATURE-----"
+        "-----BEGIN CERTIFICATE-----\nREAL_PEM_BUT_INVALID\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nU0lHTkFUVVJF\n-----END SIGNATURE-----",
     )
     assert is_valid is False
 
@@ -370,4 +372,3 @@ def test_etmf_cryptography_and_translator_coverage_boost():
     assert extract_appearance({"grid": {"span": "2"}}) == "w2"
     assert extract_appearance({"layout": {"cols": "10"}}) is None
     assert extract_appearance({}) is None
-
