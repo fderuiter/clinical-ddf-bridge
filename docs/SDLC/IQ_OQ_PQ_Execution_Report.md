@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 431
-- **Passed:** 431 🟢
+- **Total Automated Test Cases Run:** 432
+- **Passed:** 432 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -124,7 +124,7 @@ pyyaml                  6.0.3
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -174,6 +174,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dataset_json_integration_structure` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_declarative_mappings_coverage` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_dm_age_precision_and_controlled_terminology` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_dm_demographics` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_mh_sequencing_and_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_helpers` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_race` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_severity` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -186,13 +189,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_candidate_creation_and_opening_workflow` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_query_creation_with_all_audited_fields` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_query_trial_lock_enforcement_at_visit_level` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_clinical_query_authorization_failures` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_clinical_query_success` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_events_prevent_deletions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_duplicate_active_query_rejected` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_query_role_gates_robustness` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rejection_and_cancellation_reason_requirements` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
 | `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
@@ -365,8 +371,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -403,7 +409,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -503,16 +512,27 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sha256_hashing_helper` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_context_propagation` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_manifestation_lifecycle` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_protocol_amendment_concurrency_race` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_protocol_amendment_invalid_signature_rejected` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_protocol_amendment_invalid_study_404` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_protocol_amendment_minor_and_major_bumps` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_study_version_creation_and_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assert_graph_mutable_library_object_permits_active` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assert_graph_mutable_library_object_rejects_frozen` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assert_graph_mutable_permits_draft_active` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assert_graph_mutable_rejects_frozen_states` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bump_version_edge_cases` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_library_object_version_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_study_version_creation_and_immutability` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_create_study_version_duplicate_raises_conflict` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_create_study_version_success` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_version_signature_edge_cases` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pure_python_transition_guard` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stratification_factors_locking` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_initial_state_and_persistence` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_state_transitions` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblinding_and_withdrawal_behavior` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generic_natural_deduplication_key` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_validation_failures` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_validation_happy_path` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |

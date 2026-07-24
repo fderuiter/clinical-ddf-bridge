@@ -44,9 +44,17 @@ from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
 from apps.execution.outliers import recalculate_cohort_outliers
+from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.ucum import convert_unit, get_normalized_representation
-from packages.security import verify_not_auditor
+from packages.security import (
+    ROLE_CRA,
+    ROLE_DATA_MANAGER,
+    ROLE_SITE_INVESTIGATOR,
+    get_normalized_roles,
+    require_roles,
+    verify_not_auditor,
+)
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -754,12 +762,6 @@ async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
 # ==========================================
 
 
-class StateTransitionError(ValueError):
-    """Exception raised when an invalid state transition is attempted."""
-
-    pass
-
-
 class QueryHistoryItem(BaseModel):
     """Pydantic schema representing a single audited event in query history."""
 
@@ -811,6 +813,7 @@ class QueryCreate(BaseModel):
     domain: Optional[str] = None
     test_code: str
     explanation: str
+    status: Optional[str] = "OPEN"
 
     observation_id: Optional[str] = None
     field_link: Optional[str] = None
@@ -819,6 +822,18 @@ class QueryCreate(BaseModel):
     priority: Optional[str] = None
     rule_id: Optional[str] = None
     created_by: Optional[str] = None
+
+
+class QueryReopen(BaseModel):
+    """Pydantic schema for reopening a query with a reason."""
+
+    reason: Optional[str] = None
+
+
+class QueryCancel(BaseModel):
+    """Pydantic schema for cancelling a query with a reason."""
+
+    reason: str
 
 
 class QueryRespond(BaseModel):
@@ -984,6 +999,7 @@ async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
 async def list_queries(
     study_id: Optional[str] = None,
     subject_id: Optional[str] = None,
+    visit_id: Optional[str] = None,
     status: Optional[str] = None,
 ) -> List[ClinicalQueryResponse]:
     """Retrieve a list of clinical queries with optional filtering.
@@ -991,6 +1007,7 @@ async def list_queries(
     Args:
         study_id (Optional[str]): Filter by study identifier.
         subject_id (Optional[str]): Filter by subject identifier.
+        visit_id (Optional[str]): Filter by visit identifier.
         status (Optional[str]): Filter by query status.
 
     Returns:
@@ -1002,6 +1019,8 @@ async def list_queries(
             stmt = stmt.where(ClinicalQuery.study_id == study_id)
         if subject_id:
             stmt = stmt.where(ClinicalQuery.subject_id == subject_id)
+        if visit_id:
+            stmt = stmt.where(ClinicalQuery.visit_id == visit_id)
         if status:
             stmt = stmt.where(ClinicalQuery.status == status)
 
@@ -1095,7 +1114,11 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
     response_model=ClinicalQueryResponse,
     status_code=201,
 )
-async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryResponse:
+async def open_query(
+    request: Request,
+    payload: QueryCreate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> ClinicalQueryResponse:
     """Raise a new clinical query on a specific field coordinate.
 
     Args:
@@ -1106,7 +1129,13 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
         ClinicalQueryResponse: The newly opened clinical query.
     """
     verify_change_justification(request)
-    verify_roles(request, ["data_manager"])
+
+    target_status = (payload.status or "OPEN").upper()
+    if target_status not in ("CANDIDATE", "OPEN"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Initial status must be CANDIDATE or OPEN. Received: {target_status}",
+        )
 
     async with db_manager.get_session_maker()() as session:
         # Check if active query already exists on this coordinate
@@ -1116,7 +1145,7 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
             ClinicalQuery.visit_id == payload.visit_id,
             ClinicalQuery.domain == payload.domain,
             ClinicalQuery.test_code == payload.test_code,
-            ClinicalQuery.status.in_(["OPEN", "ANSWERED", "REOPENED"]),
+            ClinicalQuery.status.in_(["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]),
             ClinicalQuery.is_deleted.is_(False),
         )
         res = await session.execute(stmt)
@@ -1132,7 +1161,7 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
             visit_id=payload.visit_id,
             domain=payload.domain,
             test_code=payload.test_code,
-            status="OPEN",
+            status=target_status,
             explanation=payload.explanation,
             observation_id=payload.observation_id,
             field_link=payload.field_link,
@@ -1450,7 +1479,10 @@ async def get_form_submission(submission_id: str) -> FormSubmissionResponse:
     response_model=ClinicalQueryResponse,
 )
 async def respond_query(
-    query_id: str, request: Request, payload: QueryRespond
+    query_id: str,
+    request: Request,
+    payload: QueryRespond,
+    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR)),
 ) -> ClinicalQueryResponse:
     """Submit an investigator response/answer to an open or reopened clinical query.
 
@@ -1463,7 +1495,6 @@ async def respond_query(
         ClinicalQueryResponse: The updated query with ANSWERED status.
     """
     verify_change_justification(request)
-    verify_roles(request, ["investigator"])
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
@@ -1475,7 +1506,7 @@ async def respond_query(
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
         try:
-            validate_transition(q.status, "ANSWERED")
+            QueryService.validate_transition(q.status, "ANSWERED")
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -1522,7 +1553,11 @@ async def respond_query(
     "/api/v1/execution/queries/{query_id}/close",
     response_model=ClinicalQueryResponse,
 )
-async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
+async def close_query(
+    query_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> ClinicalQueryResponse:
     """Close an answered query (resolving the discrepancy loop).
 
     Args:
@@ -1533,7 +1568,6 @@ async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
         ClinicalQueryResponse: The updated query with CLOSED status.
     """
     verify_change_justification(request)
-    verify_roles(request, ["data_manager"])
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
@@ -1545,7 +1579,7 @@ async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
         try:
-            validate_transition(q.status, "CLOSED")
+            QueryService.validate_transition(q.status, "CLOSED")
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -1592,18 +1626,33 @@ async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
     "/api/v1/execution/queries/{query_id}/reopen",
     response_model=ClinicalQueryResponse,
 )
-async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse:
+async def reopen_query(
+    query_id: str,
+    request: Request,
+    payload: Optional[QueryReopen] = None,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> ClinicalQueryResponse:
     """Reopen an answered or closed clinical query for further clarification.
 
     Args:
         query_id (str): Unique database identifier of the query.
         request (Request): The incoming FastAPI request.
+        payload (Optional[QueryReopen]): Optional reopen payload containing reject reason.
 
     Returns:
         ClinicalQueryResponse: The updated query with REOPENED status.
     """
     verify_change_justification(request)
-    verify_roles(request, ["data_manager"])
+
+    if payload is not None:
+        reason_str = payload.reason or ""
+    else:
+        reason_str = (
+            request.headers.get("X-Change-Reason", "")
+            or current_change_reason.get()
+            or ""
+        )
+    has_reason = bool(reason_str and reason_str.strip())
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
@@ -1615,13 +1664,98 @@ async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
         try:
-            validate_transition(q.status, "REOPENED")
+            QueryService.validate_transition(
+                q.status, "REOPENED", has_reason=has_reason
+            )
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
         q.status = "REOPENED"
+        if has_reason:
+            q.explanation = reason_str.strip()
         q.resolver = None
         q.resolved_at = None
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
+        )
+
+
+@app.post(
+    "/api/v1/execution/queries/{query_id}/cancel",
+    response_model=ClinicalQueryResponse,
+)
+async def cancel_query(
+    query_id: str,
+    request: Request,
+    payload: QueryCancel,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> ClinicalQueryResponse:
+    """Cancel a clinical query raised in error.
+
+    Args:
+        query_id (str): Unique database identifier of the query.
+        request (Request): The incoming FastAPI request.
+        payload (QueryCancel): The cancellation reason.
+
+    Returns:
+        ClinicalQueryResponse: The updated query with CANCELLED status.
+    """
+    verify_change_justification(request)
+
+    if not payload.reason or not payload.reason.strip():
+        raise HTTPException(
+            status_code=400, detail="Cancellation requires a non-empty reason."
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        try:
+            QueryService.validate_transition(q.status, "CANCELLED", has_reason=True)
+        except StateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        q.status = "CANCELLED"
+        q.cancellation_reason = payload.reason
+        q.resolver = current_user_id.get()
+        q.resolved_at = datetime.now()
         await session.commit()
 
         # Refresh
@@ -1686,17 +1820,55 @@ async def update_query_state(
         if not q:
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
-        target_status = payload.status
+        target_status = payload.status.upper()
+
+        # Validate transition
+        reason_val = (
+            payload.cancellation_reason
+            or payload.explanation
+            or request.headers.get("X-Change-Reason", "")
+            or current_change_reason.get()
+            or ""
+        ).strip()
+        has_reason = bool(reason_val)
+
         try:
-            validate_transition(q.status, target_status)
+            QueryService.validate_transition(
+                q.status, target_status, has_reason=has_reason
+            )
         except StateTransitionError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
         # Enforce role boundaries depending on target transition state
-        if target_status in ("OPEN", "CLOSED", "REOPENED"):
-            verify_roles(request, ["data_manager"])
+        user_roles = get_normalized_roles(request)
+        cra_dm_roles = {
+            "cra",
+            "data manager",
+            "data_manager",
+            "sponsor_dm",
+            "dm",
+            "admin",
+        }
+        inv_roles = {
+            "site investigator",
+            "site_investigator",
+            "site-investigator",
+            "investigator",
+            "investigator_user",
+        }
+
+        if target_status in ("CANDIDATE", "OPEN", "CLOSED", "REOPENED", "CANCELLED"):
+            if not any(r in cra_dm_roles for r in user_roles):
+                raise HTTPException(
+                    status_code=403,
+                    detail="User role is not authorized for this action.",
+                )
         elif target_status == "ANSWERED":
-            verify_roles(request, ["investigator"])
+            if not any(r in inv_roles for r in user_roles):
+                raise HTTPException(
+                    status_code=403,
+                    detail="User role is not authorized for this action.",
+                )
 
         q.status = target_status
         if payload.explanation is not None:
@@ -1732,10 +1904,19 @@ async def update_query_state(
             q.resolver = current_user_id.get()
             q.resolved_at = datetime.now()
         elif target_status == "REOPENED":
+            if q.status == "ANSWERED" and payload.explanation:
+                q.explanation = payload.explanation
             q.resolver = None
             q.resolved_at = None
         elif target_status == "ANSWERED":
             q.responder = current_user_id.get()
+        elif target_status == "CANCELLED":
+            if payload.cancellation_reason:
+                q.cancellation_reason = payload.cancellation_reason
+            elif payload.explanation:
+                q.cancellation_reason = payload.explanation
+            q.resolver = current_user_id.get()
+            q.resolved_at = datetime.now()
 
         await session.commit()
 
