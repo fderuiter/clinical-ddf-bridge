@@ -230,7 +230,8 @@ async def test_audit_logs_group_sealing_and_chaining():
     assert resp.status_code == 201
 
     # Retrieve logs to make sure we have them
-    resp_logs = client.get("/api/v1/etmf/audit-logs", headers=headers)
+    auditor_headers = get_auth_headers(roles="auditor", change_reason="audit logs check")
+    resp_logs = client.get("/api/v1/etmf/audit-logs", headers=auditor_headers)
     assert resp_logs.status_code == 200
     logs = resp_logs.json()
     assert len(logs) >= 2  # INGEST and AUDIT_VIEW
