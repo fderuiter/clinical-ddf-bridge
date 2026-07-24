@@ -126,7 +126,7 @@ async def test_lookup_and_indexes():
         term_stmt = select(MedDRATerm).where(
             MedDRATerm.dictionary_version == "26.0",
             MedDRATerm.code == "10019205",
-            MedDRATerm.level == "SOC"
+            MedDRATerm.level == "SOC",
         )
         term_res = await session.execute(term_stmt)
         queried_term = term_res.scalar_one_or_none()
@@ -136,7 +136,7 @@ async def test_lookup_and_indexes():
         # Test hierarchy query
         hier_stmt = select(MedDRAHierarchy).where(
             MedDRAHierarchy.dictionary_version == "26.0",
-            MedDRAHierarchy.pt_code == "10019211"
+            MedDRAHierarchy.pt_code == "10019211",
         )
         hier_res = await session.execute(hier_stmt)
         queried_hier = hier_res.scalar_one_or_none()
@@ -173,7 +173,10 @@ async def test_audit_trigger_logging_on_coding_workflow():
             logs = res.scalars().all()
             insert_logs = [log for log in logs if log.action == "INSERT"]
             assert len(insert_logs) >= 1
-            assert any(lg.new_values["verbatim_text"] == "headache symptom" for lg in insert_logs)
+            assert any(
+                lg.new_values["verbatim_text"] == "headache symptom"
+                for lg in insert_logs
+            )
             assert any(lg.new_values["coded_code"] == "10019211" for lg in insert_logs)
 
     # 2. UPDATE audit log test
@@ -199,15 +202,21 @@ async def test_audit_trigger_logging_on_coding_workflow():
             update_logs = [log for log in logs if log.action == "UPDATE"]
             assert len(update_logs) >= 1
             assert any(lg.old_values["status"] == "CODED" for lg in update_logs)
-            assert any(lg.new_values["status"] == "RECODING_REQUIRED" for lg in update_logs)
+            assert any(
+                lg.new_values["status"] == "RECODING_REQUIRED" for lg in update_logs
+            )
 
     # 3. Prevent hard delete, but allow soft delete
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             # Hard delete should raise exception from trigger/session handler
-            with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            with pytest.raises(
+                Exception, match="Hard deletions are strictly forbidden"
+            ):
                 await session.execute(
-                    text("DELETE FROM clinical_coding_assignments WHERE observation_id = 'obs_123';")
+                    text(
+                        "DELETE FROM clinical_coding_assignments WHERE observation_id = 'obs_123';"
+                    )
                 )
 
     # Soft delete instead
@@ -271,9 +280,7 @@ async def test_dictionary_import_job_lifecycle():
             assert job_obj.records_imported == 45000
 
             res_logs = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "dictionary_import_jobs"
-                )
+                select(AuditLog).where(AuditLog.table_name == "dictionary_import_jobs")
             )
             logs = res_logs.scalars().all()
             assert len(logs) > 0

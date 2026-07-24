@@ -354,7 +354,10 @@ class MedDRATerm(AuditedModel):
     __tablename__ = "meddra_terms"
     __table_args__ = (
         UniqueConstraint(
-            "dictionary_version", "code", "level", name="uq_meddra_term_version_code_level"
+            "dictionary_version",
+            "code",
+            "level",
+            name="uq_meddra_term_version_code_level",
         ),
         Index("idx_meddra_term_lookup", "dictionary_version", "code", "level"),
         Index("idx_meddra_term_search", "dictionary_version", "term_name"),
@@ -363,7 +366,9 @@ class MedDRATerm(AuditedModel):
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     term_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    level: Mapped[str] = mapped_column(String(10), nullable=False)  # "LLT", "PT", "HLT", "HLGT", "SOC"
+    level: Mapped[str] = mapped_column(
+        String(10), nullable=False
+    )  # "LLT", "PT", "HLT", "HLGT", "SOC"
 
 
 class MedDRAHierarchy(AuditedModel):
@@ -420,7 +425,9 @@ class WHODrugIngredient(AuditedModel):
     __tablename__ = "whodrug_ingredients"
     __table_args__ = (
         UniqueConstraint(
-            "dictionary_version", "ingredient_code", name="uq_whodrug_ingredient_version_code"
+            "dictionary_version",
+            "ingredient_code",
+            name="uq_whodrug_ingredient_version_code",
         ),
         Index("idx_whodrug_ingredient_lookup", "dictionary_version", "ingredient_code"),
         Index("idx_whodrug_ingredient_search", "dictionary_version", "ingredient_name"),
@@ -453,7 +460,10 @@ class WHODrugDrugATC(AuditedModel):
     __tablename__ = "whodrug_drug_atc"
     __table_args__ = (
         UniqueConstraint(
-            "dictionary_version", "drug_code", "atc_code", name="uq_whodrug_drug_atc_version"
+            "dictionary_version",
+            "drug_code",
+            "atc_code",
+            name="uq_whodrug_drug_atc_version",
         ),
         Index("idx_whodrug_drug_atc_lookup", "dictionary_version", "drug_code"),
     )
@@ -469,7 +479,10 @@ class WHODrugDrugIngredient(AuditedModel):
     __tablename__ = "whodrug_drug_ingredients"
     __table_args__ = (
         UniqueConstraint(
-            "dictionary_version", "drug_code", "ingredient_code", name="uq_whodrug_drug_ingredient_version"
+            "dictionary_version",
+            "drug_code",
+            "ingredient_code",
+            name="uq_whodrug_drug_ingredient_version",
         ),
         Index("idx_whodrug_drug_ing_lookup", "dictionary_version", "drug_code"),
     )
@@ -484,9 +497,13 @@ class DictionaryImportJob(AuditedModel):
 
     __tablename__ = "dictionary_import_jobs"
 
-    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "MEDDRA", "WHODRUG", etc.
+    dictionary_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "MEDDRA", "WHODRUG", etc.
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)  # ImportState
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )  # ImportState
     started_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -506,14 +523,20 @@ class ClinicalCodingAssignment(AuditedModel):
     )
 
     verbatim_text: Mapped[str] = mapped_column(String(1000), nullable=False)
-    source_field: Mapped[str] = mapped_column(String(255), nullable=True)  # e.g., "AE.AETERM"
+    source_field: Mapped[str] = mapped_column(
+        String(255), nullable=True
+    )  # e.g., "AE.AETERM"
     observation_id: Mapped[str] = mapped_column(String(255), nullable=True)
     dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
     coded_code: Mapped[str] = mapped_column(String(50), nullable=False)
     coded_term: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="UNCODED", nullable=False)  # CodingState
-    recoding_status: Mapped[str] = mapped_column(String(50), default="NONE", nullable=False)  # RecodingState
+    status: Mapped[str] = mapped_column(
+        String(50), default="UNCODED", nullable=False
+    )  # CodingState
+    recoding_status: Mapped[str] = mapped_column(
+        String(50), default="NONE", nullable=False
+    )  # RecodingState
     assigned_by: Mapped[str] = mapped_column(String(255), nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
