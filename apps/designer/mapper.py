@@ -12,7 +12,9 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: The mapped study data.
     """
-    active_rules = [r for r in study_data.get("rules", []) if not r.get("is_deleted", False)]
+    active_rules = [
+        r for r in study_data.get("rules", []) if not r.get("is_deleted", False)
+    ]
 
     arms = []
     for arm_data in study_data.get("arms", []):
@@ -26,15 +28,19 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
                 # Find per-item rules targeting this activity/field
                 item_rules = []
                 for rule in active_rules:
-                    if rule.get("type") in ("skip_logic", "constraint") and rule.get("target_field") in (act_id, act_name):
-                        item_rules.append({
-                            "id": rule["id"],
-                            "type": rule["type"],
-                            "condition": rule["condition"],
-                            "action": rule.get("action"),
-                            "query_message": rule.get("query_message"),
-                            "version_index": rule.get("version_index", 1)
-                        })
+                    if rule.get("type") in ("skip_logic", "constraint") and rule.get(
+                        "target_field"
+                    ) in (act_id, act_name):
+                        item_rules.append(
+                            {
+                                "id": rule["id"],
+                                "type": rule["type"],
+                                "condition": rule["condition"],
+                                "action": rule.get("action"),
+                                "query_message": rule.get("query_message"),
+                                "version_index": rule.get("version_index", 1),
+                            }
+                        )
 
                 act_mapped = {"id": act_id, "name": act_name}
                 if item_rules:
@@ -84,17 +90,19 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
     # Map rules to top-level study rules list
     mapped_rules = []
     for rule in active_rules:
-        mapped_rules.append({
-            "id": rule["id"],
-            "type": rule["type"],
-            "condition": rule["condition"],
-            "action": rule.get("action"),
-            "target_field": rule.get("target_field"),
-            "target_form": rule.get("target_form"),
-            "target_group": rule.get("target_group"),
-            "query_message": rule.get("query_message"),
-            "version_index": rule.get("version_index", 1)
-        })
+        mapped_rules.append(
+            {
+                "id": rule["id"],
+                "type": rule["type"],
+                "condition": rule["condition"],
+                "action": rule.get("action"),
+                "target_field": rule.get("target_field"),
+                "target_form": rule.get("target_form"),
+                "target_group": rule.get("target_group"),
+                "query_message": rule.get("query_message"),
+                "version_index": rule.get("version_index", 1),
+            }
+        )
 
     return {
         "id": study_data["study_id"],

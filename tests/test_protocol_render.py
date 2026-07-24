@@ -1,21 +1,21 @@
 import uuid
-from datetime import datetime, timezone
-import pytest
-from pydantic import ValidationError
-from usdm_model import Study
+from datetime import datetime
 
+import pytest
 from protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,
-    SynopsisView,
-    SoAHeaderEpoch,
-    SoAHeaderEncounter,
-    SoACellView,
-    SoARowView,
-    SoAMatrixView,
     RenderedProtocolDocument,
+    SoACellView,
+    SoAHeaderEncounter,
+    SoAHeaderEpoch,
+    SoAMatrixView,
+    SoARowView,
+    SynopsisView,
 )
+from pydantic import ValidationError
+from usdm_model import Study
 
 
 def test_export_metadata_valid_initial():
@@ -113,7 +113,10 @@ def test_narrative_item_and_section_views():
     assert len(parent_section.subsections) == 1
     assert parent_section.subsections[0].section_number == "1.1"
     assert len(parent_section.subsections[0].items) == 2
-    assert parent_section.subsections[0].items[0].text == "This is the first paragraph of the introduction."
+    assert (
+        parent_section.subsections[0].items[0].text
+        == "This is the first paragraph of the introduction."
+    )
 
 
 def test_synopsis_view_parsing():
@@ -126,7 +129,10 @@ def test_synopsis_view_parsing():
         protocol_number="PROT-X-202",
         sponsor_name="Pharma Corp",
         phase="Phase II",
-        objectives=["To evaluate the efficacy of Compound X.", "To assess safety and tolerability."],
+        objectives=[
+            "To evaluate the efficacy of Compound X.",
+            "To assess safety and tolerability.",
+        ],
         study_design_type="Randomized, Double-Blind, Placebo-Controlled",
         population="Adults with diagnosed Disease Y.",
         sample_size=150,
@@ -159,10 +165,16 @@ def test_soa_matrix_view():
     )
 
     cell1 = SoACellView(
-        activity_id="act-vitals", encounter_id="v1", epoch_id="ep-tx", is_applicable=True
+        activity_id="act-vitals",
+        encounter_id="v1",
+        epoch_id="ep-tx",
+        is_applicable=True,
     )
     cell2 = SoACellView(
-        activity_id="act-vitals", encounter_id="v2", epoch_id="ep-tx", is_applicable=True
+        activity_id="act-vitals",
+        encounter_id="v2",
+        epoch_id="ep-tx",
+        is_applicable=True,
     )
     cell3 = SoACellView(
         activity_id="act-vitals",
@@ -189,7 +201,9 @@ def test_soa_matrix_view():
     assert len(matrix.rows) == 1
     assert matrix.rows[0].activity_name == "Vital Signs"
     assert matrix.rows[0].cells[2].is_applicable is False
-    assert matrix.rows[0].cells[2].details == "Not required unless clinically indicated."
+    assert (
+        matrix.rows[0].cells[2].details == "Not required unless clinically indicated."
+    )
 
 
 def test_rendered_protocol_document_with_usdm_study():
@@ -205,7 +219,9 @@ def test_rendered_protocol_document_with_usdm_study():
         instanceType="Study",
     )
 
-    meta = ExportMetadata(creator="auditor1", change_reason="Routine FDA submission", version_index=3)
+    meta = ExportMetadata(
+        creator="auditor1", change_reason="Routine FDA submission", version_index=3
+    )
     synopsis = SynopsisView(
         study_id="study-abc",
         protocol_title="Integrated Study Protocol",

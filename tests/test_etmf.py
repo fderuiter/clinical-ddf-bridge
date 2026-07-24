@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from apps.etmf.database import db_manager
 from apps.etmf.main import app, map_artifact_to_tmf
-from apps.etmf.models import Base, TMFAuditLog, TMFDocument, DocumentQCTransition
+from apps.etmf.models import Base, DocumentQCTransition, TMFAuditLog, TMFDocument
 from apps.gateway.main import generate_signature
 
 
@@ -930,13 +930,21 @@ async def test_etmf_qc_lifecycle_and_audit():
     - Current-status visibility and QC-history ordering.
     """
     client = TestClient(app)
-    
+
     # Define authorized headers for various roles
     headers_admin = get_auth_headers(roles="admin", change_reason="Ingest doc")
-    headers_dm = get_auth_headers(roles="sponsor_dm", change_reason="Executing technical check")
-    headers_clinical = get_auth_headers(roles="sponsor_clinical", change_reason="Executing clinical check")
-    headers_monitor = get_auth_headers(roles="monitor", change_reason="Monitoring document status")
-    headers_auditor = get_auth_headers(roles="auditor", change_reason="Audit trail lookup")
+    headers_dm = get_auth_headers(
+        roles="sponsor_dm", change_reason="Executing technical check"
+    )
+    headers_clinical = get_auth_headers(
+        roles="sponsor_clinical", change_reason="Executing clinical check"
+    )
+    _headers_monitor = get_auth_headers(
+        roles="monitor", change_reason="Monitoring document status"
+    )
+    headers_auditor = get_auth_headers(
+        roles="auditor", change_reason="Audit trail lookup"
+    )
 
     # 1. Successful progression: Draft -> Technical QC -> Clinical QC -> Approved -> Archived.
     payload1 = {
@@ -946,7 +954,9 @@ async def test_etmf_qc_lifecycle_and_audit():
         "content": "Happy path protocol content.",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload1, headers=headers_admin)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload1, headers=headers_admin
+    )
     assert ingest_resp.status_code == 201
     doc_id1 = ingest_resp.json()["document_id"]
     assert ingest_resp.json()["document_status"] == "DRAFT"
@@ -954,7 +964,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # DRAFT -> TECHNICAL_QC (Allowed roles: sponsor_dm, admin)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id1}/transition",
-        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Technical QC complete"},
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Technical QC complete",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 200
@@ -963,7 +976,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # TECHNICAL_QC -> CLINICAL_QC (Allowed roles: sponsor_clinical, admin, monitor)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id1}/transition",
-        json={"to_status": "CLINICAL_QC", "reason_for_change": "Clinical review complete"},
+        json={
+            "to_status": "CLINICAL_QC",
+            "reason_for_change": "Clinical review complete",
+        },
         headers=headers_clinical,
     )
     assert resp.status_code == 200
@@ -979,28 +995,57 @@ async def test_etmf_qc_lifecycle_and_audit():
     # APPROVED -> ARCHIVED (Allowed roles: sponsor_dm, admin)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id1}/transition",
-        json={"to_status": "ARCHIVED", "reason_for_change": "Study finalized and archived"},
+        json={
+            "to_status": "ARCHIVED",
+            "reason_for_change": "Study finalized and archived",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 200
 
     # Verify terminal status is ARCHIVED in DB
     async with db_manager.get_session_maker()() as session:
-        doc = (await session.execute(select(TMFDocument).where(TMFDocument.id == doc_id1))).scalars().first()
+        doc = (
+            (
+                await session.execute(
+                    select(TMFDocument).where(TMFDocument.id == doc_id1)
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert doc is not None
         assert doc.status == "ARCHIVED"
 
         # Verify DocumentQCTransition records (Exactly 4 transitions)
-        stmt_trans = select(DocumentQCTransition).where(DocumentQCTransition.document_id == doc_id1).order_by(DocumentQCTransition.timestamp.asc())
+        stmt_trans = (
+            select(DocumentQCTransition)
+            .where(DocumentQCTransition.document_id == doc_id1)
+            .order_by(DocumentQCTransition.timestamp.asc())
+        )
         transitions = (await session.execute(stmt_trans)).scalars().all()
         assert len(transitions) == 4
-        assert transitions[0].from_status == "DRAFT" and transitions[0].to_status == "TECHNICAL_QC"
-        assert transitions[1].from_status == "TECHNICAL_QC" and transitions[1].to_status == "CLINICAL_QC"
-        assert transitions[2].from_status == "CLINICAL_QC" and transitions[2].to_status == "APPROVED"
-        assert transitions[3].from_status == "APPROVED" and transitions[3].to_status == "ARCHIVED"
+        assert (
+            transitions[0].from_status == "DRAFT"
+            and transitions[0].to_status == "TECHNICAL_QC"
+        )
+        assert (
+            transitions[1].from_status == "TECHNICAL_QC"
+            and transitions[1].to_status == "CLINICAL_QC"
+        )
+        assert (
+            transitions[2].from_status == "CLINICAL_QC"
+            and transitions[2].to_status == "APPROVED"
+        )
+        assert (
+            transitions[3].from_status == "APPROVED"
+            and transitions[3].to_status == "ARCHIVED"
+        )
 
         # Verify TMFAuditLog entries exist for each transition
-        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.document_id == doc_id1, TMFAuditLog.action == "QC_TRANSITION")
+        stmt_audit = select(TMFAuditLog).where(
+            TMFAuditLog.document_id == doc_id1, TMFAuditLog.action == "QC_TRANSITION"
+        )
         audit_logs = (await session.execute(stmt_audit)).scalars().all()
         assert len(audit_logs) == 4
 
@@ -1012,14 +1057,19 @@ async def test_etmf_qc_lifecycle_and_audit():
         "content": "Rejection flow protocol content.",
         "mime_type": "application/pdf",
     }
-    ingest_resp2 = client.post("/api/v1/etmf/ingest", json=payload2, headers=headers_admin)
+    ingest_resp2 = client.post(
+        "/api/v1/etmf/ingest", json=payload2, headers=headers_admin
+    )
     assert ingest_resp2.status_code == 201
     doc_id2 = ingest_resp2.json()["document_id"]
 
     # DRAFT -> TECHNICAL_QC
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Technical checks passed"},
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Technical checks passed",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 200
@@ -1027,25 +1077,47 @@ async def test_etmf_qc_lifecycle_and_audit():
     # TECHNICAL_QC -> REJECTED (Allowed roles: sponsor_dm, sponsor_clinical, admin)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "REJECTED", "reason_for_change": "Failed compliance check on protocol page 5"},
+        json={
+            "to_status": "REJECTED",
+            "reason_for_change": "Failed compliance check on protocol page 5",
+        },
         headers=headers_clinical,
     )
     assert resp.status_code == 200
 
     async with db_manager.get_session_maker()() as session:
-        doc2 = (await session.execute(select(TMFDocument).where(TMFDocument.id == doc_id2))).scalars().first()
+        doc2 = (
+            (
+                await session.execute(
+                    select(TMFDocument).where(TMFDocument.id == doc_id2)
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert doc2.status == "REJECTED"
 
     # REJECTED -> DRAFT (Allowed roles: sponsor_dm, sponsor_clinical, admin)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "DRAFT", "reason_for_change": "Reverting back to Draft for updates"},
+        json={
+            "to_status": "DRAFT",
+            "reason_for_change": "Reverting back to Draft for updates",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 200
 
     async with db_manager.get_session_maker()() as session:
-        doc2 = (await session.execute(select(TMFDocument).where(TMFDocument.id == doc_id2))).scalars().first()
+        doc2 = (
+            (
+                await session.execute(
+                    select(TMFDocument).where(TMFDocument.id == doc_id2)
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert doc2.status == "DRAFT"
 
     # 3. Rejection of invalid/reverse transitions.
@@ -1053,7 +1125,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # To do this, first transition doc2 back to TECHNICAL_QC
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Technical checks passed again"},
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Technical checks passed again",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 200
@@ -1061,7 +1136,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # Try TECHNICAL_QC -> ARCHIVED (invalid state transition)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "ARCHIVED", "reason_for_change": "Attempt invalid fast-forward transition"},
+        json={
+            "to_status": "ARCHIVED",
+            "reason_for_change": "Attempt invalid fast-forward transition",
+        },
         headers=headers_admin,
     )
     assert resp.status_code == 422
@@ -1070,7 +1148,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # Try TECHNICAL_QC -> DRAFT (invalid reverse transition without REJECTED)
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "DRAFT", "reason_for_change": "Attempt invalid reverse transition"},
+        json={
+            "to_status": "DRAFT",
+            "reason_for_change": "Attempt invalid reverse transition",
+        },
         headers=headers_admin,
     )
     assert resp.status_code == 422
@@ -1081,7 +1162,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     # CLINICAL_QC required roles: sponsor_clinical, admin, monitor. So sponsor_dm is not allowed.
     resp = client.post(
         f"/api/v1/etmf/documents/{doc_id2}/transition",
-        json={"to_status": "CLINICAL_QC", "reason_for_change": "Attempt transition with incorrect role"},
+        json={
+            "to_status": "CLINICAL_QC",
+            "reason_for_change": "Attempt transition with incorrect role",
+        },
         headers=headers_dm,
     )
     assert resp.status_code == 403
@@ -1101,7 +1185,10 @@ async def test_etmf_qc_lifecycle_and_audit():
         headers=headers_clinical,
     )
     assert resp.status_code == 422
-    assert "Reason for change is mandatory and must be at least 10 characters long" in resp.json()["detail"]
+    assert (
+        "Reason for change is mandatory and must be at least 10 characters long"
+        in resp.json()["detail"]
+    )
 
     # 6. Current-status visibility and QC-history ordering.
     # Let's call the history GET endpoint for doc1 (which has 4 transitions)
@@ -1114,10 +1201,22 @@ async def test_etmf_qc_lifecycle_and_audit():
     assert len(history) == 4
 
     # Check ascending order
-    assert history[0]["from_status"] == "DRAFT" and history[0]["to_status"] == "TECHNICAL_QC"
-    assert history[1]["from_status"] == "TECHNICAL_QC" and history[1]["to_status"] == "CLINICAL_QC"
-    assert history[2]["from_status"] == "CLINICAL_QC" and history[2]["to_status"] == "APPROVED"
-    assert history[3]["from_status"] == "APPROVED" and history[3]["to_status"] == "ARCHIVED"
+    assert (
+        history[0]["from_status"] == "DRAFT"
+        and history[0]["to_status"] == "TECHNICAL_QC"
+    )
+    assert (
+        history[1]["from_status"] == "TECHNICAL_QC"
+        and history[1]["to_status"] == "CLINICAL_QC"
+    )
+    assert (
+        history[2]["from_status"] == "CLINICAL_QC"
+        and history[2]["to_status"] == "APPROVED"
+    )
+    assert (
+        history[3]["from_status"] == "APPROVED"
+        and history[3]["to_status"] == "ARCHIVED"
+    )
 
     # Verify access is audited with QC_HISTORY_VIEW in audit logs
     resp_logs = client.get(
@@ -1126,6 +1225,10 @@ async def test_etmf_qc_lifecycle_and_audit():
     )
     assert resp_logs.status_code == 200
     logs = resp_logs.json()
-    history_view_logs = [log for log in logs if log["action"] == "QC_HISTORY_VIEW" and log["document_id"] == doc_id1]
+    history_view_logs = [
+        log
+        for log in logs
+        if log["action"] == "QC_HISTORY_VIEW" and log["document_id"] == doc_id1
+    ]
     assert len(history_view_logs) > 0
     assert "Viewed QC transition history" in history_view_logs[0]["details"]

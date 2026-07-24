@@ -92,7 +92,7 @@ def test_sha256_hashing_helper():
 
     assert hash_str == hash_bytes
     assert (
-        hash_str == "709961da2370f98e2dfe285753a10082e1acc6477c02e7e109ac459ea5a4cab9"
+        hash_str == "709961da2370f98e2dfe285753a10082e1acc6477c02e7e109ac459ea5a4cab9"  # pragma: allowlist secret
     )
 
 
