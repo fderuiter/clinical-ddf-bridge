@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 365
-- **Passed:** 365 🟢
+- **Total Automated Test Cases Run:** 367
+- **Passed:** 367 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -36,106 +36,71 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-Package                 Version     Editable project location
------------------------ ----------- -------------------------
-aiosqlite               0.22.1
-annotated-doc           0.0.4
-annotated-types         0.7.0
-anyio                   4.14.2
-asyncpg                 0.31.0
-bandit                  1.9.4
-beautifulsoup4          4.15.0
-boolean-py              5.0
-cachecontrol            0.14.4
+Package            Version     Editable project location
+------------------ ----------- -------------------------
+aiosqlite          0.22.1
+annotated-doc      0.0.4
+annotated-types    0.7.0
+anyio              4.14.2
+asyncpg            0.31.0
+beautifulsoup4     4.15.0
 cadence-clinical         0.1.0       /app
-certifi                 2026.7.22
-cffi                    2.1.0
-cfgv                    3.5.0
-charset-normalizer      3.4.9
-click                   8.4.2
-coverage                7.15.2
-cryptography            49.0.0
-cyclonedx-python-lib    11.11.0
-defusedxml              0.7.1
-detect-secrets          1.5.0
-distlib                 0.4.3
-ecdsa                   0.19.2
-et-xmlfile              2.0.0
-fastapi                 0.139.2
-filelock                3.32.0
-greenlet                3.5.4
-h11                     0.16.0
-httpcore                1.0.9
-httptools               0.8.0
-httpx                   0.28.1
-identify                2.6.19
-idna                    3.18
-iniconfig               2.3.0
-jinja2                  3.1.6
-license-expression      30.4.4
-markdown-it-py          4.2.0
-markupsafe              3.0.3
-mdurl                   0.1.2
-msgpack                 1.2.1
-neo4j                   6.2.0
-nodeenv                 1.10.0
-numpy                   2.5.1
-openpyxl                3.1.5
-packageurl-python       0.17.6
-packaging               26.2
-pandas                  3.0.3
-pip                     26.1.2
-pip-api                 0.0.34
-pip-audit               2.10.1
-pip-requirements-parser 32.0.1
-platformdirs            4.11.0
-playwright              1.61.0
-pluggy                  1.6.0
-pre-commit              4.6.1
-py-serializable         2.1.0
-pyasn1                  0.6.4
-pycparser               3.0
-pydantic                2.13.4
-pydantic-core           2.46.4
-pyee                    13.0.1
-pygments                2.20.0
-pyparsing               3.3.2
-pytest                  9.1.1
-pytest-asyncio          1.4.0
-pytest-base-url         2.1.0
-pytest-cov              7.1.0
-pytest-playwright       0.8.0
-python-dateutil         2.9.0.post0
-python-discovery        1.5.0
-python-dotenv           1.2.2
-python-jose             3.5.0
-python-multipart        0.0.32
-python-slugify          8.0.4
-pytz                    2026.2
-pyyaml                  6.0.3
-requests                2.34.2
-rich                    15.0.0
-rsa                     4.9.1
-ruff                    0.15.22
-six                     1.17.0
-sortedcontainers        2.4.0
-soupsieve               2.9.1
-sqlalchemy              2.0.51
-starlette               1.3.1
-stevedore               5.9.0
-text-unidecode          1.3
-tomli                   2.4.1
-tomli-w                 1.2.0
-typing-extensions       4.16.0
-typing-inspection       0.4.2
-urllib3                 2.7.0
-usdm                    0.67.0
-uvicorn                 0.51.0
-uvloop                  0.22.1
-virtualenv              21.7.0
-watchfiles              1.2.0
-websockets              16.1.1
-yattag                  1.16.1
+certifi            2026.7.22
+cffi               2.1.0
+charset-normalizer 3.4.9
+click              8.4.2
+coverage           7.15.2
+cryptography       49.0.0
+defusedxml         0.7.1
+ecdsa              0.19.2
+et-xmlfile         2.0.0
+fastapi            0.139.2
+greenlet           3.5.4
+h11                0.16.0
+httpcore           1.0.9
+httptools          0.8.0
+httpx              0.28.1
+idna               3.18
+iniconfig          2.3.0
+jinja2             3.1.6
+markupsafe         3.0.3
+neo4j              6.2.0
+numpy              2.5.1
+openpyxl           3.1.5
+packaging          26.2
+pandas             3.0.3
+playwright         1.61.0
+pluggy             1.6.0
+pyasn1             0.6.4
+pycparser          3.0
+pydantic           2.13.4
+pydantic-core      2.46.4
+pyee               13.0.1
+pygments           2.20.0
+pytest             9.1.1
+pytest-asyncio     1.4.0
+pytest-cov         7.1.0
+python-dateutil    2.9.0.post0
+python-dotenv      1.2.2
+python-jose        3.5.0
+python-multipart   0.0.32
+pytz               2026.2
+pyyaml             6.0.3
+requests           2.34.2
+rsa                4.9.1
+six                1.17.0
+soupsieve          2.9.1
+sqlalchemy         2.0.51
+starlette          1.3.1
+typing-extensions  4.16.0
+typing-inspection  0.4.2
+urllib3            2.7.0
+usdm               0.67.0
+uvicorn            0.51.0
+uvloop             0.22.1
+watchfiles         1.2.0
+websockets         16.1.1
+yattag             1.16.1
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -233,11 +198,27 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_database_url_override_and_init` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_database_schema_creation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_document_lifecycle_and_audit_context` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_get_not_found` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_health_check` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_pydantic_schemas` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_auth_middleware_denials` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_shared_audit_fields_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_append_only_versions_and_deduplication` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_document_creation_and_site_scoped` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_part11_audit_log_retention` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_uninitialized_database_manager_eisf` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_aggregate_eligibility_evaluation` | `tests.test_eligibility_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evaluation_all_operators` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-005 | 🟢 PASSED | < 1s |
+| `test_evaluation_incompatible_types_graceful_handling` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-007 | 🟢 PASSED | < 1s |
+| `test_evaluation_kleene_indeterminate_propagation` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-006 | 🟢 PASSED | < 1s |
+| `test_parse_invalid_syntax` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-004 | 🟢 PASSED | < 1s |
+| `test_parse_logical_and_nested_expressions` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-003 | 🟢 PASSED | < 1s |
+| `test_parse_simple_expressions` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-002 | 🟢 PASSED | < 1s |
 | `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_canonical_catalog_ingestion_validations` | `tests.test_etmf` | PRD-TMF-002, PRD-TMF-003, Trace-5 | 🟢 PASSED | < 1s |
 | `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -357,6 +338,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -380,6 +368,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_capa_updates_and_concurrency` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
 | `test_create_and_list_deviations` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_create_and_update_rca` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_randomization_entities_audit_trail_and_soft_delete` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_randomization_entities_hard_delete_prevented` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_randomization_entities_trial_lock_conformity` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_audit_logs_gated_to_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_document_transition_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_edl_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -409,6 +400,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_meddra_coding` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_full_normalization` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_minimum` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_date_format_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dm_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lb_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_models_optional_nones` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_null_flavor_enum_membership` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdtm_domain_enum_membership` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_suppqual_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_normalization_and_enums` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_vs_required_and_optional_fields` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_tsdv_config_persistence` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007 | 🟢 PASSED | < 1s |
@@ -444,6 +447,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_neo4j_create_study_version_duplicate_raises_conflict` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_create_study_version_success` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties_guards` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generic_natural_deduplication_key` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_validation_failures` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_validation_happy_path` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_client_wins_existing` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_client_wins_no_existing` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_merge_independent_fields` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_merge_lww_existing_wins` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_merge_lww_incoming_wins` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_merge_lww_timestamp_tie` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_strategy_server_wins` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_fallback` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_env` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_git_https` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
