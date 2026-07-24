@@ -12,6 +12,16 @@ from apps.execution.database.models import (  # noqa: F401
     ClinicalQuery,
     SDVSignOff,
     TSDVConfig,
+    MedDRATerm,
+    MedDRAHierarchy,
+    WHODrugRecord,
+    WHODrugIngredient,
+    WHODrugATC,
+    WHODrugDrugATC,
+    WHODrugDrugIngredient,
+    DictionaryImportJob,
+    ClinicalCodingAssignment,
+    ClinicalCodingLedger,
 )
 
 
