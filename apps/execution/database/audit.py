@@ -85,6 +85,20 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Visit {visit_id} is currently locked in a read-only state."
             )
 
+        subject_id = getattr(obj, "subject_id", None) or getattr(obj, "subject", None)
+        if subject_id is not None and TrialLockManager.is_subject_locked(
+            str(subject_id)
+        ):
+            raise PermissionError(
+                f"Subject {subject_id} is currently locked in a read-only state."
+            )
+
+        form_id = getattr(obj, "form_id", None) or getattr(obj, "page_id", None)
+        if form_id is not None and TrialLockManager.is_form_locked(str(form_id)):
+            raise PermissionError(
+                f"Form {form_id} is currently locked in a read-only state."
+            )
+
     audit_logs = []
     user_id = current_user_id.get()
     reason = current_change_reason.get()
