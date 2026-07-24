@@ -32,6 +32,10 @@
       {
         "name": "Grants Manager",
         "description": "Grants Manager responsible for clinical trial budget and financial oversight."
+      },
+      {
+        "name": "Subject",
+        "description": "Subject/Patient role restricted to diary/eCOA submissions."
       }
     ]
   },
