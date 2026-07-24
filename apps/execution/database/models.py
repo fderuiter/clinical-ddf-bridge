@@ -5,7 +5,9 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     DateTime,
+    Enum,
     Float,
     Index,
     Integer,
@@ -393,7 +395,9 @@ class MedDRAHierarchy(AuditedModel):
     )
 
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    llt_code: Mapped[str] = mapped_column(String(50), nullable=True)
+    llt_code: Mapped[str] = mapped_column(
+        String(50), default="NONE", server_default="NONE", nullable=False
+    )
     pt_code: Mapped[str] = mapped_column(String(50), nullable=False)
     hlt_code: Mapped[str] = mapped_column(String(50), nullable=False)
     hlgt_code: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -497,13 +501,15 @@ class DictionaryImportJob(AuditedModel):
 
     __tablename__ = "dictionary_import_jobs"
 
-    dictionary_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # "MEDDRA", "WHODRUG", etc.
+    dictionary_type: Mapped[DictionaryType] = mapped_column(
+        Enum(DictionaryType, name="dictionary_type_enum"), nullable=False
+    )
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), default="PENDING", nullable=False
-    )  # ImportState
+    status: Mapped[ImportState] = mapped_column(
+        Enum(ImportState, name="import_state_enum"),
+        default=ImportState.PENDING,
+        nullable=False,
+    )
     started_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     progress_percentage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -520,6 +526,10 @@ class ClinicalCodingAssignment(AuditedModel):
         Index("idx_coding_assign_lookup", "dictionary_type", "dictionary_version"),
         Index("idx_coding_assign_verbatim", "verbatim_text"),
         Index("idx_coding_assign_obs", "observation_id"),
+        CheckConstraint(
+            "(status != 'CODED') OR (coded_code IS NOT NULL AND coded_term IS NOT NULL)",
+            name="chk_coding_assignment_coded_fields",
+        ),
     )
 
     verbatim_text: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -527,16 +537,22 @@ class ClinicalCodingAssignment(AuditedModel):
         String(255), nullable=True
     )  # e.g., "AE.AETERM"
     observation_id: Mapped[str] = mapped_column(String(255), nullable=True)
-    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    dictionary_type: Mapped[DictionaryType] = mapped_column(
+        Enum(DictionaryType, name="dictionary_type_assignment_enum"), nullable=False
+    )
     dictionary_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    coded_code: Mapped[str] = mapped_column(String(50), nullable=False)
-    coded_term: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), default="UNCODED", nullable=False
-    )  # CodingState
-    recoding_status: Mapped[str] = mapped_column(
-        String(50), default="NONE", nullable=False
-    )  # RecodingState
+    coded_code: Mapped[str] = mapped_column(String(50), nullable=True)
+    coded_term: Mapped[str] = mapped_column(String(255), nullable=True)
+    status: Mapped[CodingState] = mapped_column(
+        Enum(CodingState, name="coding_state_enum"),
+        default=CodingState.UNCODED,
+        nullable=False,
+    )
+    recoding_status: Mapped[RecodingState] = mapped_column(
+        Enum(RecodingState, name="recoding_state_enum"),
+        default=RecodingState.NONE,
+        nullable=False,
+    )
     assigned_by: Mapped[str] = mapped_column(String(255), nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
@@ -553,7 +569,9 @@ class ClinicalCodingLedger(AuditedModel):
     assignment_id: Mapped[str] = mapped_column(String(36), nullable=False)
     verbatim_text: Mapped[str] = mapped_column(String(1000), nullable=False)
     observation_id: Mapped[str] = mapped_column(String(255), nullable=True)
-    dictionary_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    dictionary_type: Mapped[DictionaryType] = mapped_column(
+        Enum(DictionaryType, name="dictionary_type_ledger_enum"), nullable=False
+    )
     old_dictionary_version: Mapped[str] = mapped_column(String(50), nullable=True)
     old_coded_code: Mapped[str] = mapped_column(String(50), nullable=True)
     old_coded_term: Mapped[str] = mapped_column(String(255), nullable=True)

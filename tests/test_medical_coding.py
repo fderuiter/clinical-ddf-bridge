@@ -1,4 +1,5 @@
 import os
+from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -19,7 +20,7 @@ from apps.execution.trial_lock import TrialLockManager
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_db():
+async def setup_db() -> AsyncGenerator[None, None]:
     from apps.execution.database.migrate import deploy_database_triggers
 
     TrialLockManager.reset()
@@ -44,7 +45,7 @@ async def setup_db():
 
 
 @pytest.mark.asyncio
-async def test_meddra_term_unique_constraint():
+async def test_meddra_term_unique_constraint() -> None:
     """Verify that unique constraints prevent duplicate terminology records for identical version, code, and level."""
     # First insert
     async with db_manager.get_session_maker()() as session:
@@ -72,7 +73,7 @@ async def test_meddra_term_unique_constraint():
 
 
 @pytest.mark.asyncio
-async def test_whodrug_record_unique_constraint():
+async def test_whodrug_record_unique_constraint() -> None:
     """Verify that unique constraints prevent duplicate WHODrug record inserts for identical version and drug_code."""
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -98,7 +99,7 @@ async def test_whodrug_record_unique_constraint():
 
 
 @pytest.mark.asyncio
-async def test_lookup_and_indexes():
+async def test_lookup_and_indexes() -> None:
     """Assert that lookup-oriented index queries function correctly on terminology tables."""
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -145,7 +146,7 @@ async def test_lookup_and_indexes():
 
 
 @pytest.mark.asyncio
-async def test_audit_trigger_logging_on_coding_workflow():
+async def test_audit_trigger_logging_on_coding_workflow() -> None:
     """Verify that mutations on clinical coding models write audit trail records correctly."""
     # 1. INSERT audit log test
     async with db_manager.get_session_maker()() as session:
@@ -240,12 +241,12 @@ async def test_audit_trigger_logging_on_coding_workflow():
             logs = res.scalars().all()
             delete_logs = [log for log in logs if log.action == "DELETE"]
             assert len(delete_logs) >= 1
-            assert any(lg.old_values["is_deleted"] is False for lg in delete_logs)
-            assert any(lg.new_values["is_deleted"] is True for lg in delete_logs)
+            assert any(lg.old_values["is_deleted"] == 0 for lg in delete_logs)
+            assert any(lg.new_values["is_deleted"] == 1 for lg in delete_logs)
 
 
 @pytest.mark.asyncio
-async def test_dictionary_import_job_lifecycle():
+async def test_dictionary_import_job_lifecycle() -> None:
     """Verify that import job lifecycle can be persisted, tracked, and audited."""
     async with db_manager.get_session_maker()() as session:
         async with session.begin():

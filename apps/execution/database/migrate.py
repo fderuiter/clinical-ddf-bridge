@@ -24,6 +24,14 @@ from apps.execution.database.models import (  # noqa: F401
     WHODrugRecord,
 )
 
+# Design Guideline:
+# Ensure that any future background dictionary import worker/service sets the database
+# session context flag `cadence.app_writing` to 'true' (e.g. by running
+# "SELECT set_config('cadence.app_writing', 'true', true);") for the duration of
+# bulk terminology loads. This prevents per-row audit logging on massive vocabulary tables,
+# maximizing ingest throughput, while leaving standard audit triggers enabled for normal clinical ops.
+# Keep the AuditedModel registrations and trigger deployment loop below unchanged.
+
 
 async def deploy_database_triggers(conn, dialect_name: str) -> None:
     """

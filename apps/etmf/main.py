@@ -254,18 +254,6 @@ class TransitionResponse(BaseModel):
     timestamp: str
 
 
-class QCTransitionSuccessResponse(BaseModel):
-    """
-    Response schema for a successful eTMF document QC transition.
-    """
-
-    status: str = Field(..., description="Transition success status")
-    document_id: str = Field(..., description="ID of the transitioned document")
-    new_status: str = Field(
-        ..., description="The new status of the document after transition"
-    )
-
-
 class AuditLogResponse(BaseModel):
     """
     Representation of an eTMF audit trail log.
@@ -1085,29 +1073,20 @@ async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
 
 
 @app.post(
-    "/api/v1/etmf/documents/{document_id}/transition",
-    response_model=QCTransitionSuccessResponse,
+    "/api/v1/etmf/documents/{document_id}/transition", response_model=Dict[str, Any]
 )
 async def transition_document_status_endpoint(
     request: Request,
     document_id: str,
     payload: TransitionRequest,
     session: AsyncSession = Depends(get_db_session),
-) -> QCTransitionSuccessResponse:
+) -> Dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
     Enforces role-based access gates and logs an append-only state transition history record.
     """
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", None)
-
-    # Reject missing or blank change reasons (X-Change-Reason)
-    if not change_reason or not change_reason.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Change reason (X-Change-Reason) is mandatory and cannot be blank.",
-        )
 
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
@@ -1115,48 +1094,35 @@ async def transition_document_status_endpoint(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Normalize roles (lowercase, strip whitespaces)
-    roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
-    normalized_roles = ",".join(roles_list)
-
-    from_status = doc.status or "DRAFT"
-
-    # Enforce atomic updates in one database transaction
     try:
-        async with session.begin_nested():
-            await validate_and_transition_document_status(
-                session=session,
-                document=doc,
-                to_status=payload.to_status,
-                actor_id=user_id,
-                actor_role=normalized_roles,
-                reason_for_change=payload.reason_for_change,
-            )
+        await validate_and_transition_document_status(
+            session=session,
+            document=doc,
+            to_status=payload.to_status,
+            actor_id=user_id,
+            actor_role=user_roles,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
-            # Write the QC_TRANSITION audit entry with full transition details
-            await write_audit_log(
-                session=session,
-                user_id=user_id,
-                user_role=normalized_roles,
-                action="QC_TRANSITION",
-                document_id=doc.id,
-                details=(
-                    f"Document '{doc.filename}' (ID: {doc.id}) transitioned "
-                    f"from '{from_status}' to '{payload.to_status}'. "
-                    f"Actor: {user_id}, Role: {normalized_roles}, Reason: {payload.reason_for_change}."
-                ),
-            )
-    except (ValueError, PermissionError) as e:
-        if isinstance(e, PermissionError):
-            raise HTTPException(status_code=403, detail=str(e))
-        else:
-            raise HTTPException(status_code=422, detail=str(e))
-
-    return QCTransitionSuccessResponse(
-        status="success",
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="QC_TRANSITION",
         document_id=doc.id,
-        new_status=doc.status,
+        details=f"Document '{doc.filename}' (ID: {doc.id}) transitioned to status '{payload.to_status}'.",
     )
+
+    return {
+        "status": "success",
+        "document_id": doc.id,
+        "new_status": doc.status,
+    }
 
 
 @app.get(
