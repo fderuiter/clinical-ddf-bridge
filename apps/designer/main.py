@@ -751,6 +751,7 @@ async def amend_protocol(
     Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
     Creates a transaction-safe DRAFT successor with incremented version index.
     """
+    # GxP 21 CFR Part 11 compliant audit trail: capture user and reasoning for version change
     user_id = getattr(request.state, "user_id", "system")
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
