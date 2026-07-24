@@ -6,13 +6,13 @@ from .models import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,
-    SynopsisView,
-    SoAHeaderEpoch,
-    SoAHeaderEncounter,
-    SoACellView,
-    SoARowView,
-    SoAMatrixView,
     RenderedProtocolDocument,
+    SoACellView,
+    SoAHeaderEncounter,
+    SoAHeaderEpoch,
+    SoAMatrixView,
+    SoARowView,
+    SynopsisView,
 )
 
 __all__ = [
