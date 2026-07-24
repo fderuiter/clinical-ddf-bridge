@@ -1,19 +1,12 @@
 import pytest
 from pydantic import ValidationError
-
-import packages  # Ensures core-models injection
-import tmf_reference_model
 from tmf_reference_model import (
-    Zone,
-    Section,
-    Artifact,
-    TaxonomyCatalog,
-    get_catalog,
+    build_catalog,
     get_active_catalog,
+    get_catalog,
+    get_registered_versions,
     register_catalog,
     set_active_version,
-    get_registered_versions,
-    build_catalog,
 )
 
 
