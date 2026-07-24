@@ -1,7 +1,16 @@
+import base64
 import hashlib
 import hmac
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.serialization import (
+    load_pem_private_key,
+    load_pem_public_key,
+)
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
@@ -29,3 +38,82 @@ def verify_canonical_signature(
     """
     expected_sig = generate_canonical_signature(payload, secret)
     return hmac.compare_digest(expected_sig, signature)
+
+
+def compute_sha256_hash(data: bytes | str) -> str:
+    """Computes the hex-encoded SHA-256 hash of a string or byte string."""
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def asymmetric_sign(
+    data: bytes, private_key_pem: str, password: Optional[bytes] = None
+) -> str:
+    """Signs data using a PEM-encoded private key (RSA or Elliptic Curve) and returns a Base64-encoded signature.
+
+    Used to guarantee certificate-bound identity signatures for GxP operations.
+    """
+    private_key = load_pem_private_key(
+        private_key_pem.encode("utf-8"), password=password
+    )
+    if isinstance(private_key, rsa.RSAPrivateKey):
+        signature_bytes = private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())
+    elif isinstance(private_key, ec.EllipticCurvePrivateKey):
+        signature_bytes = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+    else:
+        raise ValueError("Unsupported private key type for asymmetric signing.")
+    return base64.b64encode(signature_bytes).decode("utf-8")
+
+
+def asymmetric_verify(
+    data: bytes, signature_b64: str, public_key_pem_or_cert_pem: str
+) -> bool:
+    """Verifies a Base64-encoded asymmetric signature of data using a public key or X.509 certificate (RSA or EC)."""
+    try:
+        # Attempt to load as X.509 certificate first
+        try:
+            cert = x509.load_pem_x509_certificate(
+                public_key_pem_or_cert_pem.encode("utf-8")
+            )
+            public_key = cert.public_key()
+        except Exception:
+            # If not a certificate, load directly as a public key
+            public_key = load_pem_public_key(public_key_pem_or_cert_pem.encode("utf-8"))
+
+        signature_bytes = base64.b64decode(signature_b64.encode("utf-8"))
+
+        if isinstance(public_key, rsa.RSAPublicKey):
+            public_key.verify(
+                signature_bytes, data, padding.PKCS1v15(), hashes.SHA256()
+            )
+        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+            public_key.verify(signature_bytes, data, ec.ECDSA(hashes.SHA256()))
+        else:
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def capture_certificate_identifiers(cert_pem: str) -> Dict[str, str]:
+    """Captures key and certificate identifiers (serial_number, sha256_fingerprint, subject_key_identifier)
+
+    from a PEM-encoded X.509 certificate.
+    """
+    cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+    serial_number = str(cert.serial_number)
+    sha256_fingerprint = cert.fingerprint(hashes.SHA256()).hex()
+
+    ski = None
+    try:
+        ski_ext = cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+        ski = ski_ext.value.digest.hex()
+    except Exception:
+        pass
+
+    return {
+        "serial_number": serial_number,
+        "sha256_fingerprint": sha256_fingerprint,
+        "subject_key_identifier": ski or sha256_fingerprint,
+    }
