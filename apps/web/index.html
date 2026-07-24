@@ -34,6 +34,11 @@
             <li class="nav-item" id="tab-btn-ecrf">
               <button type="button"><span>🩺</span> eCRF Form Engine</button>
             </li>
+            <li class="nav-item" id="tab-btn-ctms">
+              <button type="button">
+                <span>📊</span> CTMS Dashboard
+              </button>
+            </li>
             <li class="nav-item" id="tab-btn-audit">
               <button type="button">
                 <span>🔒</span> Cryptographic Ledger
@@ -230,6 +235,65 @@
                   close, or reopen discrepancy notes. All query transitions are
                   audit-logged in real-time.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 4: CTMS Dashboard -->
+        <section id="section-ctms" class="dashboard-section">
+          <div class="section-header">
+            <h2>Clinical Trial Management System (CTMS)</h2>
+            <p>
+              Monitor operational site status, track site lifecycle milestones, recruitment metrics, and coordinate CRA workloads.
+            </p>
+          </div>
+
+          <div class="grid-2">
+            <!-- Site Milestones Card -->
+            <div class="card">
+              <div class="card-title">Site Operational Milestones</div>
+              <div id="ctms-milestones-container">
+                <!-- Rendered milestones table will go here -->
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-achieve-milestone" class="btn btn-primary">Achieve Current Milestone</button>
+              </div>
+            </div>
+
+            <!-- Monitoring Visits Card -->
+            <div class="card">
+              <div class="card-title">CRA Site Monitoring Visits (MVR)</div>
+              <div id="ctms-visits-container">
+                <!-- Rendered visits table will go here -->
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-schedule-visit" class="btn btn-primary">Schedule New Visit</button>
+                <button id="btn-complete-visit" class="btn">Complete Current Visit</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 24px;">
+            <!-- CRA Allocations & Workload Card -->
+            <div class="card">
+              <div class="card-title">CRA Allocation & Workload Summaries</div>
+              <div id="ctms-workload-container">
+                <!-- Rendered CRA workload table will go here -->
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-reallocate-cra" class="btn btn-primary">Reallocate CRA</button>
+              </div>
+            </div>
+
+            <!-- Site Recruitment metrics Card -->
+            <div class="card">
+              <div class="card-title">Site Recruitment Metrics</div>
+              <div id="ctms-recruitment-container">
+                <!-- Rendered recruitment metrics will go here -->
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-update-recruitment" class="btn btn-primary">Log Recruitment Update</button>
               </div>
             </div>
           </div>
