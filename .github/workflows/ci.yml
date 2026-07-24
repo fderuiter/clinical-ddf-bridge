@@ -94,7 +94,7 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
+        run: python3 scripts/validate_vulnerabilities.py
 
       - name: Run secret detection
         id: run_secrets

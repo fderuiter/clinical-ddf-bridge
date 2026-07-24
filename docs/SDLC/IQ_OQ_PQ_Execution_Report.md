@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 214
-- **Passed:** 214 🟢
+- **Total Automated Test Cases Run:** 227
+- **Passed:** 227 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -36,17 +36,18 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-Package                 Version
------------------------ -----------
+Package                 Version     Editable project location
+----------------------- ----------- -------------------------
 aiosqlite               0.22.1
 annotated-doc           0.0.4
-annotated-types         0.8.0
+annotated-types         0.7.0
 anyio                   4.14.2
 asyncpg                 0.31.0
 bandit                  1.9.4
 beautifulsoup4          4.15.0
 boolean-py              5.0
 cachecontrol            0.14.4
+cadence-clinical         0.1.0       /app
 certifi                 2026.7.22
 cffi                    2.1.0
 cfgv                    3.5.0
@@ -58,12 +59,9 @@ cyclonedx-python-lib    11.11.0
 defusedxml              0.7.1
 detect-secrets          1.5.0
 distlib                 0.4.3
-docraptor               3.1.0
 ecdsa                   0.19.2
 et-xmlfile              2.0.0
 fastapi                 0.139.2
-fhir-core               1.1.9
-fhir-resources          8.3.0
 filelock                3.32.0
 greenlet                3.5.4
 h11                     0.16.0
@@ -81,11 +79,11 @@ mdurl                   0.1.2
 msgpack                 1.2.1
 neo4j                   6.2.0
 nodeenv                 1.10.0
-numpy                   2.4.6
+numpy                   2.5.1
 openpyxl                3.1.5
 packageurl-python       0.17.6
 packaging               26.2
-pandas                  3.0.5
+pandas                  3.0.3
 pip                     26.1.2
 pip-api                 0.0.34
 pip-audit               2.10.1
@@ -125,14 +123,13 @@ soupsieve               2.9.1
 sqlalchemy              2.0.51
 starlette               1.3.1
 stevedore               5.9.0
-stringcase              1.2.0
 text-unidecode          1.3
 tomli                   2.4.1
 tomli-w                 1.2.0
 typing-extensions       4.16.0
 typing-inspection       0.4.2
 urllib3                 2.7.0
-usdm                    0.66.0
+usdm                    0.67.0
 uvicorn                 0.51.0
 uvloop                  0.22.1
 virtualenv              21.7.0
@@ -248,8 +245,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -362,6 +359,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_active_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_active_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_incorrect_rpn` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_invalid_fmea_scores` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_invalid_json` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_missing_fmea_fields` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_missing_justification` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_missing_vuln_id` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_not_found` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_not_list` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_no_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_for_inline_bypasses_with_violations` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
