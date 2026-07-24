@@ -471,3 +471,188 @@ async def test_clinical_query_trial_lock_enforcement_at_visit_level() -> None:
     finally:
         # Cleanup lock state
         TrialLockManager.unlock_visit("VISIT-LOCKED")
+
+
+@pytest.mark.asyncio
+async def test_candidate_creation_and_opening_workflow() -> None:
+    """Test raising a query in CANDIDATE state, then transitioning it to OPEN."""
+    dm_headers = get_v2_auth_headers(
+        roles="Data Manager", change_reason="DM raises candidate query"
+    )
+    payload = {
+        "study_id": "STUDY-CANDIDATE",
+        "subject_id": "SUBJ-X",
+        "test_code": "HR",
+        "explanation": "Is this a valid entry?",
+        "status": "CANDIDATE",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Create query in CANDIDATE status
+        resp = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=dm_headers
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] == "CANDIDATE"
+        q_id = data["id"]
+
+        # 2. Transition CANDIDATE -> OPEN using PATCH
+        resp_patch = await client.patch(
+            f"/api/v1/execution/queries/{q_id}",
+            json={"status": "OPEN"},
+            headers=dm_headers,
+        )
+        assert resp_patch.status_code == 200
+        assert resp_patch.json()["status"] == "OPEN"
+
+
+@pytest.mark.asyncio
+async def test_rejection_and_cancellation_reason_requirements() -> None:
+    """Test that reject (ANSWERED -> REOPENED) and cancel actions require non-empty reasons."""
+    dm_headers = get_v2_auth_headers(
+        roles="Data Manager", change_reason="DM raises query"
+    )
+    inv_headers = get_v2_auth_headers(
+        roles="Investigator", change_reason="Investigator answers"
+    )
+
+    payload = {
+        "study_id": "STUDY-REJECT",
+        "subject_id": "SUBJ-Y",
+        "test_code": "SYSBP",
+        "explanation": "Out of range BP",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create OPEN query
+        resp = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=dm_headers
+        )
+        q_id = resp.json()["id"]
+
+        # Transition OPEN -> ANSWERED
+        await client.post(
+            f"/api/v1/execution/queries/{q_id}/respond",
+            json={"response": "Valid reading"},
+            headers=inv_headers,
+        )
+
+        # Reopen/Reject with no reason should fail with 400
+        resp_reopen_fail = await client.post(
+            f"/api/v1/execution/queries/{q_id}/reopen",
+            json={"reason": ""},
+            headers=dm_headers,
+        )
+        assert resp_reopen_fail.status_code == 400
+
+        # Reopen/Reject with reason should succeed
+        resp_reopen_ok = await client.post(
+            f"/api/v1/execution/queries/{q_id}/reopen",
+            headers=get_v2_auth_headers(roles="Data Manager", change_reason="Please re-verify"),
+        )
+        assert resp_reopen_ok.status_code == 200
+        assert resp_reopen_ok.json()["status"] == "REOPENED"
+        assert resp_reopen_ok.json()["explanation"] == "Please re-verify"
+
+        # Cancel with no reason should fail with 400
+        resp_cancel_fail = await client.post(
+            f"/api/v1/execution/queries/{q_id}/cancel",
+            json={"reason": ""},
+            headers=dm_headers,
+        )
+        assert resp_cancel_fail.status_code == 400
+
+        # Cancel with reason should succeed
+        resp_cancel_ok = await client.post(
+            f"/api/v1/execution/queries/{q_id}/cancel",
+            json={"reason": "Entered in error"},
+            headers=dm_headers,
+        )
+        assert resp_cancel_ok.status_code == 200
+        assert resp_cancel_ok.json()["status"] == "CANCELLED"
+        assert resp_cancel_ok.json()["cancellation_reason"] == "Entered in error"
+
+
+@pytest.mark.asyncio
+async def test_query_role_gates_robustness() -> None:
+    """Test detailed role-based access control requirements on query execution APIs."""
+    dm_headers = get_v2_auth_headers(
+        roles="Data Manager", change_reason="DM raises query"
+    )
+    cra_headers = get_v2_auth_headers(
+        roles="CRA", change_reason="CRA raises query"
+    )
+    inv_headers = get_v2_auth_headers(
+        roles="Investigator", change_reason="Investigator responds"
+    )
+    auditor_headers = get_v2_auth_headers(
+        roles="Auditor", change_reason="Auditor trying to raise query"
+    )
+    sponsor_headers = get_v2_auth_headers(
+        roles="Sponsor Admin", change_reason="Sponsor Admin trying to raise query"
+    )
+
+    payload = {
+        "study_id": "STUDY-RG",
+        "subject_id": "SUBJ-Z",
+        "test_code": "HR",
+        "explanation": "Check heart rate",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Auditor trying to raise query should fail with 403
+        resp_auditor = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=auditor_headers
+        )
+        assert resp_auditor.status_code == 403
+
+        # 2. Sponsor Admin trying to raise query should fail with 403
+        resp_sponsor = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=sponsor_headers
+        )
+        assert resp_sponsor.status_code == 403
+
+        # 3. CRA raising query should succeed (201)
+        resp_cra = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=cra_headers
+        )
+        assert resp_cra.status_code == 201
+        q_id = resp_cra.json()["id"]
+
+        # 4. CRA trying to respond/answer should fail (403)
+        resp_cra_respond = await client.post(
+            f"/api/v1/execution/queries/{q_id}/respond",
+            json={"response": "We are CRA"},
+            headers=cra_headers,
+        )
+        assert resp_cra_respond.status_code == 403
+
+        # 5. Investigator responding/answering should succeed
+        resp_inv_respond = await client.post(
+            f"/api/v1/execution/queries/{q_id}/respond",
+            json={"response": "Re-verified correct"},
+            headers=inv_headers,
+        )
+        assert resp_inv_respond.status_code == 200
+
+        # 6. Investigator trying to close query should fail (403)
+        resp_inv_close = await client.post(
+            f"/api/v1/execution/queries/{q_id}/close",
+            headers=inv_headers,
+        )
+        assert resp_inv_close.status_code == 403
+
+        # 7. CRA closing query should succeed
+        resp_cra_close = await client.post(
+            f"/api/v1/execution/queries/{q_id}/close",
+            headers=cra_headers,
+        )
+        assert resp_cra_close.status_code == 200
+

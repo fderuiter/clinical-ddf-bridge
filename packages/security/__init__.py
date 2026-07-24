@@ -8,7 +8,13 @@ from packages.security.context import (
     current_user_id,
 )
 from packages.security.rbac import (
+    ROLE_AUDITOR,
+    ROLE_CRA,
+    ROLE_DATA_MANAGER,
+    ROLE_SITE_INVESTIGATOR,
+    ROLE_SPONSOR_ADMIN,
     get_normalized_roles,
+    require_roles,
     verify_is_auditor,
     verify_not_auditor,
 )
@@ -40,4 +46,10 @@ __all__ = [
     "asymmetric_sign",
     "asymmetric_verify",
     "capture_certificate_identifiers",
+    "ROLE_CRA",
+    "ROLE_DATA_MANAGER",
+    "ROLE_SITE_INVESTIGATOR",
+    "ROLE_AUDITOR",
+    "ROLE_SPONSOR_ADMIN",
+    "require_roles",
 ]
