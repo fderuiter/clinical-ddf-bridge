@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 208
-- **Passed:** 208 🟢
+- **Total Automated Test Cases Run:** 209
+- **Passed:** 209 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -195,6 +195,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_canonical_catalog_ingestion_validations` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_completeness_from_catalog` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_edl_definitions_and_crud` | `tests.test_etmf` | PRD-EDL-001, Trace-4 | 🟢 PASSED | < 1s |
 | `test_etmf_edge_cases_for_coverage` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |

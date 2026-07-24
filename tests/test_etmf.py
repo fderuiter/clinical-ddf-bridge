@@ -823,3 +823,88 @@ async def test_canonical_catalog_ingestion_validations():
     doc_data = get_resp.json()
     assert doc_data["taxonomy_version"] == "v3.2.0"
     assert doc_data["artifact_code"] == "01.01.01"
+
+
+@pytest.mark.asyncio
+async def test_completeness_from_catalog():
+    """
+    Verify that eTMF completeness checks source requirements from the TMF catalog API,
+    reject unsupported milestones, match exact canonical artifact identities,
+    and accurately handle changes to the shared catalog metadata.
+    """
+    from tmf_reference_model import MILESTONE_MANDATORY_ARTIFACTS
+
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Completeness test")
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+
+    # 1. Unsupported milestone validation response
+    unsupported_resp = client.get(
+        "/api/v1/etmf/completeness?study_id=study_catalog_test&milestone=BOGUS_MILESTONE",
+        headers=inspector_headers,
+    )
+    assert unsupported_resp.status_code == 400
+    assert "Unknown milestone" in unsupported_resp.json()["detail"]
+
+    # 2. INITIATION milestone completeness using canonical lookup (initially missing)
+    res_init = client.get(
+        "/api/v1/etmf/completeness?study_id=study_catalog_test&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_init.status_code == 200
+    data_init = res_init.json()
+    assert data_init["is_complete"] is False
+    assert "Clinical Trial Protocol" in data_init["missing_artifacts"]
+
+    # 3. Ingest with custom matching name but matching artifact_code and verify success
+    # Here, we use a distinct filename/metadata, but canonical artifact is "Clinical Trial Protocol" (01.01.01)
+    payload_valid = {
+        "study_id": "study_catalog_test",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_custom.pdf",
+        "content": "Protocol description",
+        "mime_type": "application/pdf",
+        "taxonomy_version": "v3.2.0",
+        "artifact_code": "01.01.01",
+    }
+    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload_valid, headers=admin_headers)
+    assert ingest_resp.status_code == 201
+
+    # 4. Re-check INITIATION completeness -> should be complete now
+    res_init_2 = client.get(
+        "/api/v1/etmf/completeness?study_id=study_catalog_test&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_init_2.status_code == 200
+    assert res_init_2.json()["is_complete"] is True
+
+    # 5. Check CONDUCT milestone (missing Define-XML and Blank CRF)
+    res_conduct = client.get(
+        "/api/v1/etmf/completeness?study_id=study_catalog_test&milestone=CONDUCT",
+        headers=inspector_headers,
+    )
+    assert res_conduct.status_code == 200
+    assert res_conduct.json()["is_complete"] is False
+    assert "Define-XML Specifications" in res_conduct.json()["missing_artifacts"]
+    assert "Blank CRF" in res_conduct.json()["missing_artifacts"]
+
+    # 6. Dynamically add a new mandatory artifact code to INITIATION in catalog to demonstrate catalog-driven changes
+    # Backup original
+    original_initiation = list(MILESTONE_MANDATORY_ARTIFACTS["INITIATION"])
+    try:
+        # Add "10.02.01" (Blank CRF) as required for INITIATION
+        MILESTONE_MANDATORY_ARTIFACTS["INITIATION"].append("10.02.01")
+
+        # Now checking INITIATION on a NEW study_id should seed the new list of expectations and report Blank CRF as missing
+        # without modifying etmf logic!
+        res_init_dynamic = client.get(
+            "/api/v1/etmf/completeness?study_id=study_catalog_test_dynamic&milestone=INITIATION",
+            headers=inspector_headers,
+        )
+        assert res_init_dynamic.status_code == 200
+        data_dynamic = res_init_dynamic.json()
+        assert data_dynamic["is_complete"] is False
+        assert "Blank CRF" in data_dynamic["missing_artifacts"]
+    finally:
+        # Restore original
+        MILESTONE_MANDATORY_ARTIFACTS["INITIATION"] = original_initiation

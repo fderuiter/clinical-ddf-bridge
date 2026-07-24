@@ -11,6 +11,7 @@ from tmf_reference_model import (
     get_active_catalog,
     resolve_artifact,
     validate_hierarchy,
+    get_mandatory_artifacts,
 )
 
 from apps.etmf.database import db_manager
@@ -48,8 +49,6 @@ async def seed_default_edl(
     Idempotently seeds default study-scope ExpectedDocument rows for a given study and milestone.
     """
     canonical = normalize_milestone(milestone)
-    if canonical not in ("INITIATION", "CONDUCT", "CLOSEOUT"):
-        return
 
     # Check if any expectations already exist for this study and milestone
     stmt = select(ExpectedDocument).where(
@@ -62,30 +61,20 @@ async def seed_default_edl(
     if existing:
         return
 
-    # Map milestone to mandatory artifacts
-    if canonical == "INITIATION":
-        artifacts = [("Clinical Trial Protocol", 1, "01.01")]
-    elif canonical == "CONDUCT":
-        artifacts = [
-            ("Clinical Trial Protocol", 1, "01.01"),
-            ("Define-XML Specifications", 10, "10.01"),
-            ("Blank CRF", 10, "10.02"),
-        ]
-    else:  # CLOSEOUT
-        artifacts = [
-            ("Clinical Trial Protocol", 1, "01.01"),
-            ("Define-XML Specifications", 10, "10.01"),
-            ("Blank CRF", 10, "10.02"),
-            ("Data Lock Certificate", 11, "11.01"),
-        ]
+    # Map milestone to mandatory artifacts using the catalog API
+    version = get_active_catalog().version
+    try:
+        mandatory_artifacts = get_mandatory_artifacts(canonical, version)
+    except ValueError:
+        return
 
-    for art, zone, sec in artifacts:
+    for art in mandatory_artifacts:
         doc = ExpectedDocument(
             study_id=study_id,
             milestone=canonical,
-            artifact_type=art,
-            zone=zone,
-            section=sec,
+            artifact_type=art.name,
+            zone=art.zone_code,
+            section=art.section_code,
             created_by="system",
             reason_for_change="System-initiated default seeding of expected documents list",
             version_index=1,
@@ -962,6 +951,16 @@ async def check_completeness(
 
     milestone_normalized = normalize_milestone(milestone)
 
+    # Validate milestone with catalog first. If unknown, raise 400 immediately.
+    version = get_active_catalog().version
+    try:
+        get_mandatory_artifacts(milestone_normalized, version)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT. Error: {str(e)}",
+        )
+
     # Idempotent dynamic seeding of default study-scope EDL if none exist yet for the study
     await seed_default_edl(session, study_id, milestone_normalized)
 
@@ -980,14 +979,6 @@ async def check_completeness(
     result = await session.execute(stmt)
     expected_docs = result.scalars().all()
 
-    # When no EDL is defined for a requested milestone, return a clear error,
-    # preserving the current unknown-milestone behavior by relying on the seeded canonical milestone set.
-    if not expected_docs:
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT",
-        )
-
     # Query all archived documents for this study
     stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
     result_docs = await session.execute(stmt_docs)
@@ -998,19 +989,37 @@ async def check_completeness(
     per_artifact_detail = []
 
     for exp in expected_docs:
+        # Resolve expectation artifact to its canonical details to match by canonical artifact identity
+        try:
+            resolved_exp = resolve_artifact(version, name=exp.artifact_type)
+            exp_code = resolved_exp["artifact"].code
+            canonical_name = resolved_exp["artifact"].name
+        except ValueError:
+            # Fallback to current artifact_type & None code if not found in catalog
+            exp_code = None
+            canonical_name = exp.artifact_type
+
         matched_doc = None
         for arch in archived_docs:
-            if exp.artifact_type.lower() in arch.artifact_type.lower():
+            is_match = False
+            if exp_code and arch.artifact_code:
+                # Direct comparison by canonical artifact identity
+                is_match = (arch.artifact_code == exp_code)
+            else:
+                # Fallback to case-insensitive name matching
+                is_match = (canonical_name.lower() in arch.artifact_type.lower())
+
+            if is_match:
                 if not matched_doc or arch.version_index > matched_doc.version_index:
                     matched_doc = arch
 
         scope = "site" if exp.site_id else "study"
         if matched_doc:
-            if matched_doc.artifact_type not in present_artifacts:
-                present_artifacts.append(matched_doc.artifact_type)
+            if canonical_name not in present_artifacts:
+                present_artifacts.append(canonical_name)
             per_artifact_detail.append(
                 ArtifactDetail(
-                    artifact_type=exp.artifact_type,
+                    artifact_type=canonical_name,
                     scope=scope,
                     status="PRESENT",
                     document_id=matched_doc.id,
@@ -1018,11 +1027,11 @@ async def check_completeness(
                 )
             )
         else:
-            if exp.artifact_type not in missing_artifacts:
-                missing_artifacts.append(exp.artifact_type)
+            if canonical_name not in missing_artifacts:
+                missing_artifacts.append(canonical_name)
             per_artifact_detail.append(
                 ArtifactDetail(
-                    artifact_type=exp.artifact_type,
+                    artifact_type=canonical_name,
                     scope=scope,
                     status="MISSING",
                     document_id=None,
