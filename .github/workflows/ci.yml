@@ -51,6 +51,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      # Playwright browsers must be installed before running pnpm check.
+      # This is because pnpm check executes the full pytest suite (including layout validators),
+      # which requires chromium to be available.
       - name: Install Playwright Browsers
         run: uv run playwright install --with-deps chromium
 
