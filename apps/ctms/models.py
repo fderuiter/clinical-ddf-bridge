@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, Float, Boolean, ForeignKey, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -208,6 +208,116 @@ class CRAAllocation(Base):
     effective_end_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True
     )
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class InvestigatorGrant(Base):
+    """
+    Represents an Investigator Grant for a site and study, tracking the total budget
+    and approval status under Part 11.
+    """
+
+    __tablename__ = "ctms_investigator_grants"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    total_budget: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class BudgetLineItem(Base):
+    """
+    Represents a specific line item in the budget of an Investigator Grant.
+    """
+
+    __tablename__ = "ctms_budget_line_items"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class PaymentMilestone(Base):
+    """
+    Represents a predefined payment milestone triggered automatically or manually.
+    """
+
+    __tablename__ = "ctms_payment_milestones"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    milestone_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    trigger_condition: Mapped[str] = mapped_column(String(100), nullable=False)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_triggered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class InvestigatorPayable(Base):
+    """
+    Tracks payables generated dynamically from milestones or custom triggers.
+    """
+
+    __tablename__ = "ctms_investigator_payables"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    milestone_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("ctms_payment_milestones.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    payment_status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(

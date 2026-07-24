@@ -8,6 +8,7 @@ from typing import Awaitable, Callable
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from packages.security.context import (
@@ -16,6 +17,23 @@ from packages.security.context import (
     current_timestamp,
     current_user_id,
 )
+
+
+class DownstreamReplayCache:
+    def __init__(self) -> None:
+        self.used_tokens: dict[str, float] = {}
+
+    def is_replayed(self, token: str, exp: float) -> bool:
+        now = time.time()
+        # Prune expired tokens
+        self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}
+        if token in self.used_tokens:
+            return True
+        self.used_tokens[token] = exp
+        return False
+
+
+downstream_replay_cache = DownstreamReplayCache()
 
 
 class GatewayAuthMiddleware(BaseHTTPMiddleware):
@@ -128,6 +146,91 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=status_code, content={"detail": "Invalid gateway signature"}
             )
+
+        # Check if request is signature-gated
+        is_signature_gated = False
+        path_lower = request.url.path.lower()
+        for pattern in ["approve", "sign-off", "unblind", "randomize"]:
+            if pattern in path_lower:
+                is_signature_gated = True
+                break
+
+        if is_signature_gated and is_mutation:
+            sig_token = request.headers.get("X-Sig-Token")
+            if not sig_token:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "detail": "REAUTHENTICATION_REQUIRED",
+                        "error": "REAUTHENTICATION_REQUIRED",
+                        "message": "21 CFR Part 11 mandate: Re-authentication is required.",
+                    },
+                )
+            try:
+                sig_payload = jwt.decode(
+                    sig_token, self.gateway_secret, algorithms=["HS256"]
+                )
+
+                # Check expiration
+                if sig_payload.get("exp", 0) < time.time():
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token has expired.",
+                        },
+                    )
+
+                # Check user binding
+                if sig_payload.get("sub") != user_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token user mismatch.",
+                        },
+                    )
+
+                # Check action binding
+                bound_action = sig_payload.get("action", "")
+                request_path = request.url.path
+                if (
+                    request_path != bound_action
+                    and bound_action not in request_path
+                    and request_path not in bound_action
+                ):
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token action mismatch.",
+                        },
+                    )
+
+                # Check replay attack
+                if downstream_replay_cache.is_replayed(
+                    sig_token, sig_payload.get("exp", 0)
+                ):
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token has already been used.",
+                        },
+                    )
+            except JWTError:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "detail": "REAUTHENTICATION_REQUIRED",
+                        "error": "REAUTHENTICATION_REQUIRED",
+                        "message": "Invalid signature token.",
+                    },
+                )
 
         request.state.user_id = user_id
         request.state.roles = roles

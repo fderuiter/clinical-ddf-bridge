@@ -56,3 +56,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-02: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](2026-08-02-eligibility-criteria-evaluation-engine.md)
 - [2026-08-02: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix](2026-08-02-usdm-v2-v3-canonical-contract-mapping-matrix.md)
 - [2026-08-03: Subject Randomization Lifecycle and State Guards](2026-08-03-subject-randomization-lifecycle-and-state-guards.md)
+- [2026-08-04: Notification Delivery Channels and Retry Dispatcher](2026-08-04-notification-delivery-channels-and-retry-dispatcher.md)
+- [2026-08-04: CTMS Service Boundary, Reporting, and Operational Workspace](2026-08-04-ctms-service-boundary-and-reporting.md)

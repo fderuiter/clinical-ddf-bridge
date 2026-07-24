@@ -243,6 +243,88 @@ export function createQueryPanel(fieldId, query) {
   `.trim();
 }
 
+/**
+ * Renders an HTML table representing CTMS site milestones.
+ *
+ * @param {Array<Object>} milestones - List of milestones
+ * @returns {string} HTML string representing the milestone table.
+ */
+export function createCtmsMilestoneTable(milestones) {
+  if (!milestones || !Array.isArray(milestones)) {
+    return `<div class="ctms-table-error">Invalid milestone data.</div>`;
+  }
+  const rows = milestones
+    .map(
+      (m) => `
+    <tr>
+      <td><strong>${m.type}</strong></td>
+      <td>${m.plannedDate || "N/A"}</td>
+      <td>${m.actualDate || "Pending"}</td>
+      <td><span class="badge ${m.status === "ACHIEVED" ? "gxp" : ""}">${m.status}</span></td>
+    </tr>
+  `
+    )
+    .join("");
+
+  return `
+<table class="clinical-visit-matrix">
+  <thead>
+    <tr>
+      <th scope="col">Milestone Type</th>
+      <th scope="col">Planned Date</th>
+      <th scope="col">Actual Date</th>
+      <th scope="col">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+  `.trim();
+}
+
+/**
+ * Renders an HTML table representing CTMS monitoring visits.
+ *
+ * @param {Array<Object>} visits - List of visits
+ * @returns {string} HTML string representing the visit table.
+ */
+export function createCtmsVisitTable(visits) {
+  if (!visits || !Array.isArray(visits)) {
+    return `<div class="ctms-table-error">Invalid monitoring visit data.</div>`;
+  }
+  const rows = visits
+    .map(
+      (v) => `
+    <tr>
+      <td><strong>${v.type}</strong></td>
+      <td>${v.scheduledDate || "N/A"}</td>
+      <td>${v.actualDate || "Pending"}</td>
+      <td>${v.cra || "N/A"}</td>
+      <td><span class="badge ${v.status === "SIGNED_OFF" ? "gxp" : ""}">${v.status}</span></td>
+    </tr>
+  `
+    )
+    .join("");
+
+  return `
+<table class="clinical-visit-matrix">
+  <thead>
+    <tr>
+      <th scope="col">Visit Type</th>
+      <th scope="col">Scheduled Date</th>
+      <th scope="col">Actual Date</th>
+      <th scope="col">CRA Assigned</th>
+      <th scope="col">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+  `.trim();
+}
+
 export {
   canonicalSerialize,
   generateCanonicalSignature,

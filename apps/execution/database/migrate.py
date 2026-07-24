@@ -350,32 +350,50 @@ async def upgrade_existing_tables(conn) -> None:
     """
     from sqlalchemy import inspect
 
-    def get_columns(sync_conn):
+    def get_table_columns(sync_conn, table_name: str):
         insp = inspect(sync_conn)
-        # Check if clinical_observations table exists first to avoid error on completely empty DB
-        if not insp.has_table("clinical_observations"):
+        if not insp.has_table(table_name):
             return []
-        return [col["name"] for col in insp.get_columns("clinical_observations")]
+        return [col["name"] for col in insp.get_columns(table_name)]
 
-    existing_cols = await conn.run_sync(get_columns)
-    if not existing_cols:
-        return
-
-    new_cols_to_add = [
-        ("lab_source", "VARCHAR(50)"),
-        ("lab_site_id", "VARCHAR(255)"),
-        ("lab_indicator", "VARCHAR(50)"),
-        ("lab_out_of_range", "BOOLEAN"),
-        ("matched_normal_bounds", "VARCHAR(255)"),
-    ]
-
-    for col_name, col_type in new_cols_to_add:
-        if col_name not in existing_cols:
-            print(f"Adding missing column {col_name} to clinical_observations table...")
-            await conn.execute(
-                text(
-                    f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+    # 1. Update clinical_observations with lab reference snapshot columns and site_id
+    obs_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "clinical_observations")
+    )
+    if obs_cols:
+        new_obs_cols = [
+            ("lab_source", "VARCHAR(50)"),
+            ("lab_site_id", "VARCHAR(255)"),
+            ("lab_indicator", "VARCHAR(50)"),
+            ("lab_out_of_range", "BOOLEAN"),
+            ("matched_normal_bounds", "VARCHAR(255)"),
+            ("site_id", "VARCHAR(255)"),
+        ]
+        for col_name, col_type in new_obs_cols:
+            if col_name not in obs_cols:
+                print(
+                    f"Adding missing column {col_name} to clinical_observations table..."
                 )
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+                    )
+                )
+
+    # List of other tables to upgrade with site_id
+    tables_to_upgrade = [
+        "clinical_queries",
+        "subject_randomizations",
+        "sdv_sign_offs",
+        "clinical_subjects",
+        "clinical_visits",
+    ]
+    for table_name in tables_to_upgrade:
+        cols = await conn.run_sync(lambda sc, tn=table_name: get_table_columns(sc, tn))
+        if cols and "site_id" not in cols:
+            print(f"Adding missing column site_id to {table_name} table...")
+            await conn.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
 
 
