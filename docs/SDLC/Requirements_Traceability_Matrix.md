@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 45
-- **Total Mapped to Automated Tests:** 18
-- **Traceability Coverage:** 40.0%
+- **Total Mapped to Automated Tests:** 19
+- **Traceability Coverage:** 42.2%
 - **SRS Requirements Mapped:** 4 of 5 (80.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -27,10 +27,10 @@
 | PRD-EDC-009 | PRD | **Visual Analog Scale (VAS) Slider Specifications** | *None* | ❌ **Unmapped** |
 | PRD-EDC-010 | PRD | **Interactive Body Map Coordinates and Schema Mapping** | *None* | ❌ **Unmapped** |
 | PRD-EDL-001 | PRD | **Data-Driven Expected Document Lists (EDLs) & Completeness Tracking** | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
-| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢<br>`test_get_soa_matrix_endpoint` (tests/test_soa_contracts.py) 🟢<br>`test_create_study_arm_endpoint` (tests/test_soa_contracts.py) 🟢<br>`test_create_epoch_endpoint` (tests/test_soa_contracts.py) 🟢<br>`test_create_visit_endpoint` (tests/test_soa_contracts.py) 🟢<br>`test_create_procedure_activity_endpoint` (tests/test_soa_contracts.py) 🟢<br>`test_create_timing_window_endpoint` (tests/test_soa_contracts.py) 🟢 | ✅ **Passed** |
+| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢<br>`test_valid_form_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_data_element_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_arm_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_visit_detail_validation` (tests/test_global_library.py) 🟢<br>`test_invalid_mismatched_type_payload_fails` (tests/test_global_library.py) 🟢<br>`test_invalid_data_element_default_unit_fails` (tests/test_global_library.py) 🟢<br>`test_mutation_creation_requires_non_empty_change_reason` (tests/test_global_library.py) 🟢<br>`test_mutation_update_requires_non_empty_reason_for_change` (tests/test_global_library.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-002 | PRD | **Biomedical Concept Lock State during Active Studies** | *None* | ❌ **Unmapped** |
 | PRD-MDR-003 | PRD | **Dynamic Cohort Opening & Closing Rules** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
-| PRD-MDR-004 | PRD | **Crossover Timeline Mapping & Arm Interventions** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢<br>`test_audit_metadata_defaults` (tests/test_soa_contracts.py) 🟢<br>`test_soa_cell_conditional_validation` (tests/test_soa_contracts.py) 🟢<br>`test_timing_window_model` (tests/test_soa_contracts.py) 🟢 | ✅ **Passed** |
+| PRD-MDR-004 | PRD | **Crossover Timeline Mapping & Arm Interventions** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-005 | PRD | **Dual-Key Blinding Security** | `test_key_splitting` (tests/test_cryptography.py) 🟢<br>`test_encryption_decryption_with_rotation` (tests/test_cryptography.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-006 | PRD | **Blinding Constraints on UI Data Rendering** | *None* | ❌ **Unmapped** |
 | PRD-MDR-007 | PRD | **Logical Mapping of I/E Criteria to eCRF Fields** | *None* | ❌ **Unmapped** |
@@ -41,14 +41,14 @@
 | PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | *None* | ❌ **Unmapped** |
 | PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_tsdv_config_persistence` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
-| PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | *None* | ❌ **Unmapped** |
+| PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | `test_capa_creation_validations` (tests/test_quality_workflow.py) 🟢<br>`test_capa_lifecycle_transitions` (tests/test_quality_workflow.py) 🟢<br>`test_capa_updates_and_concurrency` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
 | PRD-SUB-002 | PRD | **Partial Visit Query Capability on Withdrawn Subjects** | *None* | ❌ **Unmapped** |
 | PRD-SUB-003 | PRD | **Stratified Block Randomization** | *None* | ❌ **Unmapped** |
 | PRD-SUB-004 | PRD | **Dynamic Minimization Algorithm** | *None* | ❌ **Unmapped** |
 | PRD-SUB-005 | PRD | **Triggering and Authorizing Emergency Unblinding** | *None* | ❌ **Unmapped** |
 | PRD-SUB-006 | PRD | **Immediate Unblinding State Mutation & System Actions** | *None* | ❌ **Unmapped** |
 | PRD-SUB-007 | PRD | **Re-Consent Gating on Visits** | *None* | ❌ **Unmapped** |
-| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-002 | PRD | **Soft-Delete Enforcement and Shadow Schema Preservation** | `test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢<br>`test_soft_delete_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | *None* | ❌ **Unmapped** |
@@ -82,7 +82,6 @@
 - **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
 - **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
 - **PRD-QRY-006** (PRD): Automatic Verification Drop upon Data Modification
-- **PRD-SUB-001** (PRD): State Transition Matrix & Enforcements
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization
 - **PRD-SUB-004** (PRD): Dynamic Minimization Algorithm

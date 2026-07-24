@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 240
-- **Passed:** 240 🟢
+- **Total Automated Test Cases Run:** 246
+- **Passed:** 246 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -190,7 +190,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_ctms_finances_full_workflow` | `tests.test_ctms_finances` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -247,10 +246,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_data_element_default_unit_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_invalid_mismatched_type_payload_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_mutation_creation_requires_non_empty_change_reason` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_mutation_update_requires_non_empty_reason_for_change` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_valid_arm_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_valid_data_element_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_valid_form_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_valid_visit_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
+| `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -302,6 +313,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_database_schema_creation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_health_check` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_foreign_key_constraints` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_capa_lifecycle_transitions` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_capa_updates_and_concurrency` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
+| `test_create_and_list_deviations` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_create_and_update_rca` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_tsdv_config_persistence` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007 | 🟢 PASSED | < 1s |
@@ -320,16 +336,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_metadata_defaults` | `tests.test_soa_contracts` | PRD-MDR-004 | 🟢 PASSED | < 1s |
-| `test_create_epoch_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_create_procedure_activity_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_create_request_validation_fails_on_empty_reason` | `tests.test_soa_contracts` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_create_study_arm_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_create_timing_window_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_create_visit_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_get_soa_matrix_endpoint` | `tests.test_soa_contracts` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_soa_cell_conditional_validation` | `tests.test_soa_contracts` | PRD-MDR-004 | 🟢 PASSED | < 1s |
-| `test_timing_window_model` | `tests.test_soa_contracts` | PRD-MDR-004 | 🟢 PASSED | < 1s |
 | `test_get_repository_fallback` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_env` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_repository_from_git_https` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
