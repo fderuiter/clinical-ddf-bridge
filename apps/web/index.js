@@ -2,6 +2,8 @@ import {
   createClinicalInput,
   createClinicalRadioGrid,
   createClinicalVisitMatrix,
+  createCtmsMilestoneTable,
+  createCtmsVisitTable,
 } from "ui";
 
 /**
@@ -175,6 +177,90 @@ export async function sha256(message) {
   return hashHex;
 }
 
+/**
+ * Renders the clinical trial management system (CTMS) dashboard view.
+ *
+ * @param {Object} data - The CTMS dashboard dataset
+ */
+export function renderCtms(data) {
+  if (!data) return;
+  const milestonesContainer = document.getElementById(
+    "ctms-milestones-container"
+  );
+  const visitsContainer = document.getElementById("ctms-visits-container");
+  const workloadContainer = document.getElementById("ctms-workload-container");
+  const recruitmentContainer = document.getElementById(
+    "ctms-recruitment-container"
+  );
+
+  if (milestonesContainer) {
+    milestonesContainer.innerHTML = createCtmsMilestoneTable(data.milestones);
+  }
+  if (visitsContainer) {
+    visitsContainer.innerHTML = createCtmsVisitTable(data.visits);
+  }
+  if (workloadContainer) {
+    const rows = (data.allocations || [])
+      .map(
+        (a) => `
+      <tr>
+        <td><strong>${a.cra}</strong></td>
+        <td>${a.activeAllocations}</td>
+        <td>${(a.sites || []).join(", ")}</td>
+        <td>${(a.studies || []).join(", ")}</td>
+      </tr>
+    `
+      )
+      .join("");
+    workloadContainer.innerHTML = `
+<table class="clinical-visit-matrix">
+  <thead>
+    <tr>
+      <th scope="col">CRA</th>
+      <th scope="col">Active Allocations</th>
+      <th scope="col">Allocated Sites</th>
+      <th scope="col">Allocated Studies</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+    `.trim();
+  }
+  if (recruitmentContainer) {
+    const rows = (data.recruitment || [])
+      .map(
+        (r) => `
+      <tr>
+        <td><strong>${r.siteId}</strong></td>
+        <td>${r.screened}</td>
+        <td>${r.enrolled}</td>
+        <td>${r.target}</td>
+        <td>${Math.round((r.enrolled / r.target) * 100)}%</td>
+      </tr>
+    `
+      )
+      .join("");
+    recruitmentContainer.innerHTML = `
+<table class="clinical-visit-matrix">
+  <thead>
+    <tr>
+      <th scope="col">Site ID</th>
+      <th scope="col">Screened</th>
+      <th scope="col">Enrolled</th>
+      <th scope="col">Target</th>
+      <th scope="col">Progress</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+    `.trim();
+  }
+}
+
 // --- STANDALONE INTERACTIVE WEB DEMO CLIENT-SIDE LOGIC ---
 if (typeof document !== "undefined") {
   document.addEventListener("DOMContentLoaded", () => {
@@ -220,6 +306,28 @@ if (typeof document !== "undefined") {
           name: "Study Medication Log",
           statuses: ["N/A", "Complete", "Complete", "Complete", "Complete"],
         },
+      ],
+    };
+
+    // --- 1.5 CTMS MOCK DATA ---
+    const defaultCtmsData = {
+      milestones: [
+        { id: "M1", type: "SITE_SELECTION", plannedDate: "2026-08-01", actualDate: "2026-08-01", status: "ACHIEVED" },
+        { id: "M2", type: "INITIATION_VISIT", plannedDate: "2026-08-10", actualDate: "2026-08-12", status: "ACHIEVED" },
+        { id: "M3", type: "SITE_ACTIVATION", plannedDate: "2026-08-15", actualDate: "", status: "PLANNED" },
+        { id: "M4", type: "FIRST_SUBJECT_ENROLLED", plannedDate: "2026-09-01", actualDate: "", status: "PLANNED" },
+      ],
+      visits: [
+        { id: "V1", type: "SIV", scheduledDate: "2026-08-10", actualDate: "2026-08-12", status: "SIGNED_OFF", cra: "cra_fderuiter" },
+        { id: "V2", type: "IMV", scheduledDate: "2026-08-25", actualDate: "", status: "SCHEDULED", cra: "cra_fderuiter" },
+      ],
+      allocations: [
+        { cra: "cra_fderuiter", activeAllocations: 3, sites: ["Site-01", "Site-02", "Site-09"], studies: ["STUDY-01", "STUDY-02"] },
+        { cra: "cra_alice", activeAllocations: 1, sites: ["Site-03"], studies: ["STUDY-01"] },
+      ],
+      recruitment: [
+        { siteId: "Site-01", screened: 15, enrolled: 8, target: 20 },
+        { siteId: "Site-02", screened: 8, enrolled: 4, target: 15 },
       ],
     };
 
@@ -302,6 +410,7 @@ if (typeof document !== "undefined") {
 
     // --- 3. STATE HOLDERS (IN-MEMORY BROWSER DB) ---
     let currentUsdm = JSON.parse(JSON.stringify(defaultUsdm));
+    let currentCtmsData = JSON.parse(JSON.stringify(defaultCtmsData));
     let formValues = {};
     let formQueries = {}; // fieldId -> queryObj
     let ledgerBlocks = [];
@@ -344,10 +453,12 @@ if (typeof document !== "undefined") {
     // --- 5. DOM ELEMENTS ---
     const tabMdr = document.getElementById("tab-btn-mdr");
     const tabEcrf = document.getElementById("tab-btn-ecrf");
+    const tabCtms = document.getElementById("tab-btn-ctms");
     const tabAudit = document.getElementById("tab-btn-audit");
 
     const secMdr = document.getElementById("section-mdr");
     const secEcrf = document.getElementById("section-ecrf");
+    const secCtms = document.getElementById("section-ctms");
     const secAudit = document.getElementById("section-audit");
 
     const usdmTextarea = document.getElementById("usdm-json");
@@ -372,16 +483,29 @@ if (typeof document !== "undefined") {
 
     // --- 6. TAB NAVIGATION ---
     function switchTab(activeTab, activeSec) {
-      [tabMdr, tabEcrf, tabAudit].forEach((t) => t.classList.remove("active"));
-      [secMdr, secEcrf, secAudit].forEach((s) => s.classList.remove("active"));
+      [tabMdr, tabEcrf, tabCtms, tabAudit].forEach((t) => {
+        if (t) t.classList.remove("active");
+      });
+      [secMdr, secEcrf, secCtms, secAudit].forEach((s) => {
+        if (s) s.classList.remove("active");
+      });
 
-      activeTab.classList.add("active");
-      activeSec.classList.add("active");
+      if (activeTab) activeTab.classList.add("active");
+      if (activeSec) activeSec.classList.add("active");
     }
 
-    tabMdr.addEventListener("click", () => switchTab(tabMdr, secMdr));
-    tabEcrf.addEventListener("click", () => switchTab(tabEcrf, secEcrf));
-    tabAudit.addEventListener("click", () => switchTab(tabAudit, secAudit));
+    if (tabMdr && secMdr) {
+      tabMdr.addEventListener("click", () => switchTab(tabMdr, secMdr));
+    }
+    if (tabEcrf && secEcrf) {
+      tabEcrf.addEventListener("click", () => switchTab(tabEcrf, secEcrf));
+    }
+    if (tabCtms && secCtms) {
+      tabCtms.addEventListener("click", () => switchTab(tabCtms, secCtms));
+    }
+    if (tabAudit && secAudit) {
+      tabAudit.addEventListener("click", () => switchTab(tabAudit, secAudit));
+    }
 
     // --- 7. MDR VISUALIZER FUNCTIONS ---
     function renderMdr() {
@@ -824,9 +948,114 @@ if (typeof document !== "undefined") {
       }
     });
 
+    // --- 9.5 CTMS ACTIONS & EVENT LISTENERS ---
+    function renderWebCtms() {
+      renderCtms(currentCtmsData);
+    }
+
+    const btnAchieveMilestone = document.getElementById("btn-achieve-milestone");
+    if (btnAchieveMilestone) {
+      btnAchieveMilestone.addEventListener("click", () => {
+        // Find first PLANNED milestone and achieve it
+        const nextM = currentCtmsData.milestones.find((m) => m.status === "PLANNED");
+        if (nextM) {
+          nextM.status = "ACHIEVED";
+          nextM.actualDate = new Date().toISOString().slice(0, 10);
+          renderWebCtms();
+          addLedgerBlock(
+            "CTMS_MILESTONE_ACHIEVED",
+            { milestoneType: nextM.type, status: nextM.status, actualDate: nextM.actualDate },
+            `Site operational milestone '${nextM.type}' achieved and verified.`
+          );
+        } else {
+          alert("All milestones have already been achieved!");
+        }
+      });
+    }
+
+    const btnScheduleVisit = document.getElementById("btn-schedule-visit");
+    if (btnScheduleVisit) {
+      btnScheduleVisit.addEventListener("click", () => {
+        const newVisit = {
+          id: "V" + (currentCtmsData.visits.length + 1),
+          type: "IMV",
+          scheduledDate: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+          actualDate: "",
+          status: "SCHEDULED",
+          cra: "cra_fderuiter"
+        };
+        currentCtmsData.visits.push(newVisit);
+        renderWebCtms();
+        addLedgerBlock(
+          "CTMS_VISIT_SCHEDULED",
+          { visitId: newVisit.id, type: newVisit.type, scheduledDate: newVisit.scheduledDate },
+          `New Monitoring Visit scheduled for ${newVisit.scheduledDate}. Confirmation letter issued.`
+        );
+      });
+    }
+
+    const btnCompleteVisit = document.getElementById("btn-complete-visit");
+    if (btnCompleteVisit) {
+      btnCompleteVisit.addEventListener("click", () => {
+        const scheduledVisit = currentCtmsData.visits.find((v) => v.status === "SCHEDULED");
+        if (scheduledVisit) {
+          scheduledVisit.status = "SIGNED_OFF";
+          scheduledVisit.actualDate = new Date().toISOString().slice(0, 10);
+          renderWebCtms();
+          addLedgerBlock(
+            "CTMS_VISIT_COMPLETED",
+            { visitId: scheduledVisit.id, type: scheduledVisit.type, actualDate: scheduledVisit.actualDate },
+            `Monitoring Visit '${scheduledVisit.id}' completed and signed off. Follow-up letter issued.`
+          );
+        } else {
+          alert("No scheduled visits to complete!");
+        }
+      });
+    }
+
+    const btnReallocateCra = document.getElementById("btn-reallocate-cra");
+    if (btnReallocateCra) {
+      btnReallocateCra.addEventListener("click", () => {
+        const craAlice = currentCtmsData.allocations.find((a) => a.cra === "cra_alice");
+        if (craAlice) {
+          if (craAlice.activeAllocations === 1) {
+            craAlice.activeAllocations = 2;
+            craAlice.sites.push("Site-04");
+          } else {
+            craAlice.activeAllocations = 1;
+            craAlice.sites = ["Site-03"];
+          }
+          renderWebCtms();
+          addLedgerBlock(
+            "CTMS_CRA_REALLOCATION",
+            { cra: craAlice.cra, activeAllocations: craAlice.activeAllocations, sites: craAlice.sites },
+            `CRA allocations updated to balance workload.`
+          );
+        }
+      });
+    }
+
+    const btnUpdateRecruitment = document.getElementById("btn-update-recruitment");
+    if (btnUpdateRecruitment) {
+      btnUpdateRecruitment.addEventListener("click", () => {
+        const site1 = currentCtmsData.recruitment.find((r) => r.siteId === "Site-01");
+        if (site1) {
+          site1.screened += 2;
+          site1.enrolled += 1;
+          renderWebCtms();
+          addLedgerBlock(
+            "CTMS_RECRUITMENT_UPDATE",
+            { siteId: site1.siteId, screened: site1.screened, enrolled: site1.enrolled },
+            `Logged enrollment of new subject at Site-01.`
+          );
+        }
+      });
+    }
+
     // --- 10. INITIALIZATION BOOTSTRAP ---
     renderMdr();
     renderEcrf();
+    renderWebCtms();
 
     // Create Genesis Block asynchronously
     addLedgerBlock(
