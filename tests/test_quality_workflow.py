@@ -1,23 +1,13 @@
 import time
-from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from apps.gateway.main import generate_signature
 from apps.quality.database import db_manager
 from apps.quality.main import app
 from apps.quality.models import (
     Base,
-    CAPARecord,
-    CAPAStatus,
-    Deviation,
-    DeviationSeverity,
-    DeviationStatus,
-    DeviationType,
-    RootCauseAnalysis,
-    QualityAuditLog,
 )
 
 
