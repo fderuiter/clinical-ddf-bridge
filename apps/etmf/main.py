@@ -9,7 +9,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, TMFAuditLog, TMFDocument
+from apps.etmf.models import (
+    Base,
+    DocumentQCTransition,
+    DocumentStatus,
+    TMFAuditLog,
+    TMFDocument,
+    validate_qc_role,
+    validate_qc_transition,
+)
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -128,6 +136,41 @@ class DocumentResponse(BaseModel):
     created_by: str
     version_index: int
     metadata_json: Optional[Dict[str, Any]] = None
+    status: str = Field("DRAFT", description="Current status of the eTMF document")
+
+
+class QCTransitionRequest(BaseModel):
+    """
+    Request model to drive a document through the QC lifecycle.
+    """
+
+    target_status: str = Field(..., description="The target lifecycle status/stage")
+    context: Optional[Dict[str, Any]] = Field(None, description="Optional metadata or context for the transition")
+
+
+class QCTransitionResponse(BaseModel):
+    """
+    Response model representing a successful QC transition.
+    """
+
+    document_id: str = Field(..., description="ID of the document transitioned")
+    new_status: str = Field(..., description="The new status of the document")
+    transition_metadata: Dict[str, Any] = Field(..., description="Transition metadata including timestamp, user, role")
+
+
+class QCTransitionHistoryResponse(BaseModel):
+    """
+    Response model representing a single transition record in the QC history.
+    """
+
+    id: str
+    document_id: str
+    from_status: str
+    to_status: str
+    user_id: str
+    user_role: str
+    reason_for_change: str
+    timestamp: str
 
 
 class AuditLogResponse(BaseModel):
@@ -357,6 +400,7 @@ async def list_documents(
             created_by=doc.created_by,
             version_index=doc.version_index,
             metadata_json=doc.metadata_json,
+            status=doc.status,
         )
         for doc in docs
     ]
@@ -404,6 +448,7 @@ async def view_document(
         created_by=doc.created_by,
         version_index=doc.version_index,
         metadata_json=doc.metadata_json,
+        status=doc.status,
     )
 
 
@@ -560,3 +605,149 @@ async def check_completeness(
         present_artifacts=present_artifacts,
         missing_artifacts=missing_artifacts,
     )
+
+
+@app.post("/events/qc-transition/{document_id}", response_model=QCTransitionResponse)
+@app.post("/api/v1/etmf/documents/{document_id}/transition", response_model=QCTransitionResponse)
+async def transition_document(
+    request: Request,
+    document_id: str,
+    payload: QCTransitionRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QCTransitionResponse:
+    """
+    Drive a document through its QC lifecycle with validation, RBAC, and full auditing.
+    """
+    # 1. Extract context variables from request state
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+    change_reason = getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason")
+
+    # Normalize roles to a lowercase list
+    roles_list = [r.strip().lower() for r in user_roles.split(",")]
+
+    # 2. Reject if X-Change-Reason is missing or empty
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Missing required non-empty X-Change-Reason header",
+        )
+
+    # 3. Retrieve the document from database
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    from_status = doc.status
+    target_status = payload.target_status.upper()
+
+    # 4. State-machine validation: check if requested transition is allowed
+    if not validate_qc_transition(from_status, target_status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid transition: Cannot move document from {from_status} to {target_status}",
+        )
+
+    # 5. Enforce stage -> required-role gate: validate if the user has the required role for the TARGET status
+    if not validate_qc_role(target_status, roles_list):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: User roles {roles_list} do not have permission to transition to {target_status}",
+        )
+
+    # 6. Perform the mutation inside the transaction
+    doc.status = target_status
+
+    # 7. Insert the append-only DocumentQCTransition history row
+    transition_record = DocumentQCTransition(
+        document_id=doc.id,
+        from_status=from_status,
+        to_status=target_status,
+        user_id=user_id,
+        user_role=user_roles,
+        reason_for_change=change_reason,
+    )
+    session.add(transition_record)
+    await session.flush()
+
+    # 8. Log the action to the immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="QC_TRANSITION",
+        document_id=doc.id,
+        details=f"Transitioned document '{doc.filename}' (ID: {doc.id}) from {from_status} to {target_status}. Reason: {change_reason}",
+    )
+
+    # 9. Return response
+    return QCTransitionResponse(
+        document_id=doc.id,
+        new_status=target_status,
+        transition_metadata={
+            "transition_id": transition_record.id,
+            "from_status": from_status,
+            "to_status": target_status,
+            "user_id": user_id,
+            "user_role": user_roles,
+            "timestamp": transition_record.timestamp.isoformat(),
+            "reason_for_change": change_reason,
+            "context": payload.context,
+        }
+    )
+
+
+@app.get("/api/v1/etmf/documents/{document_id}/qc-history", response_model=List[QCTransitionHistoryResponse])
+async def get_qc_history(
+    request: Request,
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[QCTransitionHistoryResponse]:
+    """
+    Retrieve the ordered QC status transition history for a specific eTMF document.
+    Access to history writes an audit log entry.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    # Verify if document exists
+    stmt_doc = select(TMFDocument).where(TMFDocument.id == document_id)
+    result_doc = await session.execute(stmt_doc)
+    doc = result_doc.scalars().first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="VIEW_QC_HISTORY",
+        document_id=document_id,
+        details=f"Viewed QC transition history for eTMF document '{doc.filename}' (ID: {document_id}).",
+    )
+
+    # Retrieve all QC transitions for this document ordered by timestamp
+    stmt = (
+        select(DocumentQCTransition)
+        .where(DocumentQCTransition.document_id == document_id)
+        .order_by(DocumentQCTransition.timestamp.asc())
+    )
+    result = await session.execute(stmt)
+    transitions = result.scalars().all()
+
+    return [
+        QCTransitionHistoryResponse(
+            id=t.id,
+            document_id=t.document_id,
+            from_status=t.from_status,
+            to_status=t.to_status,
+            user_id=t.user_id,
+            user_role=t.user_role,
+            reason_for_change=t.reason_for_change,
+            timestamp=t.timestamp.isoformat(),
+        )
+        for t in transitions
+    ]
