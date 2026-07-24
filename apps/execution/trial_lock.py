@@ -37,6 +37,8 @@ class TrialLockManager:
     _router = NotificationRouter()
     _locked_sites = set()
     _locked_visits = set()
+    _locked_subjects = set()
+    _locked_forms = set()
 
     @classmethod
     def lock_site(cls, site_id: str):
@@ -69,6 +71,36 @@ class TrialLockManager:
         return str(visit_id) in cls._locked_visits
 
     @classmethod
+    def lock_subject(cls, subject_id: str):
+        """Locks a specific subject by subject_id."""
+        cls._locked_subjects.add(str(subject_id))
+
+    @classmethod
+    def unlock_subject(cls, subject_id: str):
+        """Unlocks a specific subject by subject_id."""
+        cls._locked_subjects.discard(str(subject_id))
+
+    @classmethod
+    def is_subject_locked(cls, subject_id: str) -> bool:
+        """Checks if a subject is locked."""
+        return str(subject_id) in cls._locked_subjects
+
+    @classmethod
+    def lock_form(cls, form_id: str):
+        """Locks a specific form by form_id."""
+        cls._locked_forms.add(str(form_id))
+
+    @classmethod
+    def unlock_form(cls, form_id: str):
+        """Unlocks a specific form by form_id."""
+        cls._locked_forms.discard(str(form_id))
+
+    @classmethod
+    def is_form_locked(cls, form_id: str) -> bool:
+        """Checks if a form is locked."""
+        return str(form_id) in cls._locked_forms
+
+    @classmethod
     def lock_trial(cls, reason: str = "Security violation detected"):
         """Freezes the trial into a read-only state and dispatches alerts."""
         if not cls._is_locked:
@@ -98,3 +130,5 @@ class TrialLockManager:
         cls._locked_at = None
         cls._locked_sites.clear()
         cls._locked_visits.clear()
+        cls._locked_subjects.clear()
+        cls._locked_forms.clear()

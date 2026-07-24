@@ -358,24 +358,45 @@ async def upgrade_existing_tables(conn) -> None:
         return [col["name"] for col in insp.get_columns("clinical_observations")]
 
     existing_cols = await conn.run_sync(get_columns)
-    if not existing_cols:
-        return
+    if existing_cols:
+        new_cols_to_add = [
+            ("lab_source", "VARCHAR(50)"),
+            ("lab_site_id", "VARCHAR(255)"),
+            ("lab_indicator", "VARCHAR(50)"),
+            ("lab_out_of_range", "BOOLEAN"),
+            ("matched_normal_bounds", "VARCHAR(255)"),
+        ]
 
-    new_cols_to_add = [
-        ("lab_source", "VARCHAR(50)"),
-        ("lab_site_id", "VARCHAR(255)"),
-        ("lab_indicator", "VARCHAR(50)"),
-        ("lab_out_of_range", "BOOLEAN"),
-        ("matched_normal_bounds", "VARCHAR(255)"),
-    ]
-
-    for col_name, col_type in new_cols_to_add:
-        if col_name not in existing_cols:
-            print(f"Adding missing column {col_name} to clinical_observations table...")
-            await conn.execute(
-                text(
-                    f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+        for col_name, col_type in new_cols_to_add:
+            if col_name not in existing_cols:
+                print(
+                    f"Adding missing column {col_name} to clinical_observations table..."
                 )
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
+                    )
+                )
+
+    # Check and add site_id to other confirmed tables if they exist
+    for table_name in [
+        "clinical_observations",
+        "clinical_queries",
+        "subject_randomizations",
+        "sdv_sign_offs",
+    ]:
+
+        def get_table_cols(sync_conn, t_name=table_name):
+            insp = inspect(sync_conn)
+            if not insp.has_table(t_name):
+                return []
+            return [col["name"] for col in insp.get_columns(t_name)]
+
+        tbl_cols = await conn.run_sync(get_table_cols)
+        if tbl_cols and "site_id" not in tbl_cols:
+            print(f"Adding missing column site_id to {table_name} table...")
+            await conn.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
 
 

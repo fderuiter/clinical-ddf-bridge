@@ -18,6 +18,8 @@ class LockClinicalRecord(AuditedModel):
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
     site_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     visit_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    subject_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    page_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -217,3 +219,114 @@ async def test_site_and_visit_locks() -> None:
         ValueError, match="Hard deletion of LockClinicalRecord is forbidden"
     ):
         await hard_delete_record(locked_visit_rec_id)
+
+
+@pytest.mark.asyncio
+async def test_subject_and_form_locks() -> None:
+    session_maker = db_manager.get_session_maker()
+
+    # Helpers
+    @transactional(session_maker)
+    async def create_record(subject: str | None = None, page: str | None = None) -> str:
+        session = current_session.get()
+        record = LockClinicalRecord(
+            data_value="patient_val", subject_id=subject, page_id=page
+        )
+        session.add(record)
+        await session.flush()
+        return str(record.id)
+
+    @transactional(session_maker)
+    async def update_record(rec_id: str, new_value: str) -> None:
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        if record:
+            record.data_value = new_value
+        await session.flush()
+
+    @transactional(session_maker)
+    async def soft_delete_record(rec_id: str) -> None:
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        if record:
+            record.is_deleted = True
+        await session.flush()
+
+    # 1. Test TrialLockManager state APIs for subject and form
+    assert not TrialLockManager.is_subject_locked("SUBJ-999")
+    TrialLockManager.lock_subject("SUBJ-999")
+    assert TrialLockManager.is_subject_locked("SUBJ-999")
+    TrialLockManager.unlock_subject("SUBJ-999")
+    assert not TrialLockManager.is_subject_locked("SUBJ-999")
+
+    assert not TrialLockManager.is_form_locked("FORM-ABC")
+    TrialLockManager.lock_form("FORM-ABC")
+    assert TrialLockManager.is_form_locked("FORM-ABC")
+    TrialLockManager.unlock_form("FORM-ABC")
+    assert not TrialLockManager.is_form_locked("FORM-ABC")
+
+    # 2. Test subject lock enforcement on INSERT
+    TrialLockManager.lock_subject("SUBJ_LOCKED")
+    with pytest.raises(
+        PermissionError, match="Subject SUBJ_LOCKED is currently locked"
+    ):
+        await create_record(subject="SUBJ_LOCKED")
+
+    # A write to another subject should succeed
+    subj_ok_id = await create_record(subject="SUBJ_OK")
+    assert subj_ok_id is not None
+
+    # Unlock and INSERT should succeed
+    TrialLockManager.unlock_subject("SUBJ_LOCKED")
+    subj_unlocked_id = await create_record(subject="SUBJ_LOCKED")
+    assert subj_unlocked_id is not None
+
+    # Re-lock subject and try to modify / soft-delete the record (UPDATE/DELETE)
+    TrialLockManager.lock_subject("SUBJ_LOCKED")
+    with pytest.raises(
+        PermissionError, match="Subject SUBJ_LOCKED is currently locked"
+    ):
+        await update_record(subj_unlocked_id, "updated_val_subj")
+
+    with pytest.raises(
+        PermissionError, match="Subject SUBJ_LOCKED is currently locked"
+    ):
+        await soft_delete_record(subj_unlocked_id)
+
+    # Unlock subject and operations succeed
+    TrialLockManager.unlock_subject("SUBJ_LOCKED")
+    await update_record(subj_unlocked_id, "updated_val_subj")
+    await soft_delete_record(subj_unlocked_id)
+
+    # 3. Test form lock enforcement on INSERT
+    TrialLockManager.lock_form("FORM_LOCKED")
+    with pytest.raises(PermissionError, match="Form FORM_LOCKED is currently locked"):
+        await create_record(page="FORM_LOCKED")
+
+    # A write to another form should succeed
+    form_ok_id = await create_record(page="FORM_OK")
+    assert form_ok_id is not None
+
+    # Unlock and INSERT should succeed
+    TrialLockManager.unlock_form("FORM_LOCKED")
+    form_unlocked_id = await create_record(page="FORM_LOCKED")
+    assert form_unlocked_id is not None
+
+    # Re-lock form and try to modify / soft-delete the record (UPDATE/DELETE)
+    TrialLockManager.lock_form("FORM_LOCKED")
+    with pytest.raises(PermissionError, match="Form FORM_LOCKED is currently locked"):
+        await update_record(form_unlocked_id, "updated_val_form")
+
+    with pytest.raises(PermissionError, match="Form FORM_LOCKED is currently locked"):
+        await soft_delete_record(form_unlocked_id)
+
+    # Unlock form and operations succeed
+    TrialLockManager.unlock_form("FORM_LOCKED")
+    await update_record(form_unlocked_id, "updated_val_form")
+    await soft_delete_record(form_unlocked_id)

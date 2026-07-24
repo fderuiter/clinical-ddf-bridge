@@ -1,21 +1,21 @@
 import uuid
-from datetime import datetime, timezone
-import pytest
-from pydantic import ValidationError
-from usdm_model import Study
+from datetime import datetime
 
+import pytest
 from protocol_render import (
     ExportMetadata,
     NarrativeItemView,
     NarrativeSectionView,
-    SynopsisView,
-    SoAHeaderEpoch,
-    SoAHeaderEncounter,
-    SoACellView,
-    SoARowView,
-    SoAMatrixView,
     RenderedProtocolDocument,
+    SoACellView,
+    SoAHeaderEncounter,
+    SoAHeaderEpoch,
+    SoAMatrixView,
+    SoARowView,
+    SynopsisView,
 )
+from pydantic import ValidationError
+from usdm_model import Study
 
 
 def test_export_metadata_valid_initial():
