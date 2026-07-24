@@ -23,7 +23,7 @@ from apps.designer.delta import (
 )
 from apps.designer.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 def get_auth_headers(
@@ -410,7 +410,7 @@ async def test_api_protocol_amendment_minor_and_major_bumps():
     and the source graph remains unchanged.
     """
     study_id = "amend_bump_test_study"
-    
+
     import copy
 
     from apps.designer.db import (
@@ -418,6 +418,7 @@ async def test_api_protocol_amendment_minor_and_major_bumps():
         MOCK_STUDY_PROJECTIONS_BY_VERSION,
         MOCK_STUDY_VERSIONS,
     )
+
     MOCK_STUDY_VERSIONS[study_id] = []
     MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
     MOCK_STUDIES[study_id]["study_id"] = study_id
@@ -473,6 +474,7 @@ async def test_api_protocol_amendment_minor_and_major_bumps():
         import os
 
         from packages.security.signing import generate_canonical_signature
+
         payload = {
             "id": latest_ver["id"],
             "version_tag": latest_ver["version_tag"],
@@ -484,9 +486,11 @@ async def test_api_protocol_amendment_minor_and_major_bumps():
             payload["created_at"] = str(latest_ver["created_at"])
         if "parent_version" in latest_ver:
             payload["parent_version"] = latest_ver["parent_version"]
-        secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+        secret = os.getenv(
+            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+        ).encode("utf-8")
         latest_ver["signature"] = generate_canonical_signature(payload, secret)
-        
+
         res_major = await client.post(
             f"/api/designer/protocols/{study_id}/amend",
             json={"type": "design-restructuring"},
@@ -505,10 +509,11 @@ async def test_api_protocol_amendment_invalid_signature_rejected():
     Validates that missing or tampered signatures are rejected on load.
     """
     study_id = "signature_rejection_test_study"
-    
+
     import copy
 
     from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
     MOCK_STUDY_VERSIONS[study_id] = []
     MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
     MOCK_STUDIES[study_id]["study_id"] = study_id
@@ -548,11 +553,12 @@ async def test_api_protocol_amendment_concurrency_race():
     Validates that concurrent amendments on the same study/protocol produce a conflict.
     """
     study_id = "concurrency_race_test_study"
-    
+
     import asyncio
     import copy
 
     from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
     MOCK_STUDY_VERSIONS[study_id] = []
     MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
     MOCK_STUDIES[study_id]["study_id"] = study_id
@@ -582,13 +588,13 @@ async def test_api_protocol_amendment_concurrency_race():
             )
             for _ in range(3)
         ]
-        
+
         responses = await asyncio.gather(*tasks)
-        
+
         # One of them should succeed (201), others should fail due to race safety (409 Conflict)
         success_count = sum(1 for r in responses if r.status_code == 201)
         conflict_count = sum(1 for r in responses if r.status_code == 409)
-        
+
         assert success_count == 1
         assert conflict_count == 2
 
@@ -598,16 +604,16 @@ def test_bump_version_edge_cases():
     Directly tests the bump_version helper with various semantic inputs.
     """
     from apps.designer.delta import bump_version
-    
+
     # Minor bumps
     assert bump_version("1.0", "minor") == "1.1"
     assert bump_version("v2.1", "clinical-amendment") == "v2.2"
     assert bump_version("1", "minor") == "1.1"
-    
+
     # Major bumps
     assert bump_version("1.0", "major") == "2.0"
     assert bump_version("v2.1.3", "design-restructuring") == "v3.0.0"
-    
+
     # Invalid tag format fallback
     assert bump_version("invalid_tag", "minor") == "invalid_tag-draft"
 
@@ -633,11 +639,9 @@ def test_verify_version_signature_edge_cases():
     Validates verify_version_signature with empty or invalid structures.
     """
     from apps.designer.delta import verify_version_signature
-    
+
     # Empty dictionary
     assert not verify_version_signature({})
-    
+
     # Dict without signature
     assert not verify_version_signature({"id": "v_123", "status": "DRAFT"})
-
-

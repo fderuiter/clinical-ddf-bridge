@@ -22,6 +22,7 @@ class ConcurrentLockingError(Exception):
 
 class InvalidSignatureError(Exception):
     """Raised when a study version signature is invalid or missing."""
+
     pass
 
 
@@ -35,28 +36,28 @@ def bump_version(version_tag: str, bump_type: str) -> str:
     match = re.match(r"^([a-zA-Z]*)(\d+(?:\.\d+)*)$", version_tag.strip())
     if not match:
         return version_tag + "-draft"
-    
+
     prefix, numbers_str = match.groups()
     parts = [int(p) for p in numbers_str.split(".")]
-    
+
     if len(parts) == 1:
         parts.append(0)
-    
+
     bump_type_lower = bump_type.lower()
     is_major = "major" in bump_type_lower or "restructuring" in bump_type_lower
-    
+
     if is_major:
         parts[0] += 1
         for i in range(1, len(parts)):
             parts[i] = 0
-    else: # minor
+    else:  # minor
         if len(parts) >= 2:
             parts[1] += 1
             for i in range(2, len(parts)):
                 parts[i] = 0
         else:
             parts[0] += 1
-            
+
     return prefix + ".".join(str(p) for p in parts)
 
 
@@ -67,7 +68,7 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
     signature = version_props.get("signature")
     if not signature:
         return False
-    
+
     created_at = version_props.get("created_at")
     if created_at is not None:
         if hasattr(created_at, "isoformat"):
@@ -88,11 +89,14 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
         payload["created_at"] = created_at_val
     if "parent_version" in version_props:
         payload["parent_version"] = version_props["parent_version"]
-        
+
     import os
 
     from packages.security.signing import verify_canonical_signature
-    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+
+    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
+        "utf-8"
+    )
     return verify_canonical_signature(payload, signature, secret)
 
 
@@ -166,6 +170,7 @@ async def assert_graph_mutable(
                 import os
 
                 from packages.security.signing import generate_canonical_signature
+
                 payload = {
                     "id": version_props.get("id", "legacy_ver"),
                     "version_tag": version_props.get("version_tag", "1.0"),
@@ -173,13 +178,19 @@ async def assert_graph_mutable(
                     "version_index": version_props.get("version_index", 1),
                     "created_by": version_props.get("created_by", "system"),
                 }
-                secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
-                version_props["signature"] = generate_canonical_signature(payload, secret)
+                secret = os.getenv(
+                    "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+                ).encode("utf-8")
+                version_props["signature"] = generate_canonical_signature(
+                    payload, secret
+                )
 
             if not verify_version_signature(version_props):
-                print(f"[AUDIT] [SECURITY_ALERT] Invalid or missing signature on load for StudyVersion: {version_props.get('id')}.")
+                print(
+                    f"[AUDIT] [SECURITY_ALERT] Invalid or missing signature on load for StudyVersion: {version_props.get('id')}."
+                )
                 raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
-            
+
             status = version_props.get("status")
             if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
                 raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
@@ -750,7 +761,7 @@ async def amend_protocol_version(
     if driver is None:
         if study_id not in _amendment_locks:
             _amendment_locks[study_id] = asyncio.Lock()
-            
+
         async with _amendment_locks[study_id]:
             from apps.designer.db import (
                 MOCK_STUDIES,
@@ -765,21 +776,29 @@ async def amend_protocol_version(
             versions = MOCK_STUDY_VERSIONS.get(study_id, [])
             if versions:
                 # Sort and find latest
-                latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[-1]
+                latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[
+                    -1
+                ]
                 # Verify signature
                 if not verify_version_signature(latest_ver):
-                    print(f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {latest_ver.get('id')}.")
+                    print(
+                        f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {latest_ver.get('id')}."
+                    )
                     raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
 
                 if latest_ver.get("status") not in ("LOCKED", "PUBLISHED", "ARCHIVED"):
-                    raise ConcurrentLockingError("Cannot amend a non-frozen study version")
+                    raise ConcurrentLockingError(
+                        "Cannot amend a non-frozen study version"
+                    )
 
                 parent_version_tag = latest_ver["version_tag"]
                 parent_version_index = latest_ver["version_index"]
                 parent_id = latest_ver["id"]
             else:
                 # Fallback to current_version or default
-                parent_version_tag = MOCK_STUDIES[study_id].get("current_version", "1.0")
+                parent_version_tag = MOCK_STUDIES[study_id].get(
+                    "current_version", "1.0"
+                )
                 parent_version_index = 1
                 parent_id = "initial_ver"
 
@@ -788,7 +807,10 @@ async def amend_protocol_version(
 
             # Check concurrency
             for v in versions:
-                if v.get("version_index") == new_version_index or v.get("version_tag") == new_version_tag:
+                if (
+                    v.get("version_index") == new_version_index
+                    or v.get("version_tag") == new_version_tag
+                ):
                     raise ConcurrentLockingError("Version index or tag already exists")
 
             new_id = f"v_{uuid.uuid4().hex[:12]}"
@@ -805,14 +827,18 @@ async def amend_protocol_version(
             }
 
             # Generate canonical signature
-            secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+            secret = os.getenv(
+                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+            ).encode("utf-8")
             signature = generate_canonical_signature(new_ver_payload, secret)
             new_ver_payload["signature"] = signature
 
             # Store projection before we mutate it (to make sure previous remains unchanged)
             parent_projection_key = f"{study_id}:{parent_version_tag}"
             if parent_projection_key not in MOCK_STUDY_PROJECTIONS_BY_VERSION:
-                MOCK_STUDY_PROJECTIONS_BY_VERSION[parent_projection_key] = copy.deepcopy(MOCK_STUDIES[study_id])
+                MOCK_STUDY_PROJECTIONS_BY_VERSION[parent_projection_key] = (
+                    copy.deepcopy(MOCK_STUDIES[study_id])
+                )
 
             # Clone the Arm/Epoch/Visit/Form structure
             new_projection = copy.deepcopy(MOCK_STUDIES[study_id])
@@ -838,7 +864,9 @@ async def amend_protocol_version(
             MOCK_STUDIES[study_id] = new_projection
             # Also freeze this version's projection state
             new_projection_key = f"{study_id}:{new_version_tag}"
-            MOCK_STUDY_PROJECTIONS_BY_VERSION[new_projection_key] = copy.deepcopy(new_projection)
+            MOCK_STUDY_PROJECTIONS_BY_VERSION[new_projection_key] = copy.deepcopy(
+                new_projection
+            )
 
             # Save new version record
             if study_id not in MOCK_STUDY_VERSIONS:
@@ -857,7 +885,9 @@ async def amend_protocol_version(
         tx = await session.begin_transaction()
         async with tx:
             # Pessimistic lock on Study root
-            lock_query = "MATCH (s:Study {id: $study_id}) SET s._lock = true RETURN s.id as id"
+            lock_query = (
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true RETURN s.id as id"
+            )
             lock_res = await tx.run(lock_query, study_id=study_id)
             lock_record = await lock_res.single()
             if not lock_record:
@@ -875,11 +905,19 @@ async def amend_protocol_version(
             if latest_record:
                 version_props = latest_record["version_props"]
                 if not verify_version_signature(version_props):
-                    print(f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {version_props.get('id')}.")
+                    print(
+                        f"[AUDIT] [SECURITY_ALERT] Invalid signature on load for StudyVersion: {version_props.get('id')}."
+                    )
                     raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
 
-                if version_props.get("status") not in ("LOCKED", "PUBLISHED", "ARCHIVED"):
-                    raise ConcurrentLockingError("Cannot amend a non-frozen study version")
+                if version_props.get("status") not in (
+                    "LOCKED",
+                    "PUBLISHED",
+                    "ARCHIVED",
+                ):
+                    raise ConcurrentLockingError(
+                        "Cannot amend a non-frozen study version"
+                    )
 
                 parent_version_tag = version_props["version_tag"]
                 parent_version_index = version_props["version_index"]
@@ -898,7 +936,12 @@ async def amend_protocol_version(
             WHERE sv.version_index = $version_index OR sv.version_tag = $version_tag
             RETURN sv.id as id
             """
-            check_res = await tx.run(check_query, study_id=study_id, version_index=new_version_index, version_tag=new_version_tag)
+            check_res = await tx.run(
+                check_query,
+                study_id=study_id,
+                version_index=new_version_index,
+                version_tag=new_version_tag,
+            )
             if await check_res.single():
                 raise ConcurrentLockingError("Version index or tag already exists")
 
@@ -914,7 +957,9 @@ async def amend_protocol_version(
                 "created_at": created_at_val,
                 "parent_version": parent_version_tag,
             }
-            secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+            secret = os.getenv(
+                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+            ).encode("utf-8")
             signature = generate_canonical_signature(new_ver_payload, secret)
 
             create_ver_query = """
@@ -972,7 +1017,13 @@ async def amend_protocol_version(
             )
 
             # Clone up to 4 levels of structural relations
-            rel_types = ['HAS_ARM', 'HAS_EPOCH', 'HAS_VISIT', 'HAS_FORM', 'HAS_ACTIVITY']
+            rel_types = [
+                "HAS_ARM",
+                "HAS_EPOCH",
+                "HAS_VISIT",
+                "HAS_FORM",
+                "HAS_ACTIVITY",
+            ]
             for rel in rel_types:
                 clone_rel_query = f"""
                 MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel}]->(child)
@@ -1011,7 +1062,9 @@ async def amend_protocol_version(
                         CREATE (cloned2)-[:{rel3}]->(cloned3)
                         CREATE (cloned3)-[:PREVIOUS_VERSION]->(child3)
                         """
-                        await tx.run(clone_level3_query, parent_id=parent_id, new_id=new_id)
+                        await tx.run(
+                            clone_level3_query, parent_id=parent_id, new_id=new_id
+                        )
 
             return {
                 "new_version": new_version_tag,

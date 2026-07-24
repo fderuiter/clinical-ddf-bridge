@@ -733,6 +733,7 @@ class ProtocolAmendRequest(BaseModel):
     """
     Payload for the Protocol/Designer Amendment endpoint.
     """
+
     amendment_type: Optional[str] = "minor"
     type: Optional[str] = None
 
@@ -754,7 +755,9 @@ async def amend_protocol(
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
     if not change_reason or change_reason == "system_operation":
-        change_reason = request.headers.get("X-Change-Reason", "Clinical amendment operation")
+        change_reason = request.headers.get(
+            "X-Change-Reason", "Clinical amendment operation"
+        )
 
     bump_type = payload.type or payload.amendment_type or "minor"
 
