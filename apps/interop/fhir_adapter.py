@@ -3,6 +3,23 @@ import hmac
 import os
 from typing import Any, Dict, List, Optional
 
+from packages.deid.detector import DeidDetector, redact_text
+from packages.deid.models import ComplianceProfile
+
+
+def deidentify_free_text(
+    text: str,
+    profile: ComplianceProfile = ComplianceProfile.HIPAA,
+    custom_terms: Optional[List[str]] = None,
+) -> str:
+    """
+    De-identify free-text clinical narrative, notes, or patient data using the
+    shared de-identification package.
+    """
+    detector = DeidDetector()
+    results = detector.detect(text, profile=profile, custom_terms=custom_terms)
+    return redact_text(text, results)
+
 
 def pseudonymize_identifier(identifier: str) -> str:
     """
@@ -28,6 +45,24 @@ def strip_pii_from_patient(patient_resource: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: De-identified FHIR Patient resource.
     """
+    # Extract potential custom terms (e.g. patient names) from structured fields before stripping
+    custom_terms = []
+    names = patient_resource.get("name", [])
+    if isinstance(names, list):
+        for name in names:
+            if isinstance(name, dict):
+                givens = name.get("given", [])
+                if isinstance(givens, list):
+                    for g in givens:
+                        if isinstance(g, str) and g:
+                            custom_terms.append(g)
+                family = name.get("family", "")
+                if isinstance(family, str) and family:
+                    custom_terms.append(family)
+                if family and givens:
+                    full_name = " ".join([str(g) for g in givens if g]) + " " + family
+                    custom_terms.append(full_name)
+
     stripped = patient_resource.copy()
     # Direct PII elements that must be completely removed
     pii_keys = [
@@ -42,6 +77,38 @@ def strip_pii_from_patient(patient_resource: Dict[str, Any]) -> Dict[str, Any]:
     ]
     for key in pii_keys:
         stripped.pop(key, None)
+
+    # De-identify narrative or notes if present
+    if "text" in stripped and isinstance(stripped["text"], dict):
+        div_text = stripped["text"].get("div", "")
+        if div_text:
+            stripped["text"]["div"] = deidentify_free_text(
+                div_text, ComplianceProfile.HIPAA, custom_terms=custom_terms
+            )
+
+    if "note" in stripped:
+        if isinstance(stripped["note"], list):
+            new_notes = []
+            for n in stripped["note"]:
+                if isinstance(n, dict) and "text" in n:
+                    n_copy = n.copy()
+                    n_copy["text"] = deidentify_free_text(
+                        n["text"], ComplianceProfile.HIPAA, custom_terms=custom_terms
+                    )
+                    new_notes.append(n_copy)
+                elif isinstance(n, str):
+                    new_notes.append(
+                        deidentify_free_text(
+                            n, ComplianceProfile.HIPAA, custom_terms=custom_terms
+                        )
+                    )
+                else:
+                    new_notes.append(n)
+            stripped["note"] = new_notes
+        elif isinstance(stripped["note"], str):
+            stripped["note"] = deidentify_free_text(
+                stripped["note"], ComplianceProfile.HIPAA, custom_terms=custom_terms
+            )
 
     # Pseudonymize patient ID
     orig_id = stripped.get("id", "unknown_id")
