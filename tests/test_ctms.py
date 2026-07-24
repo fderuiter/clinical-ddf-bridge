@@ -766,3 +766,336 @@ async def test_monitoring_visit_scheduling_respects_cra_allocation():
         "/api/v1/ctms/monitoring-visits", json=visit_payload, headers=cra_headers
     )
     assert visit_res_ok.status_code == 201
+
+
+# --- New Site Financial Management (Grants, Budgets, Milestones, Payables) Tests ---
+
+
+@pytest.mark.asyncio
+async def test_grant_creation_rbac():
+    """Verify that only Sponsor Admin and Grants Manager can create grants."""
+    client = TestClient(app)
+    payload = {
+        "study_id": "study_finance",
+        "site_id": "site_finance",
+        "total_budget": 100000.0,
+        "currency": "USD",
+    }
+
+    # Denied role (CRA) -> 403
+    cra_headers = get_auth_headers(roles="CRA")
+    response_denied = client.post(
+        "/api/v1/ctms/grants", json=payload, headers=cra_headers
+    )
+    assert response_denied.status_code == 403
+
+    # Permitted role (Grants Manager) -> 201
+    gm_headers = get_auth_headers(roles="Grants Manager")
+    response_ok = client.post("/api/v1/ctms/grants", json=payload, headers=gm_headers)
+    assert response_ok.status_code == 201
+    data = response_ok.json()
+    assert data["study_id"] == "study_finance"
+    assert data["site_id"] == "site_finance"
+    assert data["total_budget"] == 100000.0
+    assert data["status"] == "DRAFT"
+    assert data["version_index"] == 1
+
+
+@pytest.mark.asyncio
+async def test_grant_locked_when_approved():
+    """Verify approved grants are locked from editing, budget items, and milestones additions."""
+    client = TestClient(app)
+    gm_headers = get_auth_headers(roles="Grants Manager")
+
+    # Create Grant
+    payload = {
+        "study_id": "study_locked",
+        "site_id": "site_locked",
+        "total_budget": 50000.0,
+    }
+    response_created = client.post(
+        "/api/v1/ctms/grants", json=payload, headers=gm_headers
+    )
+    assert response_created.status_code == 201
+    grant_id = response_created.json()["id"]
+
+    # Budget Item Addition Works on Draft
+    item_payload = {
+        "category": "TRAVEL",
+        "description": "Travel cost",
+        "amount": 1000.0,
+    }
+    response_item = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/budget-items",
+        json=item_payload,
+        headers=gm_headers,
+    )
+    assert response_item.status_code == 201
+
+    # Milestone Addition Works on Draft
+    ms_payload = {
+        "milestone_name": "SIV Complete",
+        "trigger_condition": "STUDY_APPROVED",
+        "amount": 5000.0,
+    }
+    response_ms = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones",
+        json=ms_payload,
+        headers=gm_headers,
+    )
+    assert response_ms.status_code == 201
+
+    # Approve Grant
+    update_payload = {"status": "APPROVED"}
+    response_approved = client.put(
+        f"/api/v1/ctms/grants/{grant_id}", json=update_payload, headers=gm_headers
+    )
+    assert response_approved.status_code == 200
+    assert response_approved.json()["status"] == "APPROVED"
+
+    # Mutations on Approved Grant are Blocked -> 400
+    # Try updating grant total budget -> 400
+    response_update_blocked = client.put(
+        f"/api/v1/ctms/grants/{grant_id}",
+        json={"total_budget": 60000.0},
+        headers=gm_headers,
+    )
+    assert response_update_blocked.status_code == 400
+    assert "locked from editing" in response_update_blocked.json()["detail"]
+
+    # Try adding budget item -> 400
+    response_item_blocked = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/budget-items",
+        json=item_payload,
+        headers=gm_headers,
+    )
+    assert response_item_blocked.status_code == 400
+    assert "locked from editing" in response_item_blocked.json()["detail"]
+
+    # Try adding milestone -> 400
+    response_ms_blocked = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones",
+        json=ms_payload,
+        headers=gm_headers,
+    )
+    assert response_ms_blocked.status_code == 400
+    assert "locked from editing" in response_ms_blocked.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_milestone_trigger_study_approved():
+    """Verify that approving a grant triggers STUDY_APPROVED milestones and creates single payables."""
+    client = TestClient(app)
+    gm_headers = get_auth_headers(roles="Grants Manager")
+
+    # Create Grant
+    payload = {
+        "study_id": "study_m1",
+        "site_id": "site_m1",
+        "total_budget": 80000.0,
+    }
+    response_created = client.post(
+        "/api/v1/ctms/grants", json=payload, headers=gm_headers
+    )
+    grant_id = response_created.json()["id"]
+
+    # Create STUDY_APPROVED milestone
+    ms_payload = {
+        "milestone_name": "Initial Study Approval Payment",
+        "trigger_condition": "STUDY_APPROVED",
+        "amount": 10000.0,
+    }
+    client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones",
+        json=ms_payload,
+        headers=gm_headers,
+    )
+
+    # Transition to APPROVED
+    client.put(
+        f"/api/v1/ctms/grants/{grant_id}",
+        json={"status": "APPROVED"},
+        headers=gm_headers,
+    )
+
+    # Check payables
+    response_payables = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    payables = response_payables.json()
+    assert len(payables) == 1
+    assert payables[0]["amount"] == 10000.0
+    assert payables[0]["payment_status"] == "PENDING"
+
+    # Re-evaluate Study Approved condition -> Should be idempotent (no extra payable created)
+    client.post(
+        f"/api/v1/ctms/grants/{grant_id}/evaluate?condition=STUDY_APPROVED",
+        headers=gm_headers,
+    )
+    response_payables_2 = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    assert len(response_payables_2.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_milestone_trigger_visit_completed_automated():
+    """Verify that completing a monitoring visit automatically triggers VISIT_COMPLETED milestones on approved grants."""
+    client = TestClient(app)
+    cra_headers = get_auth_headers(roles="CRA")
+    gm_headers = get_auth_headers(roles="Grants Manager")
+
+    # 1. Create and Approve Grant for study_visit, site_visit
+    grant_payload = {
+        "study_id": "study_visit",
+        "site_id": "site_visit",
+        "total_budget": 50000.0,
+    }
+    g_res = client.post("/api/v1/ctms/grants", json=grant_payload, headers=gm_headers)
+    grant_id = g_res.json()["id"]
+
+    # Add VISIT_COMPLETED milestone
+    ms_payload = {
+        "milestone_name": "CRA Visit Completed",
+        "trigger_condition": "VISIT_COMPLETED",
+        "amount": 2000.0,
+    }
+    client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones",
+        json=ms_payload,
+        headers=gm_headers,
+    )
+
+    # Approve the grant
+    client.put(
+        f"/api/v1/ctms/grants/{grant_id}",
+        json={"status": "APPROVED"},
+        headers=gm_headers,
+    )
+
+    # 2. Allocate CRA and Schedule/Complete a visit
+    # Allocate cra_bob
+    alloc_headers = get_auth_headers(roles="Sponsor Admin")
+    alloc_payload = {
+        "cra_id": "cra_bob",
+        "site_id": "site_visit",
+        "study_id": "study_visit",
+        "status": "ACTIVE",
+    }
+    client.post(
+        "/api/v1/ctms/cra-allocations", json=alloc_payload, headers=alloc_headers
+    )
+
+    # Schedule visit
+    scheduled_date = datetime.utcnow() + timedelta(days=2)
+    visit_payload = {
+        "study_id": "study_visit",
+        "site_id": "site_visit",
+        "cra_id": "cra_bob",
+        "visit_type": "IMV",
+        "scheduled_date": scheduled_date.isoformat(),
+    }
+    v_res = client.post(
+        "/api/v1/ctms/monitoring-visits", json=visit_payload, headers=cra_headers
+    )
+    visit_id = v_res.json()["id"]
+
+    # Complete the visit -> Should automatically trigger evaluation of VISIT_COMPLETED milestone
+    completion_payload = {
+        "actual_date": datetime.utcnow().isoformat(),
+        "findings": [],
+    }
+    client.post(
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/complete",
+        json=completion_payload,
+        headers=cra_headers,
+    )
+
+    # 3. Verify payable was generated
+    response_payables = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    payables = response_payables.json()
+    assert len(payables) == 1
+    assert payables[0]["amount"] == 2000.0
+
+    # Completing another visit (if we had another) or running evaluate manually -> should be idempotent
+    client.post(
+        f"/api/v1/ctms/grants/{grant_id}/evaluate?condition=VISIT_COMPLETED",
+        headers=gm_headers,
+    )
+    response_payables_2 = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    assert len(response_payables_2.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_milestone_trigger_manual():
+    """Verify that MANUAL milestones can be manually triggered and are idempotent."""
+    client = TestClient(app)
+    gm_headers = get_auth_headers(roles="Grants Manager")
+
+    # Create Grant
+    payload = {
+        "study_id": "study_manual",
+        "site_id": "site_manual",
+        "total_budget": 30000.0,
+    }
+    response_created = client.post(
+        "/api/v1/ctms/grants", json=payload, headers=gm_headers
+    )
+    grant_id = response_created.json()["id"]
+
+    # Create MANUAL milestone
+    ms_payload = {
+        "milestone_name": "Equipment Sourcing",
+        "trigger_condition": "MANUAL",
+        "amount": 15000.0,
+    }
+    ms_res = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones",
+        json=ms_payload,
+        headers=gm_headers,
+    )
+    milestone_id = ms_res.json()["id"]
+
+    # Try triggering before Grant is Approved -> 400
+    response_early_trigger = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger",
+        headers=gm_headers,
+    )
+    assert response_early_trigger.status_code == 400
+
+    # Approve the grant
+    client.put(
+        f"/api/v1/ctms/grants/{grant_id}",
+        json={"status": "APPROVED"},
+        headers=gm_headers,
+    )
+
+    # Trigger manually
+    response_trigger = client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger",
+        headers=gm_headers,
+    )
+    assert response_trigger.status_code == 200
+    assert response_trigger.json()["is_triggered"] is True
+
+    # Check payables
+    response_payables = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    payables = response_payables.json()
+    assert len(payables) == 1
+    assert payables[0]["amount"] == 15000.0
+
+    # Re-trigger manually -> Should be idempotent (no extra payable created)
+    client.post(
+        f"/api/v1/ctms/grants/{grant_id}/milestones/{milestone_id}/trigger",
+        headers=gm_headers,
+    )
+    response_payables_2 = client.get(
+        f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
+    )
+    assert len(response_payables_2.json()) == 1
