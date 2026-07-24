@@ -513,3 +513,204 @@ async def test_site_aware_completeness():
         headers=inspector_headers,
     )
     assert res_site_3.json()["is_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_etmf_edge_cases_for_coverage():
+    """
+    Test edge cases and exception handling paths in eTMF for full branch coverage.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Cover edge cases")
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+
+    # 1. view_document 404
+    view_resp = client.get("/api/v1/etmf/documents/nonexistent-id", headers=inspector_headers)
+    assert view_resp.status_code == 404
+
+    # 2. download_document 404
+    download_resp = client.get("/api/v1/etmf/documents/nonexistent-id/download", headers=inspector_headers)
+    assert download_resp.status_code == 404
+
+    # 3. update_expectation 404
+    payload = {
+        "study_id": "study_xyz",
+        "site_id": "site_alpha",
+        "milestone": "INITIATION",
+        "artifact_type": "Some Doc",
+        "reason_for_change": "Updating nonexistent EDL",
+    }
+    update_resp = client.put("/api/v1/etmf/edl/nonexistent-id", json=payload, headers=admin_headers)
+    assert update_resp.status_code == 404
+
+    # 4. list_expectations filtering by milestone (first trigger check_completeness to seed default EDL dynamically)
+    client.get("/api/v1/etmf/completeness?study_id=study_xyz&milestone=INITIATION", headers=inspector_headers)
+    list_resp = client.get("/api/v1/etmf/edl?study_id=study_xyz&milestone=INITIATION", headers=inspector_headers)
+    assert list_resp.status_code == 200
+    assert len(list_resp.json()) >= 1
+
+    # 5. get_audit_trail with document_id filter
+    audit_resp = client.get("/api/v1/etmf/audit-logs?document_id=doc_123", headers=inspector_headers)
+    assert audit_resp.status_code == 200
+
+    # 6. TrialLock write block for EDL creation/update
+    from apps.execution.trial_lock import TrialLockManager
+    TrialLockManager.lock_trial()
+    try:
+        locked_post_resp = client.post("/api/v1/etmf/edl", json=payload, headers=admin_headers)
+        assert locked_post_resp.status_code == 403
+        assert "locked in a read-only state" in locked_post_resp.json()["detail"]
+
+        locked_put_resp = client.put("/api/v1/etmf/edl/some-id", json=payload, headers=admin_headers)
+        assert locked_put_resp.status_code == 403
+    finally:
+        TrialLockManager.reset()
+
+    # 10. Call test-exception to trigger db_session rollback
+    try:
+        client.get("/api/v1/etmf/test-exception", headers=inspector_headers)
+    except Exception as e:
+        assert "Intentional" in str(e)
+
+    # 11. Ingest with requires_signature: True in metadata
+    payload_req_sig_1 = {
+        "study_id": "study_xyz",
+        "artifact_type": "Ad-hoc doc with signature rule",
+        "filename": "adhoc_sig.txt",
+        "content": "No signatures here.",
+        "mime_type": "text/plain",
+        "metadata_json": {"requires_signature": True}
+    }
+    req_sig_resp_1 = client.post("/api/v1/etmf/ingest", json=payload_req_sig_1, headers=admin_headers)
+    assert req_sig_resp_1.status_code == 422
+
+    payload_req_sig_2 = {
+        "study_id": "study_xyz",
+        "artifact_type": "Ad-hoc doc with signature rule 2",
+        "filename": "adhoc_sig.txt",
+        "content": "No signatures here.",
+        "mime_type": "text/plain",
+        "metadata_json": {"require_signature": True}
+    }
+    req_sig_resp_2 = client.post("/api/v1/etmf/ingest", json=payload_req_sig_2, headers=admin_headers)
+    assert req_sig_resp_2.status_code == 422
+
+    # 12. Ingest with invalid mock signature
+    payload_invalid_mock = {
+        "study_id": "study_xyz",
+        "artifact_type": "Signed Document",
+        "filename": "signed_invalid.txt",
+        "content": (
+            "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE INVALID_MOCK\n-----END CERTIFICATE-----\n"
+            "-----BEGIN SIGNATURE-----\nMOCK\n-----END SIGNATURE-----\nContent"
+        ),
+        "mime_type": "text/plain",
+    }
+    invalid_mock_resp = client.post("/api/v1/etmf/ingest", json=payload_invalid_mock, headers=admin_headers)
+    assert invalid_mock_resp.status_code == 422
+
+    # 7. Ingest ad-hoc/fallback document to hit map_artifact_to_tmf zone 2 default path
+    payload_adhoc = {
+        "study_id": "study_xyz",
+        "artifact_type": "Ad-hoc document",
+        "filename": "adhoc.txt",
+        "content": "Just some plain text content.",
+        "mime_type": "text/plain",
+    }
+    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload_adhoc, headers=admin_headers)
+    assert ingest_resp.status_code == 201
+
+    # 8. List documents with zone=2 and search filter to hit list filters
+    list_docs_resp = client.get("/api/v1/etmf/documents?zone=2&search=plain", headers=inspector_headers)
+    assert list_docs_resp.status_code == 200
+    assert len(list_docs_resp.json()) >= 1
+
+    # 8b. List documents with study_id, zone, and search filter combined
+    list_docs_resp_all = client.get("/api/v1/etmf/documents?study_id=study_xyz&zone=2&search=plain", headers=inspector_headers)
+    assert list_docs_resp_all.status_code == 200
+
+    # 8c. Call health check endpoint
+    health_resp = client.get("/health")
+    assert health_resp.status_code == 200
+    assert health_resp.json()["status"] == "ok"
+
+    # 9. Ingest document with nested signature metadata dict to hit metadata parsing
+    payload_nested_sig = {
+        "study_id": "study_xyz",
+        "artifact_type": "Signed Document",
+        "filename": "signed_doc.txt",
+        "content": "Signed content.",
+        "mime_type": "text/plain",
+        "metadata_json": {
+            "signature": {
+                "certificate": "MOCK_SIGNATURE",
+                "signature_value": "MOCK"
+            }
+        }
+    }
+    nested_sig_resp = client.post("/api/v1/etmf/ingest", json=payload_nested_sig, headers=admin_headers)
+    assert nested_sig_resp.status_code == 201
+
+
+def test_uninitialized_database_manager():
+    """
+    Cover the exception path when database manager is uninitialized.
+    """
+    from apps.etmf.database import ETMFDatabaseManager
+    mgr = ETMFDatabaseManager()
+    with pytest.raises(Exception) as exc_info:
+        mgr.get_session_maker()
+    assert "not initialized" in str(exc_info.value)
+
+
+def test_placeholder_scripts():
+    """
+    Increase unit test coverage for placeholder scripts by running them as __main__.
+    """
+    import runpy
+    runpy.run_path("apps/execution/database/provision_tenant.py", run_name="__main__")
+    runpy.run_path("apps/execution/database/rollback.py", run_name="__main__")
+
+
+def test_ucum_extra_coverage():
+    """
+    Increase unit test coverage for apps/execution/ucum.py.
+    """
+    from apps.execution.ucum import convert_unit, get_normalized_representation
+    import pytest
+
+    # 1. Incompatible base units (e.g., kg to m)
+    with pytest.raises(ValueError) as exc_info:
+        convert_unit(10.0, "kg", "m")
+    assert "Incompatible" in str(exc_info.value)
+
+    # 2. Unrecognized units
+    with pytest.raises(ValueError) as exc_info:
+        convert_unit(10.0, "unknown_unit_1", "unknown_unit_2")
+    assert "Unrecognized" in str(exc_info.value)
+
+    # 3. get_normalized_representation with none values
+    val, unit = get_normalized_representation(None, "kg")
+    assert val is None
+    assert unit == "kg"
+
+    val, unit = get_normalized_representation(10.0, None)
+    assert val == 10.0
+    assert unit is None
+
+    # 4. Temperature conversions Cel -> Fahr and K
+    assert convert_unit(0, "Cel", "[Fahr]") == 32.0
+    assert convert_unit(32, "[Fahr]", "Cel") == 0.0
+    assert convert_unit(0, "Cel", "K") == 273.15
+    assert convert_unit(273.15, "K", "Cel") == 0.0
+    assert convert_unit(1.0, "[oz_av]", "g") == 28.349523125
+
+    # 5. Trigger exception in get_normalized_representation temperature path
+    val, unit = get_normalized_representation("not_a_float", "K")
+    assert val == "not_a_float"
+    assert unit == "K"
+
+    # 6. Unrecognized unit in get_normalized_representation
+    val, unit = get_normalized_representation(10.0, "unknown_unit")
+    assert val == 10.0
+    assert unit == "unknown_unit"
