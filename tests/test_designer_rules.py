@@ -27,7 +27,7 @@ from apps.designer.rules import (
     detect_unknown_fields,
 )
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 def get_auth_headers(
