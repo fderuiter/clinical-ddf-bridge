@@ -1,4 +1,5 @@
 import os
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select, text
@@ -6,18 +7,13 @@ from sqlalchemy.exc import IntegrityError
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
-    Base,
     AuditLog,
-    MedDRATerm,
-    MedDRAHierarchy,
-    WHODrugRecord,
-    WHODrugIngredient,
-    WHODrugATC,
-    WHODrugDrugATC,
-    WHODrugDrugIngredient,
-    DictionaryImportJob,
+    Base,
     ClinicalCodingAssignment,
-    ClinicalCodingLedger,
+    DictionaryImportJob,
+    MedDRAHierarchy,
+    MedDRATerm,
+    WHODrugRecord,
 )
 from apps.execution.trial_lock import TrialLockManager
 
@@ -177,8 +173,8 @@ async def test_audit_trigger_logging_on_coding_workflow():
             logs = res.scalars().all()
             insert_logs = [log for log in logs if log.action == "INSERT"]
             assert len(insert_logs) >= 1
-            assert any(l.new_values["verbatim_text"] == "headache symptom" for l in insert_logs)
-            assert any(l.new_values["coded_code"] == "10019211" for l in insert_logs)
+            assert any(lg.new_values["verbatim_text"] == "headache symptom" for lg in insert_logs)
+            assert any(lg.new_values["coded_code"] == "10019211" for lg in insert_logs)
 
     # 2. UPDATE audit log test
     async with db_manager.get_session_maker()() as session:
@@ -202,8 +198,8 @@ async def test_audit_trigger_logging_on_coding_workflow():
             logs = res.scalars().all()
             update_logs = [log for log in logs if log.action == "UPDATE"]
             assert len(update_logs) >= 1
-            assert any(l.old_values["status"] == "CODED" for l in update_logs)
-            assert any(l.new_values["status"] == "RECODING_REQUIRED" for l in update_logs)
+            assert any(lg.old_values["status"] == "CODED" for lg in update_logs)
+            assert any(lg.new_values["status"] == "RECODING_REQUIRED" for lg in update_logs)
 
     # 3. Prevent hard delete, but allow soft delete
     async with db_manager.get_session_maker()() as session:
@@ -235,8 +231,8 @@ async def test_audit_trigger_logging_on_coding_workflow():
             logs = res.scalars().all()
             delete_logs = [log for log in logs if log.action == "DELETE"]
             assert len(delete_logs) >= 1
-            assert any(l.old_values["is_deleted"] == False for l in delete_logs)
-            assert any(l.new_values["is_deleted"] == True for l in delete_logs)
+            assert any(lg.old_values["is_deleted"] is False for lg in delete_logs)
+            assert any(lg.new_values["is_deleted"] is True for lg in delete_logs)
 
 
 @pytest.mark.asyncio
@@ -282,5 +278,5 @@ async def test_dictionary_import_job_lifecycle():
             logs = res_logs.scalars().all()
             assert len(logs) > 0
             # Ensure audit is tracking changes on dictionary_import_jobs
-            assert any(l.action == "INSERT" for l in logs)
-            assert any(l.action == "UPDATE" for l in logs)
+            assert any(lg.action == "INSERT" for lg in logs)
+            assert any(lg.action == "UPDATE" for lg in logs)

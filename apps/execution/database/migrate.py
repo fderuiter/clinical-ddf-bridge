@@ -8,20 +8,20 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from apps.execution.database.models import (  # noqa: F401
     Base,
+    ClinicalCodingAssignment,
+    ClinicalCodingLedger,
     ClinicalObservation,
     ClinicalQuery,
+    DictionaryImportJob,
+    MedDRAHierarchy,
+    MedDRATerm,
     SDVSignOff,
     TSDVConfig,
-    MedDRATerm,
-    MedDRAHierarchy,
-    WHODrugRecord,
-    WHODrugIngredient,
     WHODrugATC,
     WHODrugDrugATC,
     WHODrugDrugIngredient,
-    DictionaryImportJob,
-    ClinicalCodingAssignment,
-    ClinicalCodingLedger,
+    WHODrugIngredient,
+    WHODrugRecord,
 )
 
 
