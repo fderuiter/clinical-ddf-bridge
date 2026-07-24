@@ -32,6 +32,7 @@ from apps.execution.database.models import (
     ClinicalSubject,
     ClinicalVisit,
     FormSubmission,
+    SDVSignOff,
     TranslationJob,
 )
 from apps.execution.demographics import (
@@ -1205,6 +1206,224 @@ async def open_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+        )
+
+
+# ==========================================
+# SDV Sign-Off & Drop API
+# ==========================================
+
+
+class SDVScopeEnum(str, Enum):
+    FIELD = "FIELD"
+    PAGE = "PAGE"
+    VISIT = "VISIT"
+
+
+class SDVSignOffRequest(BaseModel):
+    scope: SDVScopeEnum
+    target_id: str
+    subject_id: str
+    study_id: str
+
+
+class SDVSignOffResponse(BaseModel):
+    id: str
+    scope: str
+    target_id: str
+    subject_id: str
+    study_id: str
+    is_verified: bool
+    verified_by: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    dropped_reason: Optional[str] = None
+    dropped_at: Optional[datetime] = None
+
+
+@app.post(
+    "/api/v1/execution/sdv/signoff",
+    response_model=SDVSignOffResponse,
+    status_code=201,
+)
+async def sdv_signoff(
+    request: Request,
+    payload: SDVSignOffRequest,
+    roles: list[str] = Depends(require_roles("CRA", "monitor")),
+) -> SDVSignOffResponse:
+    """Perform a CRA-gated SDV sign-off on field, page, or visit level targets."""
+    user_id = current_user_id.get()
+
+    async with db_manager.get_session_maker()() as session:
+        # Validate that the subject exists and belongs to the study
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == payload.subject_id,
+            ClinicalSubject.study_id == payload.study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj = res_subj.scalars().first()
+        if not subj:
+            raise HTTPException(
+                status_code=400,
+                detail="Subject not found or Study/Subject mismatch",
+            )
+
+        if payload.scope == SDVScopeEnum.FIELD:
+            # Query the target clinical observation
+            stmt_obs = select(ClinicalObservation).where(
+                ClinicalObservation.id == payload.target_id,
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            res_obs = await session.execute(stmt_obs)
+            obs = res_obs.scalars().first()
+            if not obs:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Observation target not found.",
+                )
+
+            # Check consistency of subject and study
+            if obs.subject_id != payload.subject_id or obs.study_id != payload.study_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Inconsistent target coordinates for FIELD scope.",
+                )
+
+            # Update observation state
+            obs.is_sdv_verified = True
+            obs.sdv_verified_by = user_id
+            obs.sdv_verified_at = datetime.utcnow()
+
+            # Create or update matching SDVSignOff record
+            stmt_so = select(SDVSignOff).where(
+                SDVSignOff.scope == "FIELD",
+                SDVSignOff.target_id == obs.id,
+            )
+            res_so = await session.execute(stmt_so)
+            so = res_so.scalars().first()
+            if so:
+                so.is_verified = True
+                so.verified_by = user_id
+                so.verified_at = datetime.utcnow()
+                so.dropped_reason = None
+                so.dropped_at = None
+                so_id = so.id
+            else:
+                so_new = SDVSignOff(
+                    scope="FIELD",
+                    target_id=obs.id,
+                    subject_id=payload.subject_id,
+                    study_id=payload.study_id,
+                    is_verified=True,
+                    verified_by=user_id,
+                    verified_at=datetime.utcnow(),
+                )
+                session.add(so_new)
+                so_id = so_new.id
+
+        elif payload.scope == SDVScopeEnum.VISIT:
+            # Check if visit exists
+            stmt_visit = select(ClinicalVisit).where(
+                ClinicalVisit.id == payload.target_id,
+                ClinicalVisit.is_deleted.is_(False),
+            )
+            res_visit = await session.execute(stmt_visit)
+            visit = res_visit.scalars().first()
+            if not visit:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Visit target not found.",
+                )
+
+            # Check consistency of subject and study
+            if (
+                visit.subject_id != payload.subject_id
+                or visit.study_id != payload.study_id
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Inconsistent target coordinates for VISIT scope.",
+                )
+
+            # Create or update aggregate SDVSignOff record
+            stmt_so = select(SDVSignOff).where(
+                SDVSignOff.scope == "VISIT",
+                SDVSignOff.target_id == payload.target_id,
+            )
+            res_so = await session.execute(stmt_so)
+            so = res_so.scalars().first()
+            if so:
+                so.is_verified = True
+                so.verified_by = user_id
+                so.verified_at = datetime.utcnow()
+                so.dropped_reason = None
+                so.dropped_at = None
+                so_id = so.id
+            else:
+                so_new = SDVSignOff(
+                    scope="VISIT",
+                    target_id=payload.target_id,
+                    subject_id=payload.subject_id,
+                    study_id=payload.study_id,
+                    is_verified=True,
+                    verified_by=user_id,
+                    verified_at=datetime.utcnow(),
+                )
+                session.add(so_new)
+                so_id = so_new.id
+
+        elif payload.scope == SDVScopeEnum.PAGE:
+            # Create or update aggregate SDVSignOff record for page target (no model check to avoid FK assumptions)
+            stmt_so = select(SDVSignOff).where(
+                SDVSignOff.scope == "PAGE",
+                SDVSignOff.target_id == payload.target_id,
+            )
+            res_so = await session.execute(stmt_so)
+            so = res_so.scalars().first()
+            if so:
+                so.is_verified = True
+                so.verified_by = user_id
+                so.verified_at = datetime.utcnow()
+                so.dropped_reason = None
+                so.dropped_at = None
+                so_id = so.id
+            else:
+                so_new = SDVSignOff(
+                    scope="PAGE",
+                    target_id=payload.target_id,
+                    subject_id=payload.subject_id,
+                    study_id=payload.study_id,
+                    is_verified=True,
+                    verified_by=user_id,
+                    verified_at=datetime.utcnow(),
+                )
+                session.add(so_new)
+                so_id = so_new.id
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported SDV scope: {payload.scope}",
+            )
+
+        await session.commit()
+
+        # Explicit re-query and explicit response construction pattern
+        stmt_ref = select(SDVSignOff).where(SDVSignOff.id == so_id)
+        res_ref = await session.execute(stmt_ref)
+        so_db = res_ref.scalar_one()
+
+        return SDVSignOffResponse(
+            id=so_db.id,
+            scope=so_db.scope,
+            target_id=so_db.target_id,
+            subject_id=so_db.subject_id,
+            study_id=so_db.study_id,
+            is_verified=so_db.is_verified,
+            verified_by=so_db.verified_by,
+            verified_at=so_db.verified_at,
+            dropped_reason=so_db.dropped_reason,
+            dropped_at=so_db.dropped_at,
         )
 
 

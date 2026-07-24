@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import event, inspect
+from sqlalchemy import event, inspect, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
-from apps.execution.trial_lock import TrialLockManager
+from apps.execution.trial_lock import NotificationRouter, TrialLockManager
 from packages.security.context import (
     current_change_reason,
     current_ip_address,
@@ -12,7 +12,7 @@ from packages.security.context import (
     current_user_id,
 )
 
-from .models import AuditedModel, AuditLog
+from .models import AuditedModel, AuditLog, ClinicalObservation, SDVSignOff
 
 
 def get_primary_key(obj):
@@ -84,6 +84,80 @@ def receive_before_flush(session: Session, flush_context, instances):
             raise PermissionError(
                 f"Visit {visit_id} is currently locked in a read-only state."
             )
+
+    # Pre-pass on session.dirty to detect clinical value edits on verified observations
+    # and perform auto-drop verification workflow.
+    for obj in list(session.dirty):
+        if isinstance(obj, ClinicalObservation):
+            # Check if it was previously verified
+            is_sdv_hist = get_history(obj, "is_sdv_verified")
+            if is_sdv_hist.has_changes():
+                was_verified = (
+                    bool(is_sdv_hist.deleted[0]) if is_sdv_hist.deleted else False
+                )
+            else:
+                was_verified = bool(obj.is_sdv_verified)
+
+            if was_verified:
+                # Check if clinical value changed
+                clinical_value_changed = False
+                for field in ["value", "value_string", "normalized_value"]:
+                    hist = get_history(obj, field)
+                    if hist.has_changes():
+                        old_val = hist.deleted[0] if hist.deleted else None
+                        new_val = hist.added[0] if hist.added else getattr(obj, field)
+                        if old_val != new_val:
+                            clinical_value_changed = True
+                            break
+
+                if clinical_value_changed:
+                    # Enforce meaningful change reason
+                    current_reason = current_change_reason.get()
+                    if (
+                        not current_reason
+                        or current_reason == "system_operation"
+                        or not current_reason.strip()
+                    ):
+                        raise ValueError(
+                            "Meaningful GxP change reason is required for modifying previously verified clinical values."
+                        )
+
+                    # Save verifier for notification before we clear it!
+                    old_verifier = obj.sdv_verified_by
+
+                    # Clear verification state on the observation itself
+                    obj.is_sdv_verified = False
+                    obj.sdv_verified_by = None
+                    obj.sdv_verified_at = None
+
+                    # Update associated SDVSignOff records to unverified state
+                    stmt = select(SDVSignOff).where(
+                        SDVSignOff.scope == "FIELD",
+                        SDVSignOff.target_id == obj.id,
+                        SDVSignOff.is_verified.is_(True),
+                    )
+                    res = session.execute(stmt)
+                    sign_offs = res.scalars().all()
+                    for so in sign_offs:
+                        so.is_verified = False
+                        so.dropped_reason = "Clinical value modified"
+                        so.dropped_at = datetime.utcnow()
+
+                    # Send notification to the previous verifier
+                    if old_verifier:
+                        msg = f"Previously verified field modified on Subject {obj.subject_id} - Visit {obj.visit_id}."
+                        payload = {
+                            "message": msg,
+                            "study_id": obj.study_id,
+                            "subject_id": obj.subject_id,
+                            "visit_id": obj.visit_id,
+                            "observation_id": obj.id,
+                            "editor": current_user_id.get(),
+                            "change_reason": current_reason,
+                        }
+                        NotificationRouter().send_dashboard_notification(
+                            [old_verifier], payload
+                        )
 
     audit_logs = []
     user_id = current_user_id.get()
