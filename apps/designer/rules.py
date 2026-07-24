@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -9,6 +9,7 @@ class FieldReference(BaseModel):
     """
     Represents a structured field reference within an expression tree.
     """
+
     field_id: str
     form_id: Optional[str] = None
     visit_id: Optional[str] = None
@@ -19,6 +20,7 @@ class ExpressionNode(BaseModel):
     """
     A recursive node in a structured clinical expression tree.
     """
+
     type: Literal["logical", "comparison", "function", "field_ref", "constant"]
     operator: Optional[str] = None
     operands: Optional[List[ExpressionNode]] = None
@@ -44,15 +46,30 @@ class ExpressionNode(BaseModel):
             if self.operator not in ("==", "!=", "<", "<=", ">", ">="):
                 raise ValueError(f"Invalid comparison operator: '{self.operator}'")
             if not self.operands or len(self.operands) != 2:
-                raise ValueError(f"Comparison operator '{self.operator}' requires exactly 2 operands")
+                raise ValueError(
+                    f"Comparison operator '{self.operator}' requires exactly 2 operands"
+                )
         elif self.type == "function":
-            valid_funcs = ("is_empty", "is_not_empty", "sum", "avg", "min", "max", "count")
+            valid_funcs = (
+                "is_empty",
+                "is_not_empty",
+                "sum",
+                "avg",
+                "min",
+                "max",
+                "count",
+            )
             if self.operator not in valid_funcs:
                 raise ValueError(f"Invalid function operator: '{self.operator}'")
             if not self.operands:
                 raise ValueError(f"Function node '{self.operator}' requires operands")
-            if self.operator in ("is_empty", "is_not_empty") and len(self.operands) != 1:
-                raise ValueError(f"Function '{self.operator}' requires exactly 1 operand")
+            if (
+                self.operator in ("is_empty", "is_not_empty")
+                and len(self.operands) != 1
+            ):
+                raise ValueError(
+                    f"Function '{self.operator}' requires exactly 1 operand"
+                )
         return self
 
 
@@ -64,6 +81,7 @@ class SkipLogicRule(BaseModel):
     """
     A rule that defines visibility skip logic for fields, groups, or forms.
     """
+
     id: str
     study_id: str
     type: Literal["skip_logic"] = "skip_logic"
@@ -80,6 +98,7 @@ class ConstraintRule(BaseModel):
     """
     A rule that defines constraints and validations on a single field.
     """
+
     id: str
     study_id: str
     type: Literal["constraint"] = "constraint"
@@ -101,6 +120,7 @@ class CrossFormCheckRule(BaseModel):
     """
     A rule that defines edit checks spanning multiple forms or visits (longitudinal checks).
     """
+
     id: str
     study_id: str
     type: Literal["cross_form_check"] = "cross_form_check"
@@ -120,6 +140,7 @@ class CreateRuleRequest(BaseModel):
     """
     Request schema to create a rule.
     """
+
     type: Literal["skip_logic", "constraint", "cross_form_check"]
     condition: ExpressionNode
     action: Optional[Literal["show", "hide"]] = None
@@ -210,7 +231,9 @@ def extract_field_references(node: ExpressionNode) -> List[FieldReference]:
     return refs
 
 
-def detect_unknown_fields(node: ExpressionNode, study_projection: Dict[str, Any]) -> List[str]:
+def detect_unknown_fields(
+    node: ExpressionNode, study_projection: Dict[str, Any]
+) -> List[str]:
     """
     Checks if referenced fields, forms, or visits do not exist in the study projection.
     Returns a list of validation failure messages.
@@ -246,7 +269,11 @@ def detect_circular_dependencies(rules: List[Dict[str, Any]]) -> List[str]:
     Returns a list of circular dependency path description strings.
     """
     # Filter for active skip logic rules
-    skip_rules = [r for r in rules if r.get("type") == "skip_logic" and not r.get("is_deleted", False)]
+    skip_rules = [
+        r
+        for r in rules
+        if r.get("type") == "skip_logic" and not r.get("is_deleted", False)
+    ]
 
     # Build adjacency list: target_field -> referenced_fields
     adj = {}
