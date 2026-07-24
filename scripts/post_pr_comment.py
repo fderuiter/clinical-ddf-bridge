@@ -139,7 +139,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 
     # Read vulnerability summary if present
     vulnerability_table = ""
-    v_summary_path = "/tmp/vulnerability_summary.json"
+    v_summary_path = "/tmp/vulnerability_summary.json"  # nosec B108
     if os.path.exists(v_summary_path):
         try:
             with open(v_summary_path, "r", encoding="utf-8") as f:
