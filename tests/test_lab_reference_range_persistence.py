@@ -1,9 +1,11 @@
-from datetime import datetime
 import pytest
 from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
-from apps.execution.database.migrate import deploy_database_triggers, upgrade_existing_tables
+from apps.execution.database.migrate import (
+    deploy_database_triggers,
+    upgrade_existing_tables,
+)
 from apps.execution.database.models import (
     AuditLog,
     Base,
@@ -269,8 +271,6 @@ async def test_schema_evolution_migration_upgrade():
 
     # 1. Create clinical_observations table with only legacy columns
     # We define a minimal model representing the legacy table schema.
-    legacy_metadata = Base.metadata
-
     async with temp_engine.begin() as conn:
         # Create legacy table schema manually
         await conn.execute(text("""
