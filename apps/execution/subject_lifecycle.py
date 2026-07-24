@@ -97,13 +97,18 @@ def guard_subject_transition(current_state: Any, target_state: Any) -> None:
 
     This validator acts as the centralized pure-Python guardian of subject state
     pathways, enforcing GxP compliant pathways to prevent protocol deviations.
+    Specifically, it verifies that the subject does not undergo unauthorized or
+    uncontrolled transitions (e.g., reverting a finalized withdrawal, bypassing
+    screening, or re-randomizing) that would compromise trial statistical integrity or
+    violate 21 CFR Part 11 traceability rules.
 
     Args:
         current_state (Any): The current state of the subject, or None.
         target_state (Any): The requested new state.
 
     Raises:
-        InvalidStateTransitionError: If the transition is illegal.
+        InvalidStateTransitionError: If the transition is illegal according to the
+            defined ALLOWED_SUBJECT_TRANSITIONS pathways.
     """
     curr = normalize_state(current_state)
     tgt = normalize_state(target_state)
