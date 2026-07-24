@@ -13,6 +13,7 @@ from apps.execution.database.models import (  # noqa: F401
     ClinicalObservation,
     ClinicalQuery,
     DictionaryImportJob,
+    FormSubmission,
     LabReferenceRange,
     MedDRAHierarchy,
     MedDRATerm,
