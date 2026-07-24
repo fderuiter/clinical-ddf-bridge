@@ -9,6 +9,10 @@ EU Annex 11, and ICH E6(R2).
 
 from enum import Enum
 
+from audit import AuditFields
+
+__all__ = ["AuditFields", "OrganizationType", "ClinicalStaffRole", "TrialDuty"]
+
 
 class OrganizationType(str, Enum):
     """

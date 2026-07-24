@@ -112,13 +112,12 @@ async def validate_and_transition_document_status(
     document.status = to_status
 
     # Record append-only history log
-    role_str = ",".join(actor_role) if isinstance(actor_role, (list, tuple, set)) else str(actor_role)
     transition_record = DocumentQCTransition(
         document_id=document.id,
         from_status=from_status,
         to_status=to_status,
         actor_id=actor_id,
-        actor_role=role_str,
+        actor_role=actor_role,
         reason_for_change=reason_for_change.strip(),
     )
     session.add(transition_record)

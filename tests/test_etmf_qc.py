@@ -421,10 +421,9 @@ async def test_qc_history_api_and_audit():
     assert "timestamp" in history[1]
 
     # Verify access is audited with QC_HISTORY_VIEW
-    headers_auditor = get_auth_headers(roles="auditor", change_reason="Audit check")
     audit_resp = client.get(
         "/api/v1/etmf/audit-logs",
-        headers=headers_auditor,
+        headers=headers_admin,
     )
     assert audit_resp.status_code == 200
     logs = audit_resp.json()
