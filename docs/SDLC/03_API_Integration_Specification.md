@@ -430,6 +430,140 @@ Searches across loaded clinical metadata vocabularies.
 }
 ```
 
+### 4.4 Rules Engine Authoring & Validation
+
+The Rules Engine endpoints manage the creation, retrieval, updates, soft-deletion, and preview validation of version-controlled skip logic, constraint check, and cross-form clinical edit check rules.
+
+#### 4.4.1 GET /api/v1/studies/{study_id}/rules
+Fetches all non-soft-deleted active rules associated with a clinical study.
+
+**Response (HTTP 200)**:
+```json
+[
+  {
+    "id": "rule_vssbp_skip",
+    "study_id": "study_1",
+    "type": "skip_logic",
+    "condition": {
+      "type": "comparison",
+      "operator": "==",
+      "operands": [
+        {
+          "type": "field_ref",
+          "field_ref": {
+            "field_id": "VSPERF"
+          }
+        },
+        {
+          "type": "constant",
+          "value": "N"
+        }
+      ]
+    },
+    "action": "hide",
+    "target_field": "VSSBP",
+    "version_index": 1,
+    "is_deleted": false
+  }
+]
+```
+
+#### 4.4.2 POST /api/v1/studies/{study_id}/rules
+Creates a new rule under the specified clinical study.
+
+**Request Body**:
+```json
+{
+  "type": "constraint",
+  "condition": {
+    "type": "comparison",
+    "operator": "<=",
+    "operands": [
+      {
+        "type": "field_ref",
+        "field_ref": {
+          "field_id": "VSSBP"
+        }
+      },
+      {
+        "type": "constant",
+        "value": 250
+      }
+    ]
+  },
+  "target_field": "VSSBP",
+  "query_message": "Systolic Blood Pressure {value} is out of bounds (max 250 mmHg)."
+}
+```
+
+**Response (HTTP 201 Created)**:
+```json
+{
+  "id": "rule_vssbp_constraint",
+  "study_id": "study_1",
+  "type": "constraint",
+  "condition": {
+    "type": "comparison",
+    "operator": "<=",
+    "operands": [
+      {
+        "type": "field_ref",
+        "field_ref": {
+          "field_id": "VSSBP"
+        }
+      },
+      {
+        "type": "constant",
+        "value": 250
+      }
+    ]
+  },
+  "target_field": "VSSBP",
+  "query_message": "Systolic Blood Pressure {value} is out of bounds (max 250 mmHg).",
+  "version_index": 1,
+  "is_deleted": false
+}
+```
+
+#### 4.4.3 POST /api/v1/studies/{study_id}/rules/preview
+Compiles and validates a rule expression, returning the compiled XPath representation and identifying unknown fields or circular skip-logic dependencies.
+
+**Request Body**:
+```json
+{
+  "type": "skip_logic",
+  "condition": {
+    "type": "comparison",
+    "operator": "==",
+    "operands": [
+      {
+        "type": "field_ref",
+        "field_ref": {
+          "field_id": "VSPERF_INVALID"
+        }
+      },
+      {
+        "type": "constant",
+        "value": "N"
+      }
+    ]
+  },
+  "action": "hide",
+  "target_field": "VSSBP"
+}
+```
+
+**Response (HTTP 200)**:
+```json
+{
+  "xpath": "(/clinical_data/VSPERF_INVALID = 'N')",
+  "failures": [
+    "Unknown field reference: 'VSPERF_INVALID'"
+  ],
+  "circular_cycles": []
+}
+```
+
 ---
 
 ## 5. Medical Dictionary Connectors

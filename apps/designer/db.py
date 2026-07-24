@@ -1,5 +1,5 @@
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # --- Mock Database Content ---
 MOCK_TERMINOLOGY = {
@@ -36,6 +36,9 @@ MOCK_STUDIES = {
     }
 }
 
+# In-memory rule mock store fallback
+MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
+
 # --- Counters for Acceptance Criteria Tests ---
 db_query_counts = {"terminology_lookups": 0}
 
@@ -49,8 +52,64 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     Returns:
         Optional[Dict[str, Any]]: The study data dictionary, or None if not found.
     """
-    # Simulates an optimized database projection query returning multi-level relationships
-    return MOCK_STUDIES.get(study_id)
+    if study_id not in MOCK_STUDIES:
+        return None
+    # Deep copy to avoid mutating cache/template
+    import copy
+    study = copy.deepcopy(MOCK_STUDIES[study_id])
+    # Dynamically inject non-soft-deleted mock rules
+    study["rules"] = [r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)]
+    return study
+
+
+def get_mock_rules(study_id: str) -> List[Dict[str, Any]]:
+    """Retrieves all non-soft-deleted mock rules for a study."""
+    return [r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)]
+
+
+def get_mock_rule_by_id(study_id: str, rule_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a specific non-soft-deleted mock rule by ID."""
+    for r in MOCK_RULES.get(study_id, []):
+        if r["id"] == rule_id and not r.get("is_deleted", False):
+            return r
+    return None
+
+
+def create_mock_rule(study_id: str, rule_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Creates and saves a mock rule under a study."""
+    import uuid
+    rule_id = f"rule_{uuid.uuid4().hex[:12]}"
+    rule = {
+        "id": rule_id,
+        "study_id": study_id,
+        "version_index": 1,
+        "is_deleted": False,
+        **rule_data
+    }
+    if study_id not in MOCK_RULES:
+        MOCK_RULES[study_id] = []
+    MOCK_RULES[study_id].append(rule)
+    return rule
+
+
+def update_mock_rule(study_id: str, rule_id: str, rule_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Updates a mock rule and increments version index."""
+    for r in MOCK_RULES.get(study_id, []):
+        if r["id"] == rule_id and not r.get("is_deleted", False):
+            r.update(rule_data)
+            r["version_index"] += 1
+            return r
+    return None
+
+
+def delete_mock_rule(study_id: str, rule_id: str) -> bool:
+    """Soft-deletes a mock rule."""
+    for r in MOCK_RULES.get(study_id, []):
+        if r["id"] == rule_id and not r.get("is_deleted", False):
+            r["is_deleted"] = True
+            r["version_index"] += 1
+            return True
+    return False
 
 
 def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
