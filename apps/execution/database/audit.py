@@ -47,6 +47,10 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ctms_recruitment_records",
             "ctms_site_milestones",
             "ctms_cra_allocations",
+            "ctms_investigator_grants",
+            "ctms_budget_line_items",
+            "ctms_payment_milestones",
+            "ctms_investigator_payables",
             "quality_deviations",
             "quality_root_cause_analyses",
             "quality_capa_records",
@@ -58,6 +62,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "notification_deliveries",
             "consent_documents",
             "consent_audit_logs",
+            "consent_clauses",
+            "consent_templates",
         ):
             return
 
