@@ -2,6 +2,7 @@ import time
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from jose import jwt
 
 from apps.gateway.main import generate_signature
 from packages.security.context import (
@@ -36,6 +37,11 @@ async def secure_endpoint_post():
 @test_app.get("/health")
 async def health_endpoint():
     return {"status": "ok"}
+
+
+@test_app.post("/api/v1/execution/form-submissions/{submission_id}/approve")
+async def form_approve_endpoint(submission_id: str):
+    return {"status": "success", "message": "Form Approved"}
 
 
 def test_middleware_health_bypass() -> None:
@@ -441,3 +447,209 @@ def test_audit_context_variables_and_decorator() -> None:
         "reason": "signoff",
         "ip": "172.16.0.2",
     }
+
+
+def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
+    """
+    Test that signature-gated endpoints in downstream microservices reject requests without X-Sig-Token.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    # Request without X-Sig-Token should fail with REAUTHENTICATION_REQUIRED
+    response = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
+    """
+    Test that a valid, bound, and unexpired X-Sig-Token permits access.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    # Generate valid sig_token
+    payload = {
+        "sub": user_id,
+        "username": "test_user",
+        "action": "/api/v1/execution/form-submissions/123/approve",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+
+def test_downstream_signature_gated_endpoint_expired_token() -> None:
+    """
+    Test that an expired X-Sig-Token is rejected by downstream middleware.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    # Expired token
+    payload = {
+        "sub": user_id,
+        "username": "test_user",
+        "action": "/api/v1/execution/form-submissions/123/approve",
+        "roles": [roles],
+        "iat": time.time() - 70.0,
+        "exp": time.time() - 10.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
+    """
+    Test that a token bound to a different action/path is rejected by downstream middleware.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    # Token bound to different action
+    payload = {
+        "sub": user_id,
+        "username": "test_user",
+        "action": "/api/v1/execution/form-submissions/999/approve",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
+    """
+    Test that a token cannot be used twice (replay attack is blocked).
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    # Generate token
+    payload = {
+        "sub": user_id,
+        "username": "test_user",
+        "action": "/api/v1/execution/form-submissions/123/approve",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    # First request should pass
+    response = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response.status_code == 200
+
+    # Second request should fail with REAUTHENTICATION_REQUIRED
+    response2 = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=headers
+    )
+    assert response2.status_code == 401
+    assert response2.json()["detail"] == "REAUTHENTICATION_REQUIRED"
