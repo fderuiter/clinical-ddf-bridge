@@ -94,7 +94,9 @@ class MonitoringVisitFinding(Base):
     )
     visit_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     text: Mapped[str] = mapped_column(String(1000), nullable=False)
-    severity: Mapped[str] = mapped_column(String(50), nullable=False)  # MINOR, MAJOR, CRITICAL
+    severity: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # MINOR, MAJOR, CRITICAL
     resolution_status: Mapped[str] = mapped_column(
         String(50), default="OPEN", nullable=False
     )  # OPEN, RESOLVED
@@ -120,7 +122,9 @@ class GeneratedLetter(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     visit_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    letter_type: Mapped[str] = mapped_column(String(50), nullable=False)  # CONFIRMATION, FOLLOW_UP
+    letter_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # CONFIRMATION, FOLLOW_UP
     rendered_content: Mapped[str] = mapped_column(String(100000), nullable=False)
 
     # Standard Part 11 Audit Fields

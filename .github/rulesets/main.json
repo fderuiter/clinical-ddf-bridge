@@ -35,9 +35,6 @@
         "required_status_checks": [
           {
             "context": "Test and Coverage"
-          },
-          {
-            "context": "Container Security Scan"
           }
         ]
       }

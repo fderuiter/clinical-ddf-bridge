@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")

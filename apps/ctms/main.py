@@ -111,8 +111,12 @@ class MonitoringVisitCreate(BaseModel):
     study_id: str = Field(..., description="Study ID associated with the visit")
     site_id: str = Field(..., description="Site ID where the monitoring visit occurs")
     cra_id: str = Field(..., description="CRA performing the monitoring visit")
-    visit_type: str = Field(..., description="Type of monitoring visit (e.g. SIV, IMV, COV)")
-    scheduled_date: datetime = Field(..., description="Scheduled date/time of the visit")
+    visit_type: str = Field(
+        ..., description="Type of monitoring visit (e.g. SIV, IMV, COV)"
+    )
+    scheduled_date: datetime = Field(
+        ..., description="Scheduled date/time of the visit"
+    )
 
 
 class FindingCreate(BaseModel):
@@ -122,8 +126,12 @@ class FindingCreate(BaseModel):
 
 
 class MonitoringVisitComplete(BaseModel):
-    actual_date: datetime = Field(..., description="Actual date/time when the visit was conducted")
-    findings: List[FindingCreate] = Field(default=[], description="List of recorded findings")
+    actual_date: datetime = Field(
+        ..., description="Actual date/time when the visit was conducted"
+    )
+    findings: List[FindingCreate] = Field(
+        default=[], description="List of recorded findings"
+    )
 
 
 class MonitoringVisitResponse(BaseModel):
@@ -309,6 +317,7 @@ async def get_audit_trail(
 
 
 # --- Monitoring Visits Endpoints ---
+
 
 @app.post(
     "/api/v1/ctms/monitoring-visits",
@@ -640,16 +649,16 @@ async def get_monitoring_visit_letters(
 
     return [
         GeneratedLetterResponse(
-            id=l.id,
-            visit_id=l.visit_id,
-            letter_type=l.letter_type,
-            rendered_content=l.rendered_content,
-            created_at=l.created_at.isoformat(),
-            created_by=l.created_by,
-            reason_for_change=l.reason_for_change,
-            version_index=l.version_index,
+            id=let.id,
+            visit_id=let.visit_id,
+            letter_type=let.letter_type,
+            rendered_content=let.rendered_content,
+            created_at=let.created_at.isoformat(),
+            created_by=let.created_by,
+            reason_for_change=let.reason_for_change,
+            version_index=let.version_index,
         )
-        for l in letters
+        for let in letters
     ]
 
 

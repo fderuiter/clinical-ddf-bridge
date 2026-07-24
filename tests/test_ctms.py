@@ -12,8 +12,6 @@ from apps.ctms.models import (
     Base,
     CTMSAuditLog,
     GeneratedLetter,
-    MonitoringVisit,
-    MonitoringVisitFinding,
 )
 from apps.gateway.main import generate_signature
 
@@ -32,7 +30,9 @@ async def setup_db():
     await db_manager.close()
 
 
-def get_auth_headers(roles: str = "admin", change_reason: str = "Authorized change") -> dict:
+def get_auth_headers(
+    roles: str = "admin", change_reason: str = "Authorized change"
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
@@ -167,6 +167,7 @@ async def test_database_manager_uninitialized():
 
 # --- New Monitoring Visits & Correspondence Tests ---
 
+
 @pytest.mark.asyncio
 async def test_monitoring_visit_workflow_happy_path():
     """
@@ -176,7 +177,9 @@ async def test_monitoring_visit_workflow_happy_path():
     """
     client = TestClient(app)
     cra_headers = get_auth_headers(roles="CRA", change_reason="CRA operations")
-    monitor_headers = get_auth_headers(roles="Monitor", change_reason="Monitor operations")
+    monitor_headers = get_auth_headers(
+        roles="Monitor", change_reason="Monitor operations"
+    )
 
     # 1. Schedule a Visit (CRA role)
     scheduled_date = datetime.utcnow() + timedelta(days=5)
@@ -253,11 +256,11 @@ async def test_monitoring_visit_workflow_happy_path():
     assert response_letters_2.status_code == 200
     letters_2 = response_letters_2.json()
     assert len(letters_2) == 2
-    types = [l["letter_type"] for l in letters_2]
+    types = [let["letter_type"] for let in letters_2]
     assert "CONFIRMATION" in types
     assert "FOLLOW_UP" in types
 
-    follow_up = next(l for l in letters_2 if l["letter_type"] == "FOLLOW_UP")
+    follow_up = next(let for let in letters_2 if let["letter_type"] == "FOLLOW_UP")
     assert "CLINICAL MONITORING VISIT FOLLOW-UP LETTER" in follow_up["rendered_content"]
     assert "Informed consent form missing date" in follow_up["rendered_content"]
     assert "CRITICAL" in follow_up["rendered_content"]
@@ -283,7 +286,10 @@ async def test_monitoring_visit_workflow_happy_path():
         headers=cra_headers,
     )
     assert response_tampered.status_code == 200
-    assert response_tampered.json()["rendered_content"] == "MODIFIED_TAMPERED_LETTER_CONTENT"
+    assert (
+        response_tampered.json()["rendered_content"]
+        == "MODIFIED_TAMPERED_LETTER_CONTENT"
+    )
 
     # 3. Monitor supervisory sign-off (Monitor role)
     response_signoff = client.post(
@@ -300,14 +306,16 @@ async def test_monitoring_visit_workflow_happy_path():
         result = await session.execute(stmt)
         logs = result.scalars().all()
 
-        actions = [l.action for l in logs]
+        actions = [log_entry.action for log_entry in logs]
         assert "CREATE_VISIT" in actions
         assert "GENERATE_LETTER" in actions
         assert "COMPLETE_VISIT" in actions
         assert "CREATE_FINDING" in actions
         assert "SIGN_OFF_VISIT" in actions
 
-        signoff_log = next(l for l in logs if l.action == "SIGN_OFF_VISIT")
+        signoff_log = next(
+            log_entry for log_entry in logs if log_entry.action == "SIGN_OFF_VISIT"
+        )
         assert signoff_log.user_role == "Monitor"
         assert "Monitor supervisory sign-off" in signoff_log.details
 
@@ -461,7 +469,7 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
     # Try retrieving non-existent letter type -> 404
     response_no_letter = client.get(
-        f"/api/v1/ctms/monitoring-visits/non-existent-id/letters/CONFIRMATION",
+        "/api/v1/ctms/monitoring-visits/non-existent-id/letters/CONFIRMATION",
         headers=cra_headers,
     )
     assert response_no_letter.status_code == 404

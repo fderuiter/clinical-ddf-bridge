@@ -36,17 +36,18 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-Package                 Version
------------------------ -----------
+Package                 Version     Editable project location
+----------------------- ----------- -------------------------
 aiosqlite               0.22.1
 annotated-doc           0.0.4
-annotated-types         0.8.0
+annotated-types         0.7.0
 anyio                   4.14.2
 asyncpg                 0.31.0
 bandit                  1.9.4
 beautifulsoup4          4.15.0
 boolean-py              5.0
 cachecontrol            0.14.4
+cadence-clinical         0.1.0       /app
 certifi                 2026.7.22
 cffi                    2.1.0
 cfgv                    3.5.0
@@ -58,12 +59,9 @@ cyclonedx-python-lib    11.11.0
 defusedxml              0.7.1
 detect-secrets          1.5.0
 distlib                 0.4.3
-docraptor               3.1.0
 ecdsa                   0.19.2
 et-xmlfile              2.0.0
 fastapi                 0.139.2
-fhir-core               1.1.9
-fhir-resources          8.3.0
 filelock                3.32.0
 greenlet                3.5.4
 h11                     0.16.0
@@ -81,11 +79,11 @@ mdurl                   0.1.2
 msgpack                 1.2.1
 neo4j                   6.2.0
 nodeenv                 1.10.0
-numpy                   2.4.6
+numpy                   2.5.1
 openpyxl                3.1.5
 packageurl-python       0.17.6
 packaging               26.2
-pandas                  3.0.5
+pandas                  3.0.3
 pip                     26.1.2
 pip-api                 0.0.34
 pip-audit               2.10.1
@@ -118,21 +116,20 @@ pyyaml                  6.0.3
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.16.0
+ruff                    0.15.22
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
 sqlalchemy              2.0.51
 starlette               1.3.1
 stevedore               5.9.0
-stringcase              1.2.0
 text-unidecode          1.3
 tomli                   2.4.1
 tomli-w                 1.2.0
 typing-extensions       4.16.0
 typing-inspection       0.4.2
 urllib3                 2.7.0
-usdm                    0.66.0
+usdm                    0.67.0
 uvicorn                 0.51.0
 uvloop                  0.22.1
 virtualenv              21.7.0
