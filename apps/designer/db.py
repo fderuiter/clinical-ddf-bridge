@@ -39,6 +39,39 @@ MOCK_STUDIES = {
 # In-memory rule mock store fallback
 MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
 
+# --- Mock Study Version Content ---
+MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
+
+
+def create_mock_study_version(study_id: str, version_data: Dict[str, Any]):
+    """Creates a mock StudyVersion in-memory."""
+    if study_id not in MOCK_STUDY_VERSIONS:
+        MOCK_STUDY_VERSIONS[study_id] = []
+
+    # Check if version_index or version_tag already exists for this study
+    for v in MOCK_STUDY_VERSIONS[study_id]:
+        if v.get("version_index") == version_data.get("version_index") or v.get(
+            "version_tag"
+        ) == version_data.get("version_tag"):
+            from apps.designer.delta import ConcurrentLockingError
+
+            raise ConcurrentLockingError("Version index or tag already exists")
+
+    MOCK_STUDY_VERSIONS[study_id].append(version_data)
+
+
+def assert_mock_study_mutable(study_id: str):
+    """Checks if the mock study is mutable (not LOCKED, PUBLISHED, or ARCHIVED)."""
+    versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+    if versions:
+        latest = versions[-1]
+        status = latest.get("status")
+        if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+            from apps.designer.delta import ImmutabilityViolationError
+
+            raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+
+
 # --- Counters for Acceptance Criteria Tests ---
 db_query_counts = {"terminology_lookups": 0}
 
@@ -56,9 +89,12 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
         return None
     # Deep copy to avoid mutating cache/template
     import copy
+
     study = copy.deepcopy(MOCK_STUDIES[study_id])
     # Dynamically inject non-soft-deleted mock rules
-    study["rules"] = [r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)]
+    study["rules"] = [
+        r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)
+    ]
     return study
 
 
@@ -78,13 +114,14 @@ def get_mock_rule_by_id(study_id: str, rule_id: str) -> Optional[Dict[str, Any]]
 def create_mock_rule(study_id: str, rule_data: Dict[str, Any]) -> Dict[str, Any]:
     """Creates and saves a mock rule under a study."""
     import uuid
+
     rule_id = f"rule_{uuid.uuid4().hex[:12]}"
     rule = {
         "id": rule_id,
         "study_id": study_id,
         "version_index": 1,
         "is_deleted": False,
-        **rule_data
+        **rule_data,
     }
     if study_id not in MOCK_RULES:
         MOCK_RULES[study_id] = []
@@ -92,7 +129,9 @@ def create_mock_rule(study_id: str, rule_data: Dict[str, Any]) -> Dict[str, Any]
     return rule
 
 
-def update_mock_rule(study_id: str, rule_id: str, rule_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def update_mock_rule(
+    study_id: str, rule_id: str, rule_data: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
     """Updates a mock rule and increments version index."""
     for r in MOCK_RULES.get(study_id, []):
         if r["id"] == rule_id and not r.get("is_deleted", False):
