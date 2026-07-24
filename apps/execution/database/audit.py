@@ -57,6 +57,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "notification_audit_logs",
             "consent_documents",
             "consent_audit_logs",
+            "consent_clauses",
+            "consent_templates",
         ):
             return
 
