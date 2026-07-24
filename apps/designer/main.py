@@ -416,3 +416,213 @@ async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetai
         updated_by="usr_9921a88b2c410",
         reason_for_change=payload.reason_for_change,
     )
+
+
+# ==========================================
+# Rules Engine (Skip Logic, Constraints, etc.) API Endpoints
+# ==========================================
+
+from fastapi import Request
+from apps.designer.rules import (
+    CreateRuleRequest,
+    ExpressionNode,
+    SkipLogicRule,
+    ConstraintRule,
+    CrossFormCheckRule,
+    compile_to_xpath,
+    detect_unknown_fields,
+    detect_circular_dependencies,
+)
+from apps.designer.db import (
+    get_mock_rules,
+    get_mock_rule_by_id,
+    create_mock_rule,
+    update_mock_rule,
+    delete_mock_rule,
+)
+from apps.designer.delta import (
+    create_rule_node,
+    update_rule_node,
+    delete_rule_node,
+    get_rules_from_graph,
+)
+
+
+class RulePreviewResponse(BaseModel):
+    """
+    Response for rule preview/validation request.
+    """
+    xpath: str
+    failures: List[str]
+    circular_cycles: List[str]
+
+
+@app.get("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_200_OK)
+async def get_study_rules(study_id: str, request: Request) -> List[Dict[str, Any]]:
+    """
+    Retrieves all non-soft-deleted active rules for a specific clinical study.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        return await get_rules_from_graph(driver, study_id)
+    else:
+        return get_mock_rules(study_id)
+
+
+@app.post("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_201_CREATED)
+async def create_study_rule(study_id: str, payload: CreateRuleRequest, request: Request) -> Dict[str, Any]:
+    """
+    Creates a new rule for a clinical study, enforcing auth and X-Change-Reason.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+    rule_dict = payload.model_dump()
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        import uuid
+        rule_id = f"rule_{uuid.uuid4().hex[:12]}"
+        await create_rule_node(driver, study_id, user_id, change_reason, rule_id, rule_dict)
+        rule_dict["id"] = rule_id
+        rule_dict["study_id"] = study_id
+        rule_dict["version_index"] = 1
+        rule_dict["is_deleted"] = False
+        return rule_dict
+    else:
+        created = create_mock_rule(study_id, rule_dict)
+        # Verify the change justification is captured in the response/metadata
+        created["created_by"] = user_id
+        created["change_reason"] = change_reason
+        return created
+
+
+@app.get("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
+async def get_study_rule_by_id(study_id: str, rule_id: str, request: Request) -> Dict[str, Any]:
+    """
+    Retrieves a specific rule by ID.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        rules = await get_rules_from_graph(driver, study_id)
+        for r in rules:
+            if r["id"] == rule_id:
+                return r
+        raise HTTPException(status_code=404, detail="Rule not found")
+    else:
+        rule = get_mock_rule_by_id(study_id, rule_id)
+        if not rule:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return rule
+
+
+@app.put("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
+async def update_study_rule_by_id(
+    study_id: str, rule_id: str, payload: CreateRuleRequest, request: Request
+) -> Dict[str, Any]:
+    """
+    Updates a rule's parameters, incrementing version index.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        rules = await get_rules_from_graph(driver, study_id)
+        rule_exists = any(r["id"] == rule_id for r in rules)
+        if not rule_exists:
+            raise HTTPException(status_code=404, detail="Rule not found")
+
+        new_version = await update_rule_node(driver, study_id, rule_id, user_id, change_reason, payload.model_dump())
+        rule_dict = payload.model_dump()
+        rule_dict["id"] = rule_id
+        rule_dict["study_id"] = study_id
+        rule_dict["version_index"] = new_version
+        rule_dict["is_deleted"] = False
+        return rule_dict
+    else:
+        rule = get_mock_rule_by_id(study_id, rule_id)
+        if not rule:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        updated = update_mock_rule(study_id, rule_id, payload.model_dump())
+        updated["updated_by"] = user_id
+        updated["change_reason"] = change_reason
+        return updated
+
+
+@app.delete("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
+async def delete_study_rule_by_id(study_id: str, rule_id: str, request: Request) -> Dict[str, str]:
+    """
+    Soft-deletes a rule, retaining its historical properties in audit.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        rules = await get_rules_from_graph(driver, study_id)
+        rule_exists = any(r["id"] == rule_id for r in rules)
+        if not rule_exists:
+            raise HTTPException(status_code=404, detail="Rule not found")
+
+        await delete_rule_node(driver, study_id, rule_id, user_id, change_reason)
+        return {"status": "success", "message": "Rule successfully deleted"}
+    else:
+        success = delete_mock_rule(study_id, rule_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return {"status": "success", "message": "Rule successfully deleted"}
+
+
+@app.post("/api/v1/studies/{study_id}/rules/preview", response_model=RulePreviewResponse, status_code=status.HTTP_200_OK)
+async def compile_preview_rule(study_id: str, payload: CreateRuleRequest, request: Request) -> RulePreviewResponse:
+    """
+    Read-only compile and validation preview route.
+    Detects unknown field references and circular skip-logic dependencies.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    xpath = compile_to_xpath(payload.condition)
+    failures = detect_unknown_fields(payload.condition, study_data)
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        existing_rules = await get_rules_from_graph(driver, study_id)
+    else:
+        existing_rules = get_mock_rules(study_id)
+
+    temp_rules = [dict(r) for r in existing_rules]
+    temp_rules.append({
+        "id": "proposed_rule",
+        "type": payload.type,
+        "condition": payload.condition.model_dump(),
+        "target_field": payload.target_field,
+    })
+    circular_cycles = detect_circular_dependencies(temp_rules)
+
+    return RulePreviewResponse(
+        xpath=xpath,
+        failures=failures,
+        circular_cycles=circular_cycles,
+    )
