@@ -151,6 +151,23 @@ def delete_mock_rule(study_id: str, rule_id: str) -> bool:
     return False
 
 
+def run_async(coro):
+    """Runs an async coroutine synchronously, handling cases where an event loop is already running."""
+    import asyncio
+    import concurrent.futures
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No running event loop in this thread, we can safely use asyncio.run
+        return asyncio.run(coro)
+    else:
+        # An event loop is already running in this thread (e.g. FastAPI / ASGI context).
+        # We run the coroutine in a separate thread using ThreadPoolExecutor to avoid blocking/nesting issues.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, coro).result()
+
+
 def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
     """Retrieves controlled terminology data from the database.
 
@@ -162,7 +179,29 @@ def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
     """
     # Increments counter to prove zero additional queries from cache hits
     db_query_counts["terminology_lookups"] += 1
-    return MOCK_TERMINOLOGY.get(concept_id)
+
+    import os
+
+    is_offline = os.getenv("TERMINOLOGY_OFFLINE", "").lower() in (
+        "true",
+        "1",
+    ) or os.getenv("NCI_EVS_OFFLINE", "").lower() in ("true", "1")
+    if is_offline:
+        return MOCK_TERMINOLOGY.get(concept_id)
+
+    from apps.designer.evs_client import EVSNotFoundError, NCIEVSClient
+
+    client = NCIEVSClient()
+    try:
+        return run_async(client.get_concept(concept_id))
+    except EVSNotFoundError:
+        if concept_id in MOCK_TERMINOLOGY:
+            return MOCK_TERMINOLOGY[concept_id]
+        return None
+    except Exception as e:
+        if concept_id in MOCK_TERMINOLOGY:
+            return MOCK_TERMINOLOGY[concept_id]
+        raise e
 
 
 # --- Controlled Terminology Cache ---
@@ -226,13 +265,14 @@ class TerminologyCache:
 
         if data:
             with self._lock:
+                store_time = time.time()
                 if concept_id in self._cache:
-                    self._cache[concept_id] = (data, now)
+                    self._cache[concept_id] = (data, store_time)
                 else:
                     if len(self._cache) >= self.max_size:
                         # Basic eviction policy
                         self._cache.pop(next(iter(self._cache)))
-                    self._cache[concept_id] = (data, now)
+                    self._cache[concept_id] = (data, store_time)
             return data
         return data
 
