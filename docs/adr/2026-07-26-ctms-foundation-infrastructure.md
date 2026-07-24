@@ -4,6 +4,7 @@
 * **Date:** 2026-07-26
 * **Authors:** @fderuiter
 * **Deciders:** @fderuiter, @jules
+* **GitHub Issue:** [fderuiter/cadence-clinical#104](https://github.com/fderuiter/cadence-clinical/issues/104)
 
 ---
 
