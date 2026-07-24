@@ -1,34 +1,31 @@
-import json
-from unittest.mock import AsyncMock, MagicMock
-import pytest
-import httpx
-import time
-import hmac
 import hashlib
+import hmac
+import json
+import time
+from unittest.mock import AsyncMock, MagicMock
 
-from apps.designer.main import app
-from apps.designer.rules import (
-    ExpressionNode,
-    FieldReference,
-    CreateRuleRequest,
-    compile_to_xpath,
-    detect_unknown_fields,
-    detect_circular_dependencies,
-)
+import httpx
+import pytest
+
 from apps.designer.db import (
     MOCK_RULES,
-    get_study_projection,
-    create_mock_rule,
-    update_mock_rule,
-    delete_mock_rule,
 )
 from apps.designer.delta import (
     create_rule_node,
-    update_rule_node,
     delete_rule_node,
     get_rules_from_graph,
+    update_rule_node,
 )
+from apps.designer.main import app
 from apps.designer.mapper import map_study_to_usdm
+from apps.designer.rules import (
+    CreateRuleRequest,
+    ExpressionNode,
+    FieldReference,
+    compile_to_xpath,
+    detect_circular_dependencies,
+    detect_unknown_fields,
+)
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"
 
