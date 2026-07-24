@@ -47,3 +47,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Lab Reference Range Management](2026-07-30-lab-reference-range-management.md)
+- [2026-07-30: CTMS Investigator Grants, Budgets, Milestones, and Payables Tracking](2026-07-30-ctms-investigator-grants-and-finances.md)
+- [2026-07-30: Schedule of Activities (SoA) Domain Contracts and Graph Schema Extensions](2026-07-30-soa-domain-contracts-and-graph-extensions.md)
