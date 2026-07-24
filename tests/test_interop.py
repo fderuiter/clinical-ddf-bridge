@@ -1,3 +1,8 @@
+# @req:PRD-ECOA-001 - Instrument and subject-assignment persistence models and tests
+# This file tests the eCOA content and scheduling data models used to author questionnaires/diaries and assign them to subjects.
+# Verifies 21 CFR Part 11 auditing requirements (created_at, created_by, reason_for_change, version_index),
+# database schema integrity, foreign-key constraints, cascading delete logic, and authorization boundaries.
+
 import time
 from datetime import datetime, timedelta, timezone
 

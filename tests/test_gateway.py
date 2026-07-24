@@ -1,3 +1,4 @@
+import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -421,3 +422,270 @@ def test_gateway_subject_role_routing_restrictions(
             "/execution/test", headers={"Authorization": f"Bearer {token}"}
         )
         assert res_execution.status_code == 403
+
+
+def test_signature_verification_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test successful re-authentication.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",
+                "totp": "123456",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "sig_token" in data
+
+
+def test_signature_verification_invalid_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test re-authentication with invalid credentials.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        # Invalid password
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "wrong_password",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response.status_code == 401
+
+        # Invalid TOTP
+        response2 = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",
+                "totp": "invalid_totp",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response2.status_code == 401
+
+
+def test_signature_verification_role_insufficient(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test re-authentication for a user with insufficient roles.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    # Auditor is not in AUTHORIZED_SIGNING_ROLES
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["auditor"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response.status_code == 403
+        assert response.json()["detail"] == "ROLE_INSUFFICIENT"
+
+
+def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that signature-gated mutations require a valid sig_token.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # 1. Muted mutation request without X-Sig-Token -> 401 REAUTHENTICATION_REQUIRED
+        response = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+        # 2. Re-authenticate to get sig_token
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        sig_token = reauth_resp.json()["sig_token"]
+
+        # 3. Request with valid X-Sig-Token -> 200 OK
+        response2 = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response2.status_code == 200
+
+        # 4. Request with same X-Sig-Token (Replay) -> 401 REAUTHENTICATION_REQUIRED
+        response3 = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response3.status_code == 401
+        assert response3.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_signature_gated_mutation_expired_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that expired sig_tokens are rejected.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    # Issue an expired token
+    expired_time = time.time() - 10.0
+    payload = {
+        "sub": "user1",
+        "username": "user1",
+        "action": "/api/v1/execution/form-submissions/123/approve",
+        "roles": ["investigator"],
+        "iat": expired_time - 60.0,
+        "exp": expired_time,
+    }
+    from apps.gateway.main import GATEWAY_SECRET
+
+    expired_token = jwt.encode(payload, GATEWAY_SECRET, algorithm="HS256")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": expired_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_signature_gated_mutation_mismatched_action(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that sig_tokens bound to a different action/path are rejected.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        # Get token bound to action A
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        sig_token = reauth_resp.json()["sig_token"]
+
+        # Request to action B using token A -> 401 REAUTHENTICATION_REQUIRED
+        response = client.post(
+            "/api/v1/execution/form-submissions/999/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
