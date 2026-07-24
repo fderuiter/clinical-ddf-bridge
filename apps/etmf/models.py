@@ -53,6 +53,9 @@ class TMFDocument(Base):
     """
     Represents an archived document in the electronic Trial Master File (eTMF)
     structured on the DIA TMF Reference Model (Zones 1-11).
+
+    The status field represents the current state of the document within the
+    validated state machine of the eTMF QC review lifecycle (e.g. DRAFT, TECHNICAL_QC, etc.).
     """
 
     __tablename__ = "tmf_documents"
