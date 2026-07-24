@@ -631,3 +631,39 @@ class LabReferenceRange(AuditedModel):
     high_bound: Mapped[float] = mapped_column(Float, nullable=True)
     critical_low: Mapped[float] = mapped_column(Float, nullable=True)
     critical_high: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class FormSubmission(AuditedModel):
+    """Represents a CRF form submission as the auditable unit of PI sign-off.
+
+    Inherits from AuditedModel to maintain an immutable audit log and participate in
+    existing versioning, audit-ledger, Merkle-sealing, and locking conventions.
+
+    Attributes:
+        study_id (str): Unique clinical trial study identifier.
+        site_id (str): Site identifier for local trial locking applicability.
+        subject_id (str): Clinical subject identifier.
+        visit_id (str): Clinical visit identifier (nullable).
+        form_id (str): CRF form identifier or grouping key.
+        status (str): Controlled status: "DRAFT", "COMPLETED", "APPROVED".
+        signature_manifest (dict): Nullable JSON dictionary of electronic signature details.
+    """
+
+    __tablename__ = "form_submissions"
+    __table_args__ = (
+        Index(
+            "idx_form_submissions_coords",
+            "study_id",
+            "subject_id",
+            "visit_id",
+            "form_id",
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    form_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    signature_manifest: Mapped[dict] = mapped_column(JSON, nullable=True)

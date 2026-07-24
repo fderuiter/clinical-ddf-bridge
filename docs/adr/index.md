@@ -45,4 +45,6 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
+- [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
 - [2026-07-30: Lab Reference Range Management](2026-07-30-lab-reference-range-management.md)
+- [2026-07-31: eCOA Subject Identity, Authorization, and Gateway Routing](2026-07-31-ecoa-subject-identity-and-gateway-routing.md)

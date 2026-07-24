@@ -481,6 +481,23 @@ async def proxy_requests(request: Request, path: str) -> Response:
             ",".join(roles_list) if isinstance(roles_list, list) else str(roles_list)
         )
 
+    # Subject / Patient security routing boundary checks
+    user_roles_list = [r.strip().lower() for r in roles.split(",") if r.strip()]
+    if "subject" in user_roles_list:
+        allowed_paths = {
+            "api/v1/interop/epro/submit",
+            "api/v1/interop/epro/sync",
+            "interop/api/v1/interop/epro/submit",
+            "interop/api/v1/interop/epro/sync",
+        }
+        if path not in allowed_paths:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Access denied: Subject principal is not authorized to access this route"
+                },
+            )
+
     if path.startswith("designer/"):
         target_url = f"{SERVICES['designer']}/{path[len('designer/') :]}"
     elif path.startswith("execution/"):
