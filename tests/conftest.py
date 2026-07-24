@@ -1,11 +1,12 @@
 # Automatically inject packages paths before any other local package is imported
-import packages
 import asyncio
 import uuid
 from typing import Any, Dict
 
 import pytest
 from neo4j.exceptions import TransientError
+
+import packages  # noqa: F401
 
 
 class MockDatabaseState:

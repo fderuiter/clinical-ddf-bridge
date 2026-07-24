@@ -4,6 +4,7 @@ All records are designed to be immutable at runtime to ensure GxP data integrity
 """
 
 from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 

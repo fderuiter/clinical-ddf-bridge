@@ -4,7 +4,6 @@ Unit tests for the canonical versioned DIA TMF Reference Model catalog.
 
 import pytest
 from pydantic import ValidationError
-
 from tmf_reference_model import (
     Artifact,
     Catalog,

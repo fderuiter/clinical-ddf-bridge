@@ -4,6 +4,7 @@ Includes the canonical, pre-seeded active v3.2.0 catalog.
 """
 
 from typing import Dict, List, Optional
+
 from .models import Artifact, Catalog, Section, Zone
 
 
