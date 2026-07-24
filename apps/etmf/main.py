@@ -23,6 +23,7 @@ from apps.etmf.models import (
     TMFAuditLog,
     TMFDocument,
 )
+from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -341,7 +342,7 @@ class CompletenessResponse(BaseModel):
 async def write_audit_log(
     session: AsyncSession,
     user_id: str,
-    user_role: str,
+    user_role: str | list[str],
     action: str,
     document_id: Optional[str],
     details: str,
@@ -349,9 +350,14 @@ async def write_audit_log(
     """
     Utility function to write to the immutable eTMF audit ledger.
     """
+    if isinstance(user_role, list):
+        user_role_str = ",".join(user_role)
+    else:
+        user_role_str = user_role
+
     log_entry = TMFAuditLog(
         user_id=user_id,
-        user_role=user_role,
+        user_role=user_role_str,
         action=action,
         document_id=document_id,
         details=details,
@@ -373,6 +379,7 @@ async def health_check() -> dict[str, str]:
 async def ingest_document(
     request: Request,
     payload: IngestionRequest,
+    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> Dict[str, Any]:
     """
@@ -383,8 +390,15 @@ async def ingest_document(
     user_roles = getattr(request.state, "roles", "system")
 
     # Only write-privileged roles can ingest documents (No Inspectors)
-    roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    if "inspector" in roles_list or "regulatory_inspector" in roles_list:
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -694,6 +708,7 @@ async def download_document(
 async def get_audit_trail(
     request: Request,
     document_id: Optional[str] = Query(None, description="Filter logs by document ID"),
+    roles: list[str] = Depends(verify_is_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> List[AuditLogResponse]:
     """
@@ -791,6 +806,7 @@ async def list_expectations(
 async def create_expectation(
     request: Request,
     payload: ExpectedDocumentCreate,
+    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> ExpectedDocumentResponse:
     """
@@ -799,8 +815,15 @@ async def create_expectation(
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
 
-    roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    if "inspector" in roles_list or "regulatory_inspector" in roles_list:
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -863,6 +886,7 @@ async def update_expectation(
     request: Request,
     edl_id: str,
     payload: ExpectedDocumentCreate,
+    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> ExpectedDocumentResponse:
     """
@@ -871,8 +895,15 @@ async def update_expectation(
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
 
-    roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    if "inspector" in roles_list or "regulatory_inspector" in roles_list:
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1080,6 +1111,7 @@ async def transition_document_status_endpoint(
     request: Request,
     document_id: str,
     payload: TransitionRequest,
+    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> Dict[str, Any]:
     """
