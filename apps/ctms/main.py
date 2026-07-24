@@ -11,11 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.ctms.database import db_manager
 from apps.ctms.models import (
     Base,
+    CRAAllocation,
     CTMSAuditLog,
     CTMSStudy,
     GeneratedLetter,
     MonitoringVisit,
     MonitoringVisitFinding,
+    RecruitmentRecord,
+    SiteMilestone,
     write_audit_log,
 )
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
@@ -170,6 +173,108 @@ class GeneratedLetterResponse(BaseModel):
     created_by: str
     reason_for_change: str
     version_index: int
+
+
+# Pydantic models for CTMS Recruitment Records
+class RecruitmentRecordCreate(BaseModel):
+    site_id: str = Field(..., description="Site ID being tracked")
+    study_id: str = Field(..., description="Study ID associated with the site")
+    screened_count: int = Field(0, description="Total number of screened subjects")
+    enrolled_count: int = Field(0, description="Total number of enrolled subjects")
+    target_count: int = Field(0, description="Target enrollment count")
+    as_of_date: Optional[datetime] = Field(
+        None, description="The date/time as of which metrics apply"
+    )
+
+
+class RecruitmentRecordResponse(BaseModel):
+    id: str
+    site_id: str
+    study_id: str
+    screened_count: int
+    enrolled_count: int
+    target_count: int
+    as_of_date: str
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+# Pydantic models for CTMS Site Milestones
+class SiteMilestoneCreate(BaseModel):
+    site_id: str = Field(..., description="Site ID")
+    study_id: str = Field(..., description="Study ID")
+    milestone_type: str = Field(..., description="The type of milestone")
+    planned_date: Optional[datetime] = Field(None, description="Planned milestone date")
+    actual_date: Optional[datetime] = Field(None, description="Actual milestone date")
+    status: Optional[str] = Field("PLANNED", description="Status of the milestone")
+
+
+class SiteMilestoneUpdate(BaseModel):
+    planned_date: Optional[datetime] = Field(None, description="Planned milestone date")
+    actual_date: Optional[datetime] = Field(None, description="Actual milestone date")
+    status: Optional[str] = Field(None, description="Status of the milestone")
+
+
+class SiteMilestoneResponse(BaseModel):
+    id: str
+    site_id: str
+    study_id: str
+    milestone_type: str
+    planned_date: Optional[str]
+    actual_date: Optional[str]
+    status: str
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+# Pydantic models for CTMS CRA Allocation & Workload
+class CRAAllocationCreate(BaseModel):
+    cra_id: str = Field(..., description="CRA ID being allocated")
+    site_id: str = Field(..., description="Site ID")
+    study_id: str = Field(..., description="Study ID")
+    status: Optional[str] = Field("ACTIVE", description="Allocation status")
+    effective_start_date: Optional[datetime] = Field(
+        None, description="Effective start date"
+    )
+    effective_end_date: Optional[datetime] = Field(
+        None, description="Effective end date"
+    )
+
+
+class CRAAllocationUpdate(BaseModel):
+    cra_id: Optional[str] = Field(None, description="CRA ID being allocated")
+    status: Optional[str] = Field(None, description="Allocation status")
+    effective_start_date: Optional[datetime] = Field(
+        None, description="Effective start date"
+    )
+    effective_end_date: Optional[datetime] = Field(
+        None, description="Effective end date"
+    )
+
+
+class CRAAllocationResponse(BaseModel):
+    id: str
+    cra_id: str
+    site_id: str
+    study_id: str
+    status: str
+    effective_start_date: str
+    effective_end_date: Optional[str]
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class CRAWorkloadItem(BaseModel):
+    cra_id: str
+    active_allocations_count: int
+    allocated_sites: List[str]
+    allocated_studies: List[str]
 
 
 @app.get("/health")
@@ -343,7 +448,21 @@ async def schedule_monitoring_visit(
         ["cra", "admin", "sponsor admin", "system"],
     )
 
-    # 1. Persist the Monitoring Visit
+    # 1. Validate active CRA allocation for study and site if one exists
+    alloc_stmt = select(CRAAllocation).where(
+        CRAAllocation.study_id == payload.study_id,
+        CRAAllocation.site_id == payload.site_id,
+        CRAAllocation.status == "ACTIVE",
+    )
+    alloc_result = await session.execute(alloc_stmt)
+    active_alloc = alloc_result.scalars().first()
+    if active_alloc and active_alloc.cra_id != payload.cra_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CRA '{payload.cra_id}' is not allocated to site '{payload.site_id}' and study '{payload.study_id}'. Allocated CRA is '{active_alloc.cra_id}'.",
+        )
+
+    # 2. Persist the Monitoring Visit
     visit = MonitoringVisit(
         study_id=payload.study_id,
         site_id=payload.site_id,
@@ -783,3 +902,592 @@ async def sign_off_monitoring_visit(
         reason_for_change=visit.reason_for_change,
         version_index=visit.version_index,
     )
+
+
+# --- Recruitment Records Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/recruitment",
+    response_model=RecruitmentRecordResponse,
+    status_code=201,
+)
+async def record_recruitment(
+    request: Request,
+    payload: RecruitmentRecordCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> RecruitmentRecordResponse:
+    """
+    Record or update recruitment metrics for a site and study.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_roles(
+        user_roles,
+        ["cra", "monitor", "admin", "sponsor admin", "system"],
+    )
+
+    as_of = payload.as_of_date or datetime.utcnow()
+
+    record = RecruitmentRecord(
+        site_id=payload.site_id,
+        study_id=payload.study_id,
+        screened_count=payload.screened_count,
+        enrolled_count=payload.enrolled_count,
+        target_count=payload.target_count,
+        as_of_date=as_of,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(record)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_RECRUITMENT_RECORD",
+        details=f"Recorded recruitment metrics for study '{payload.study_id}' at site '{payload.site_id}': screened={payload.screened_count}, enrolled={payload.enrolled_count}, target={payload.target_count}.",
+    )
+
+    return RecruitmentRecordResponse(
+        id=record.id,
+        site_id=record.site_id,
+        study_id=record.study_id,
+        screened_count=record.screened_count,
+        enrolled_count=record.enrolled_count,
+        target_count=record.target_count,
+        as_of_date=record.as_of_date.isoformat(),
+        created_at=record.created_at.isoformat(),
+        created_by=record.created_by,
+        reason_for_change=record.reason_for_change,
+        version_index=record.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/recruitment",
+    response_model=List[RecruitmentRecordResponse],
+)
+async def list_recruitment_records(
+    request: Request,
+    study_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[RecruitmentRecordResponse]:
+    """
+    List recorded recruitment metrics, optionally filtered by site and/or study.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
+    )
+
+    stmt = select(RecruitmentRecord)
+    if study_id:
+        stmt = stmt.where(RecruitmentRecord.study_id == study_id)
+    if site_id:
+        stmt = stmt.where(RecruitmentRecord.site_id == site_id)
+
+    stmt = stmt.order_by(RecruitmentRecord.as_of_date.desc())
+    result = await session.execute(stmt)
+    records = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_RECRUITMENT_RECORDS",
+        details="Listed recruitment records.",
+    )
+
+    return [
+        RecruitmentRecordResponse(
+            id=r.id,
+            site_id=r.site_id,
+            study_id=r.study_id,
+            screened_count=r.screened_count,
+            enrolled_count=r.enrolled_count,
+            target_count=r.target_count,
+            as_of_date=r.as_of_date.isoformat(),
+            created_at=r.created_at.isoformat(),
+            created_by=r.created_by,
+            reason_for_change=r.reason_for_change,
+            version_index=r.version_index,
+        )
+        for r in records
+    ]
+
+
+# --- Site Milestones Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/site-milestones",
+    response_model=SiteMilestoneResponse,
+    status_code=201,
+)
+async def create_site_milestone(
+    request: Request,
+    payload: SiteMilestoneCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> SiteMilestoneResponse:
+    """
+    Create a new site lifecycle milestone.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_roles(
+        user_roles,
+        ["cra", "monitor", "admin", "sponsor admin", "system"],
+    )
+
+    milestone = SiteMilestone(
+        site_id=payload.site_id,
+        study_id=payload.study_id,
+        milestone_type=payload.milestone_type,
+        planned_date=payload.planned_date,
+        actual_date=payload.actual_date,
+        status=payload.status or "PLANNED",
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(milestone)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_MILESTONE",
+        details=f"Created milestone '{payload.milestone_type}' for site '{payload.site_id}' in study '{payload.study_id}'.",
+    )
+
+    return SiteMilestoneResponse(
+        id=milestone.id,
+        site_id=milestone.site_id,
+        study_id=milestone.study_id,
+        milestone_type=milestone.milestone_type,
+        planned_date=milestone.planned_date.isoformat()
+        if milestone.planned_date
+        else None,
+        actual_date=milestone.actual_date.isoformat()
+        if milestone.actual_date
+        else None,
+        status=milestone.status,
+        created_at=milestone.created_at.isoformat(),
+        created_by=milestone.created_by,
+        reason_for_change=milestone.reason_for_change,
+        version_index=milestone.version_index,
+    )
+
+
+@app.put(
+    "/api/v1/ctms/site-milestones/{milestone_id}",
+    response_model=SiteMilestoneResponse,
+)
+async def update_site_milestone(
+    milestone_id: str,
+    request: Request,
+    payload: SiteMilestoneUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> SiteMilestoneResponse:
+    """
+    Update site lifecycle milestones.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_roles(
+        user_roles,
+        ["cra", "monitor", "admin", "sponsor admin", "system"],
+    )
+
+    stmt = select(SiteMilestone).where(SiteMilestone.id == milestone_id)
+    result = await session.execute(stmt)
+    milestone = result.scalars().first()
+
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Site milestone not found")
+
+    if payload.planned_date is not None:
+        milestone.planned_date = payload.planned_date
+    if payload.actual_date is not None:
+        milestone.actual_date = payload.actual_date
+    if payload.status is not None:
+        milestone.status = payload.status
+
+    milestone.version_index += 1
+    milestone.reason_for_change = change_reason
+    session.add(milestone)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="UPDATE_MILESTONE",
+        details=f"Updated site milestone '{milestone_id}' (type '{milestone.milestone_type}'). Status: '{milestone.status}'.",
+    )
+
+    return SiteMilestoneResponse(
+        id=milestone.id,
+        site_id=milestone.site_id,
+        study_id=milestone.study_id,
+        milestone_type=milestone.milestone_type,
+        planned_date=milestone.planned_date.isoformat()
+        if milestone.planned_date
+        else None,
+        actual_date=milestone.actual_date.isoformat()
+        if milestone.actual_date
+        else None,
+        status=milestone.status,
+        created_at=milestone.created_at.isoformat(),
+        created_by=milestone.created_by,
+        reason_for_change=milestone.reason_for_change,
+        version_index=milestone.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/site-milestones",
+    response_model=List[SiteMilestoneResponse],
+)
+async def list_site_milestones(
+    request: Request,
+    study_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[SiteMilestoneResponse]:
+    """
+    List site milestones, optionally filtered by site and/or study.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
+    )
+
+    stmt = select(SiteMilestone)
+    if study_id:
+        stmt = stmt.where(SiteMilestone.study_id == study_id)
+    if site_id:
+        stmt = stmt.where(SiteMilestone.site_id == site_id)
+
+    stmt = stmt.order_by(SiteMilestone.created_at.desc())
+    result = await session.execute(stmt)
+    milestones = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_SITE_MILESTONES",
+        details="Listed site milestones.",
+    )
+
+    return [
+        SiteMilestoneResponse(
+            id=m.id,
+            site_id=m.site_id,
+            study_id=m.study_id,
+            milestone_type=m.milestone_type,
+            planned_date=m.planned_date.isoformat() if m.planned_date else None,
+            actual_date=m.actual_date.isoformat() if m.actual_date else None,
+            status=m.status,
+            created_at=m.created_at.isoformat(),
+            created_by=m.created_by,
+            reason_for_change=m.reason_for_change,
+            version_index=m.version_index,
+        )
+        for m in milestones
+    ]
+
+
+# --- CRA Allocations Endpoints ---
+
+
+@app.post(
+    "/api/v1/ctms/cra-allocations",
+    response_model=CRAAllocationResponse,
+    status_code=201,
+)
+async def allocate_cra(
+    request: Request,
+    payload: CRAAllocationCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> CRAAllocationResponse:
+    """
+    Allocate or reallocate a CRA to a site and study.
+    Restricted to Sponsor Admin.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    # Restrict CRA allocation writes strictly to Sponsor Admin
+    check_roles(user_roles, ["sponsor admin"])
+
+    # Reassignment logic: deactivate any existing active allocations for this study and site
+    stmt = select(CRAAllocation).where(
+        CRAAllocation.study_id == payload.study_id,
+        CRAAllocation.site_id == payload.site_id,
+        CRAAllocation.status == "ACTIVE",
+    )
+    result = await session.execute(stmt)
+    existing_active = result.scalars().all()
+
+    start_date = payload.effective_start_date or datetime.utcnow()
+
+    for old_alloc in existing_active:
+        old_alloc.status = "INACTIVE"
+        old_alloc.effective_end_date = start_date
+        old_alloc.version_index += 1
+        old_alloc.reason_for_change = f"Reassigned CRA to {payload.cra_id}"
+        session.add(old_alloc)
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="DEACTIVATE_CRA_ALLOCATION",
+            details=f"Deactivated active allocation '{old_alloc.id}' for CRA '{old_alloc.cra_id}' at site '{payload.site_id}' in study '{payload.study_id}' due to reassignment.",
+        )
+
+    allocation = CRAAllocation(
+        cra_id=payload.cra_id,
+        site_id=payload.site_id,
+        study_id=payload.study_id,
+        status=payload.status or "ACTIVE",
+        effective_start_date=start_date,
+        effective_end_date=payload.effective_end_date,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(allocation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="CREATE_CRA_ALLOCATION",
+        details=f"Allocated CRA '{payload.cra_id}' to site '{payload.site_id}' in study '{payload.study_id}'. Status: '{allocation.status}'.",
+    )
+
+    return CRAAllocationResponse(
+        id=allocation.id,
+        cra_id=allocation.cra_id,
+        site_id=allocation.site_id,
+        study_id=allocation.study_id,
+        status=allocation.status,
+        effective_start_date=allocation.effective_start_date.isoformat(),
+        effective_end_date=allocation.effective_end_date.isoformat()
+        if allocation.effective_end_date
+        else None,
+        created_at=allocation.created_at.isoformat(),
+        created_by=allocation.created_by,
+        reason_for_change=allocation.reason_for_change,
+        version_index=allocation.version_index,
+    )
+
+
+@app.put(
+    "/api/v1/ctms/cra-allocations/{allocation_id}",
+    response_model=CRAAllocationResponse,
+)
+async def update_cra_allocation(
+    allocation_id: str,
+    request: Request,
+    payload: CRAAllocationUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> CRAAllocationResponse:
+    """
+    Update or reassign an existing CRA allocation.
+    Restricted to Sponsor Admin.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    check_roles(user_roles, ["sponsor admin"])
+
+    stmt = select(CRAAllocation).where(CRAAllocation.id == allocation_id)
+    result = await session.execute(stmt)
+    allocation = result.scalars().first()
+
+    if not allocation:
+        raise HTTPException(status_code=404, detail="CRA Allocation not found")
+
+    if payload.cra_id is not None:
+        allocation.cra_id = payload.cra_id
+    if payload.status is not None:
+        allocation.status = payload.status
+    if payload.effective_start_date is not None:
+        allocation.effective_start_date = payload.effective_start_date
+    if payload.effective_end_date is not None:
+        allocation.effective_end_date = payload.effective_end_date
+
+    allocation.version_index += 1
+    allocation.reason_for_change = change_reason
+    session.add(allocation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="UPDATE_CRA_ALLOCATION",
+        details=f"Updated CRA Allocation '{allocation_id}'. CRA: '{allocation.cra_id}', Status: '{allocation.status}'.",
+    )
+
+    return CRAAllocationResponse(
+        id=allocation.id,
+        cra_id=allocation.cra_id,
+        site_id=allocation.site_id,
+        study_id=allocation.study_id,
+        status=allocation.status,
+        effective_start_date=allocation.effective_start_date.isoformat(),
+        effective_end_date=allocation.effective_end_date.isoformat()
+        if allocation.effective_end_date
+        else None,
+        created_at=allocation.created_at.isoformat(),
+        created_by=allocation.created_by,
+        reason_for_change=allocation.reason_for_change,
+        version_index=allocation.version_index,
+    )
+
+
+@app.get(
+    "/api/v1/ctms/cra-allocations",
+    response_model=List[CRAAllocationResponse],
+)
+async def list_cra_allocations(
+    request: Request,
+    study_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    cra_id: Optional[str] = None,
+    status: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[CRAAllocationResponse]:
+    """
+    List CRA allocations, optionally filtered.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
+    )
+
+    stmt = select(CRAAllocation)
+    if study_id:
+        stmt = stmt.where(CRAAllocation.study_id == study_id)
+    if site_id:
+        stmt = stmt.where(CRAAllocation.site_id == site_id)
+    if cra_id:
+        stmt = stmt.where(CRAAllocation.cra_id == cra_id)
+    if status:
+        stmt = stmt.where(CRAAllocation.status == status)
+
+    stmt = stmt.order_by(CRAAllocation.created_at.desc())
+    result = await session.execute(stmt)
+    allocations = result.scalars().all()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="LIST_CRA_ALLOCATIONS",
+        details="Listed CRA allocations.",
+    )
+
+    return [
+        CRAAllocationResponse(
+            id=a.id,
+            cra_id=a.cra_id,
+            site_id=a.site_id,
+            study_id=a.study_id,
+            status=a.status,
+            effective_start_date=a.effective_start_date.isoformat(),
+            effective_end_date=a.effective_end_date.isoformat()
+            if a.effective_end_date
+            else None,
+            created_at=a.created_at.isoformat(),
+            created_by=a.created_by,
+            reason_for_change=a.reason_for_change,
+            version_index=a.version_index,
+        )
+        for a in allocations
+    ]
+
+
+@app.get(
+    "/api/v1/ctms/cra-allocations/workload",
+    response_model=List[CRAWorkloadItem],
+)
+async def retrieve_workload_summaries(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[CRAWorkloadItem]:
+    """
+    Retrieve workload summaries reflecting active CRA allocations.
+    """
+    user_id = getattr(request.state, "user_id", "anonymous")
+    user_roles = getattr(request.state, "roles", "anonymous")
+
+    check_roles(
+        user_roles,
+        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
+    )
+
+    # Fetch active allocations
+    stmt = select(CRAAllocation).where(CRAAllocation.status == "ACTIVE")
+    result = await session.execute(stmt)
+    active_allocations = result.scalars().all()
+
+    cra_workload_map = {}
+    for alloc in active_allocations:
+        cra_id = alloc.cra_id
+        if cra_id not in cra_workload_map:
+            cra_workload_map[cra_id] = {
+                "active_allocations_count": 0,
+                "allocated_sites": set(),
+                "allocated_studies": set(),
+            }
+
+        cra_workload_map[cra_id]["active_allocations_count"] += 1
+        cra_workload_map[cra_id]["allocated_sites"].add(alloc.site_id)
+        cra_workload_map[cra_id]["allocated_studies"].add(alloc.study_id)
+
+    # Log action
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="VIEW_WORKLOAD_SUMMARY",
+        details="Accessed CRA workload summaries.",
+    )
+
+    return [
+        CRAWorkloadItem(
+            cra_id=cra_id,
+            active_allocations_count=info["active_allocations_count"],
+            allocated_sites=list(info["allocated_sites"]),
+            allocated_studies=list(info["allocated_studies"]),
+        )
+        for cra_id, info in cra_workload_map.items()
+    ]
