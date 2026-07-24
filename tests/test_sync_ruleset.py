@@ -3,6 +3,8 @@ import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from scripts.sync_ruleset import RULESET_NAME, get_repository, sync_ruleset
@@ -114,3 +116,34 @@ def test_sync_ruleset_update_existing():
         args = mock_run.call_args_list[1][0][0]
         assert "PUT" in args
         assert "repos/owner/repo/rulesets/12345" in args
+
+
+def test_sync_ruleset_permission_denied_403():
+    import subprocess
+
+    with patch.dict(
+        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"}
+    ):
+        mock_run = MagicMock()
+        # First call: GET existing rulesets -> empty list
+        # Second call: POST to create ruleset -> fails with 403
+        err = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["gh", "api", "--method", "POST", "repos/owner/repo/rulesets"],
+            output="",
+            stderr="Resource not accessible by integration",
+        )
+        mock_run.side_effect = [
+            MagicMock(stdout="[]", stderr="", returncode=0),
+            err,
+        ]
+
+        with patch("subprocess.run", mock_run):
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch(
+                    "builtins.open",
+                    mock_open(read_data='{"name": "main-branch-protection"}'),
+                ):
+                    with pytest.raises(SystemExit) as exc_info:
+                        sync_ruleset()
+                    assert exc_info.value.code == 1

@@ -124,40 +124,59 @@ def sync_ruleset():
             existing_ruleset_id = ruleset.get("id")
             break
 
-    if existing_ruleset_id:
-        print(
-            f"Found existing ruleset '{RULESET_NAME}' with ID {existing_ruleset_id}. Updating..."
-        )
-        update_url = f"repos/{repo}/rulesets/{existing_ruleset_id}"
-        stdout, stderr = run_command(
-            [
-                "gh",
-                "api",
-                "--method",
-                "PUT",
-                update_url,
-                "--input",
-                str(config_file_path),
-            ],
-            check=True,
-        )
-        print("Ruleset updated successfully!")
-    else:
-        print(f"Ruleset '{RULESET_NAME}' not found. Creating new ruleset...")
-        create_url = f"repos/{repo}/rulesets"
-        stdout, stderr = run_command(
-            [
-                "gh",
-                "api",
-                "--method",
-                "POST",
-                create_url,
-                "--input",
-                str(config_file_path),
-            ],
-            check=True,
-        )
-        print("Ruleset created successfully!")
+    try:
+        if existing_ruleset_id:
+            print(
+                f"Found existing ruleset '{RULESET_NAME}' with ID {existing_ruleset_id}. Updating..."
+            )
+            update_url = f"repos/{repo}/rulesets/{existing_ruleset_id}"
+            stdout, stderr = run_command(
+                [
+                    "gh",
+                    "api",
+                    "--method",
+                    "PUT",
+                    update_url,
+                    "--input",
+                    str(config_file_path),
+                ],
+                check=True,
+            )
+            print("Ruleset updated successfully!")
+        else:
+            print(f"Ruleset '{RULESET_NAME}' not found. Creating new ruleset...")
+            create_url = f"repos/{repo}/rulesets"
+            stdout, stderr = run_command(
+                [
+                    "gh",
+                    "api",
+                    "--method",
+                    "POST",
+                    create_url,
+                    "--input",
+                    str(config_file_path),
+                ],
+                check=True,
+            )
+            print("Ruleset created successfully!")
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr or ""
+        stdout_msg = e.stdout or ""
+        combined_output = f"{stderr_msg}\n{stdout_msg}"
+        if (
+            "Resource not accessible by integration" in combined_output
+            or "403" in combined_output
+        ):
+            print(
+                "Error: Permission denied (HTTP 403) during ruleset administration.\n"
+                "Ruleset administration requires a token with 'Administration: write' permissions. "
+                "Please verify that the GITHUB_TOKEN has the required permissions or that a dedicated admin-capable PAT is supplied."
+            )
+        else:
+            print(
+                f"Error: Command failed with exit code {e.returncode}.\nStderr: {stderr_msg}\nStdout: {stdout_msg}"
+            )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
