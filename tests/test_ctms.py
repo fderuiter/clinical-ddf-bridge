@@ -32,7 +32,9 @@ async def setup_db():
 
 
 def get_auth_headers(
-    roles: str = "admin", change_reason: str = "Authorized change", sig_token_action: str = None
+    roles: str = "admin",
+    change_reason: str = "Authorized change",
+    sig_token_action: str = None,
 ) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
@@ -53,6 +55,7 @@ def get_auth_headers(
         headers["X-Change-Reason"] = change_reason
     if sig_token_action:
         from jose import jwt
+
         tok_payload = {
             "sub": user_id,
             "username": user_id,
@@ -61,7 +64,9 @@ def get_auth_headers(
             "iat": time.time(),
             "exp": time.time() + 60.0,
         }
-        sig_token = jwt.encode(tok_payload, "internal-gateway-secret-12345", algorithm="HS256")
+        sig_token = jwt.encode(
+            tok_payload, "internal-gateway-secret-12345", algorithm="HS256"
+        )
         headers["X-Sig-Token"] = sig_token
     return headers
 
@@ -196,9 +201,6 @@ async def test_monitoring_visit_workflow_happy_path():
     """
     client = TestClient(app)
     cra_headers = get_auth_headers(roles="CRA", change_reason="CRA operations")
-    monitor_headers = get_auth_headers(
-        roles="Monitor", change_reason="Monitor operations"
-    )
 
     # 1. Schedule a Visit (CRA role)
     scheduled_date = datetime.utcnow() + timedelta(days=5)
@@ -412,7 +414,8 @@ async def test_monitoring_visit_workflow_rbac_denials():
         sig_token_action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
     )
     response_cra_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers_cra_signoff
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+        headers=headers_cra_signoff,
     )
     assert response_cra_signoff.status_code == 403
 
@@ -437,7 +440,6 @@ async def test_monitoring_visit_invalid_state_and_findings():
     """
     client = TestClient(app)
     cra_headers = get_auth_headers(roles="CRA")
-    monitor_headers = get_auth_headers(roles="Monitor")
 
     # Schedule a visit
     scheduled_date = datetime.utcnow() + timedelta(days=2)
@@ -460,7 +462,8 @@ async def test_monitoring_visit_invalid_state_and_findings():
         sig_token_action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
     )
     response_invalid_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers_invalid_signoff
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+        headers=headers_invalid_signoff,
     )
     assert response_invalid_signoff.status_code == 400
     assert "Only completed" in response_invalid_signoff.json()["detail"]

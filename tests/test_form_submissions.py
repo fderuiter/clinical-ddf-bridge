@@ -17,7 +17,10 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
 def get_auth_headers(
-    user_id="test_user", roles="admin", change_reason="system_operation", sig_token_action: str = None
+    user_id="test_user",
+    roles="admin",
+    change_reason="system_operation",
+    sig_token_action: str = None,
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
@@ -43,6 +46,7 @@ def get_auth_headers(
     }
     if sig_token_action:
         from jose import jwt
+
         tok_payload = {
             "sub": user_id,
             "username": user_id,
