@@ -3,9 +3,9 @@ from packages.security.context import (
     audit_context_decorator,
     current_change_reason,
     current_ip_address,
+    current_signature_context,
     current_timestamp,
     current_user_id,
-    current_signature_context,
 )
 from packages.security.rbac import (
     get_normalized_roles,
@@ -13,13 +13,13 @@ from packages.security.rbac import (
     verify_not_auditor,
 )
 from packages.security.signing import (
-    canonical_serialize,
-    generate_canonical_signature,
-    verify_canonical_signature,
-    compute_sha256_hash,
     asymmetric_sign,
     asymmetric_verify,
+    canonical_serialize,
     capture_certificate_identifiers,
+    compute_sha256_hash,
+    generate_canonical_signature,
+    verify_canonical_signature,
 )
 
 __all__ = [

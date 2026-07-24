@@ -80,8 +80,8 @@ def test_role_normalization_string() -> None:
 
     request = MockRequest("Admin, CRA, Auditor")
     normalized = get_normalized_roles(request)
-    assert normalized == ["admin", "cra", "auditor"]
-    assert request.state.roles == ["admin", "cra", "auditor"]
+    assert normalized == ["sysadmin", "cra", "auditor"]
+    assert request.state.roles == ["sysadmin", "cra", "auditor"]
 
 
 def test_role_normalization_list() -> None:
@@ -98,8 +98,8 @@ def test_role_normalization_list() -> None:
 
     request = MockRequest(["Sponsor Admin", "Monitor"])
     normalized = get_normalized_roles(request)
-    assert normalized == ["sponsor admin", "monitor"]
-    assert request.state.roles == ["sponsor admin", "monitor"]
+    assert normalized == ["sysadmin", "cra"]
+    assert request.state.roles == ["sysadmin", "cra"]
 
 
 def test_verify_not_auditor_denies_auditors() -> None:
@@ -134,7 +134,7 @@ def test_verify_not_auditor_allows_others() -> None:
             self.headers = {}
 
     request = MockRequest("admin,sponsor_dm,cra")
-    assert verify_not_auditor(request) == ["admin", "sponsor_dm", "cra"]
+    assert verify_not_auditor(request) == ["sysadmin", "sponsor_dm", "cra"]
 
 
 def test_verify_is_auditor_denies_non_auditors() -> None:
@@ -169,7 +169,7 @@ def test_verify_is_auditor_allows_auditors() -> None:
 
     for auditor_role in ["auditor", "inspector", "regulatory_inspector"]:
         request = MockRequest(auditor_role)
-        assert verify_is_auditor(request) == [auditor_role]
+        assert verify_is_auditor(request) == ["auditor"]
 
 
 # ==========================================

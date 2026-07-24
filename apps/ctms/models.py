@@ -139,16 +139,20 @@ class GeneratedLetter(Base):
 async def write_audit_log(
     session: AsyncSession,
     user_id: str,
-    user_role: str,
+    user_role: str | list[str],
     action: str,
     details: str,
 ) -> None:
     """
     Utility helper to write to the append-only CTMSAuditLog.
     """
+    role_str = user_role
+    if isinstance(user_role, list):
+        role_str = ",".join(user_role)
+
     log_entry = CTMSAuditLog(
         user_id=user_id,
-        user_role=user_role,
+        user_role=role_str,
         action=action,
         details=details,
     )

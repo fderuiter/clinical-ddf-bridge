@@ -22,12 +22,12 @@ ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
 
 # Mapping target-stages to required roles using the lowercase eTMF role convention
 STAGE_TO_REQUIRED_ROLES: Dict[str, list[str]] = {
-    DocumentStatus.TECHNICAL_QC: ["sponsor_dm", "admin"],
-    DocumentStatus.CLINICAL_QC: ["sponsor_clinical", "admin", "monitor"],
-    DocumentStatus.APPROVED: ["sponsor_dm", "sponsor_clinical", "admin"],
-    DocumentStatus.ARCHIVED: ["sponsor_dm", "admin"],
-    DocumentStatus.REJECTED: ["sponsor_dm", "sponsor_clinical", "admin"],
-    DocumentStatus.DRAFT: ["sponsor_dm", "sponsor_clinical", "admin"],
+    DocumentStatus.TECHNICAL_QC: ["sponsor_dm", "sysadmin", "admin"],
+    DocumentStatus.CLINICAL_QC: ["sponsor_clinical", "sysadmin", "admin", "cra", "monitor"],
+    DocumentStatus.APPROVED: ["sponsor_dm", "sponsor_clinical", "sysadmin", "admin"],
+    DocumentStatus.ARCHIVED: ["sponsor_dm", "sysadmin", "admin"],
+    DocumentStatus.REJECTED: ["sponsor_dm", "sponsor_clinical", "sysadmin", "admin"],
+    DocumentStatus.DRAFT: ["sponsor_dm", "sponsor_clinical", "sysadmin", "admin"],
 }
 
 
@@ -111,13 +111,17 @@ async def validate_and_transition_document_status(
     from_status = current
     document.status = to_status
 
+    role_str = actor_role
+    if isinstance(actor_role, list):
+        role_str = ",".join(actor_role)
+
     # Record append-only history log
     transition_record = DocumentQCTransition(
         document_id=document.id,
         from_status=from_status,
         to_status=to_status,
         actor_id=actor_id,
-        actor_role=actor_role,
+        actor_role=role_str,
         reason_for_change=reason_for_change.strip(),
     )
     session.add(transition_record)
