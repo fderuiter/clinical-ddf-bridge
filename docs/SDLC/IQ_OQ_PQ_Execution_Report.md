@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 567
+- **Passed:** 567 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -397,6 +397,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_instrument_and_assignment_orm_persistence` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_matching_rule_behavior` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normal_boundaries_and_inclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sex_and_all_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_and_source_precedence` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tie_breaking_with_none_bounds` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unit_matching` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
