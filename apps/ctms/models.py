@@ -136,6 +136,88 @@ class GeneratedLetter(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class RecruitmentRecord(Base):
+    """
+    Tracks site recruitment metrics for clinical studies with standard Part 11 audit fields.
+    """
+
+    __tablename__ = "ctms_recruitment_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    screened_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    enrolled_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    target_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    as_of_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class SiteMilestone(Base):
+    """
+    Represents site milestones with planning details and status tracking under Part 11 compliance.
+    """
+
+    __tablename__ = "ctms_site_milestones"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    milestone_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    planned_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="PLANNED", nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class CRAAllocation(Base):
+    """
+    Represents allocation of a CRA to a site and study with active/inactive statuses.
+    """
+
+    __tablename__ = "ctms_cra_allocations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    cra_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(50), default="ACTIVE", nullable=False)
+    effective_start_date: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    effective_end_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 async def write_audit_log(
     session: AsyncSession,
     user_id: str,
