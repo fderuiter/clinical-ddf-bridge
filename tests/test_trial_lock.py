@@ -18,6 +18,8 @@ class LockClinicalRecord(AuditedModel):
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
     site_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     visit_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    subject_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    form_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -217,3 +219,88 @@ async def test_site_and_visit_locks() -> None:
         ValueError, match="Hard deletion of LockClinicalRecord is forbidden"
     ):
         await hard_delete_record(locked_visit_rec_id)
+
+
+@pytest.mark.asyncio
+async def test_subject_and_form_locks() -> None:
+    session_maker = db_manager.get_session_maker()
+
+    # Helpers
+    @transactional(session_maker)
+    async def create_record(subject: str | None = None, form: str | None = None) -> str:
+        session = current_session.get()
+        record = LockClinicalRecord(
+            data_value="patient_y", subject_id=subject, form_id=form
+        )
+        session.add(record)
+        await session.flush()
+        return str(record.id)
+
+    @transactional(session_maker)
+    async def update_record(rec_id: str, new_value: str) -> None:
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        if record:
+            record.data_value = new_value
+        await session.flush()
+
+    # 1. Verify subject lock operations & write path enforcement
+    TrialLockManager.lock_subject("subject_001")
+    assert TrialLockManager.is_subject_locked("subject_001")
+    assert not TrialLockManager.is_subject_locked("subject_002")
+
+    # Write to a non-locked subject should succeed
+    non_locked_rec = await create_record(subject="subject_002")
+    assert non_locked_rec is not None
+
+    # Write to a locked subject should fail
+    with pytest.raises(
+        PermissionError, match="Subject subject_001 is currently locked"
+    ):
+        await create_record(subject="subject_001")
+
+    # Unlock subject, then write should succeed
+    TrialLockManager.unlock_subject("subject_001")
+    locked_subj_rec = await create_record(subject="subject_001")
+    assert locked_subj_rec is not None
+
+    # Lock subject again, updating should fail
+    TrialLockManager.lock_subject("subject_001")
+    with pytest.raises(
+        PermissionError, match="Subject subject_001 is currently locked"
+    ):
+        await update_record(locked_subj_rec, "new_value")
+
+    # Clean up subject lock
+    TrialLockManager.unlock_subject("subject_001")
+    await update_record(locked_subj_rec, "new_value")
+
+    # 2. Verify form lock operations & write path enforcement
+    TrialLockManager.lock_form("form_001")
+    assert TrialLockManager.is_form_locked("form_001")
+    assert not TrialLockManager.is_form_locked("form_002")
+
+    # Write to a non-locked form should succeed
+    non_locked_form_rec = await create_record(form="form_002")
+    assert non_locked_form_rec is not None
+
+    # Write to a locked form should fail
+    with pytest.raises(PermissionError, match="Form form_001 is currently locked"):
+        await create_record(form="form_001")
+
+    # Unlock form, then write should succeed
+    TrialLockManager.unlock_form("form_001")
+    locked_form_rec = await create_record(form="form_001")
+    assert locked_form_rec is not None
+
+    # Lock form again, updating should fail
+    TrialLockManager.lock_form("form_001")
+    with pytest.raises(PermissionError, match="Form form_001 is currently locked"):
+        await update_record(locked_form_rec, "new_value_form")
+
+    # Clean up form lock
+    TrialLockManager.unlock_form("form_001")
+    await update_record(locked_form_rec, "new_value_form")

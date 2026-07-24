@@ -47,6 +47,10 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ctms_recruitment_records",
             "ctms_site_milestones",
             "ctms_cra_allocations",
+            "ctms_investigator_grants",
+            "ctms_budget_line_items",
+            "ctms_payment_milestones",
+            "ctms_investigator_payables",
             "quality_deviations",
             "quality_root_cause_analyses",
             "quality_capa_records",
@@ -55,8 +59,11 @@ def receive_before_flush(session: Session, flush_context, instances):
             "isf_audit_logs",
             "notification_records",
             "notification_audit_logs",
+            "notification_deliveries",
             "consent_documents",
             "consent_audit_logs",
+            "consent_clauses",
+            "consent_templates",
         ):
             return
 
@@ -83,6 +90,20 @@ def receive_before_flush(session: Session, flush_context, instances):
         if visit_id is not None and TrialLockManager.is_visit_locked(str(visit_id)):
             raise PermissionError(
                 f"Visit {visit_id} is currently locked in a read-only state."
+            )
+
+        subject_id = getattr(obj, "subject_id", None) or getattr(obj, "subject", None)
+        if subject_id is not None and TrialLockManager.is_subject_locked(
+            str(subject_id)
+        ):
+            raise PermissionError(
+                f"Subject {subject_id} is currently locked in a read-only state."
+            )
+
+        form_id = getattr(obj, "form_id", None) or getattr(obj, "page_id", None)
+        if form_id is not None and TrialLockManager.is_form_locked(str(form_id)):
+            raise PermissionError(
+                f"Form {form_id} is currently locked in a read-only state."
             )
 
     audit_logs = []
